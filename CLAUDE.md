@@ -1,0 +1,246 @@
+# CLAUDE.md
+
+Guidance for Claude Code (claude.ai/code) working in this repository.
+
+## What this is
+
+**Chronicler** — a data-driven quest mod for NeoForge: chapters, quests, stages,
+givers in the world, a journal. It is the family's answer to FTB Quests, built
+for tight compatibility with **LegendQuest**, **ZombieMod**, **CityWorld** and
+**SableCraft Standards** — and it requires none of them. First use: the *Zombie
+Apocalypse Roleplay* (ZARP) questline. `docs/DESIGN.md` is the thinking, the
+data model and the build order — **read it before adding a feature.**
+
+| | |
+|---|---|
+| Minecraft | 1.21.11 (`main`); `mc26.1` / `mc26.2` branches to come |
+| Loader | NeoForge 21.11.42 |
+| Java | 21 (25 on 26.x) |
+| Build | Gradle 9.2.1 + ModDevGradle 2.0.141 |
+| Licence | MIT |
+| Mod id | `chronicler`, package `com.sablednah.chronicler` |
+
+This is the **seventh** mod in the series. `../LegendQuest-ReForged` is the
+closest architectural relative (datapack registries fed from YAML, Lang +
+`messages.yml`, soft Standards seams, optional client), `../ZombieMod/ZombieMod`
+has the codec-dispatch data pattern and the networking lessons,
+`../SableCraft-Standards` has the seams we consume and the two-player test rig,
+`../CityWorld-ReForged/PORTING.md` is the richest 1.21.11 API reference. **Read
+their `CLAUDE.md` before inventing anything** — every trap below was paid for
+next door.
+
+## Build & run
+
+**There is no system Java.** Set this every time, *before* the gradle command:
+
+```bash
+export JAVA_HOME=/home/sable/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2
+export PATH="$JAVA_HOME/bin:$PATH"
+
+./gradlew compileJava             # fast inner loop
+./gradlew build                   # -> build/libs/chronicler-<ver>+mc<mc>.jar
+./gradlew runServer               # headless dedicated server on port 25570
+./gradlew runServer -Pselftest    # the same, running neoforge/SelfTest on ServerStartedEvent
+./deploy.sh                       # build + copy into the CurseForge test instance
+.\TestClient.cmd                  # (Windows) TestBuddy dev client, auto-joins the dev server
+```
+
+- **Never report success from a command that prints it unconditionally.**
+  `./gradlew build -q 2>&1 | grep -E "error:|BUILD FAIL"` and read what it
+  prints; an `echo OK` after a build announces success over a real failure.
+- **Boot checks print the ERROR lines, never a count.** `grep -nE "ERROR|FATAL|
+  RegistryDataLoader"` on the log. A `RegistryDataLoader` error means the
+  dedicated server still says "Done" while the client refuses to open the
+  world — a bad quest file is a world-killer, and a `grep -c` once shipped one.
+- `-D` on the `gradlew` line sets a property on **Gradle's** JVM, not the
+  forked server; `-Pselftest` exists because it is translated in `build.gradle`.
+- Versions and metadata live in `gradle.properties` and expand into
+  `src/main/templates/META-INF/neoforge.mods.toml`. **Edit the template, never
+  a generated `mods.toml`.** `minecraft_version` is what we build against;
+  `minecraft_version_range` / `neo_version_range` are what the jar runs on.
+- `run/` is gitignored. A fresh checkout needs `run/eula.txt` and a
+  `run/server.properties` with the port pair below (`rcon.password=chrdev`).
+- **Compiling with the dev server running takes minutes; stopped, seconds.**
+  Stop it before reaching for `wsl --shutdown`. If Gradle genuinely hangs on
+  `:compileJava` with no CPU, that is the known `/mnt/d` degradation.
+- **Config hot-reload does not work on `/mnt/d`** (inotify does not cross
+  drvfs). Restart the dev server after any config change. It works on a real
+  server; do not "fix" it.
+
+### Dev-server ports — one pair per project
+
+Five sibling mods were once all on 25565/25575; whichever started second lost,
+and RCON's only symptom is "auth failed". Chronicler owns:
+
+| Project | game | RCON |
+|---|---|---|
+| Standards | 25569 (26.1: 25571, 26.2: 25572) | 25575 |
+| LegendQuest | 25566 | 25576 |
+| ZombieMod | 25567 | 25577 |
+| CityWorld | 25568 (default 25565 in places) | 25578 |
+| MobHealth | 25569 | 25579 |
+| **Chronicler** | **25570** | **25580** |
+
+Before assuming a port is yours, `ss -ltnp | grep 2557`. **Never kill a JVM
+without checking whose it is** — match on this repo's classes directory, not on
+`java` or `fml.modFolders` (that pattern matches every sibling's dev server):
+
+```bash
+ps -eo pid,etime,args | grep "[f]ml.modFolders" | grep "Chronicler/build/classes"
+```
+
+`pkill -f "gradlew runServer"` kills the shell you type it in. Don't.
+
+### Testing
+
+`SelfTest` runs headless and is the only route to "does the command work"
+without a client (Gradle cannot pipe stdin to the server console). Rules it
+keeps: **parse AND execute**; **test both directions** (a deliberately bad
+command must be refused); **call the real code**, never a re-derivation.
+
+What it cannot see are the two bug families this family keeps producing:
+
+1. **Code that has never met real input.** The self-test proves "computes the
+   right answer", not "anything ever called it". When adding a seam or gate,
+   ask what the first real input is and where it comes from — and get a real
+   consumer on the far side before calling it done.
+2. **The server is right and the client was never told.** Minecraft predicts
+   locally; a cancelled action already happened on screen. Resend what the
+   client believes (block state and neighbours, inventory), put feedback where
+   the cursor was.
+
+For those: the dev client (`TestClient.cmd`), then a **genuinely vanilla
+client** for anything that sends a packet — see ZombieMod's `CLAUDE.md` for the
+procedure. Direct Connect `127.0.0.1`, not `localhost`. `/zm observe on` makes
+a test player damage-immune if ZombieMod is in `run/mods`.
+
+## Design principles (standing requirements, not preferences)
+
+**Vanilla first, modded as sugar.** Can an unmodded client use the whole
+feature? Quests are offered on the action bar, accepted by right-click or a
+clickable chat line, tracked on the action bar, read in a written book,
+completed with a title card. A modded client may get a HUD later. Anything
+that must be client-side to work at all is a signal to find a server-side
+substitute, not to add a footnote.
+
+**"Don't make me think."** Explain at the moment of the change. A message that
+names the remedy beats one that names the problem. Never ship output that
+needs decoding. A visible correction is itself a defect.
+
+**Sensible defaults, highly configurable.** Every number is somebody's wrong
+number: expose it, in `chronicler-common.toml` or `messages.yml`. Defaults are
+still opinionated.
+
+**Rebuild, don't copy.** FTB Quests, Quests (Bukkit), BetonQuest are read for
+intent, never lifted — even where the licence would allow it.
+
+**Tone:** dry, deadpan; a refusal leaves you knowing what to do next. A
+well-chosen emoji is polish, a row of them is clutter.
+
+## Architecture
+
+```
+data/<pack>/chronicler/{chapter,quest}/<name>.json   datapack registries
+config/chronicler/{chapters,quests}/<name>.yml       the YAML front door (same schema)
+        ↓  Chapter.CODEC / Quest.CODEC
+data/                        loader-light records; ObjectiveSpec / RewardSpec dispatch on "type"
+core/QuestLog                the player's journal (attachment, copyOnDeath)
+neoforge/                    events, commands, permissions, Lang, Feedback, Net, SelfTest
+yaml/                        YAML -> JSON pack
+network/                     (empty) wire formats, when a client half exists
+neoforge/compat/             (empty) ONE guarded class per sibling mod
+```
+
+- **Content is a frozen registry.** `/reload` rebuilds tags and functions,
+  never the registry loader; chapters and quests apply on **restart**.
+  `messages.yml` is not a registry and does reload. The reload notice says so.
+- **Objective and reward types are codec-dispatched records** with a public
+  `SpecTypes.register`, so the interesting types (a LegendQuest level, a
+  ZombieMod genus, a CityWorld lot) live in `compat/` or other mods. A bare
+  `"type": "kill"` means `chronicler:kill`; bare ids elsewhere mean ours too
+  (`ChroniclerIds.CODEC`).
+- **No `ItemStack` in a codec.** Items are held as ids and built at use time —
+  on 26.x a stack cannot be constructed while a datapack registry is loading.
+- **Text is resolved server-side** through `Lang` → `messages.yml`, merged on
+  every start via `messages.known` so keys added later reach existing servers.
+  `{term.*}` re-skins vocabulary wholesale. **A hardcoded player-facing string
+  is a bug.** `&` codes become real styles in `Feedback.colored`, never `§`
+  in a literal — the console, log and RCON read `getString()`. Audit:
+  `grep -rnE '§|\\u00[aA]7' src/main/java` (both spellings).
+- **Every clientbound send goes through `Net.sendIfAble`** — written before any
+  payload exists, because `optional()` makes the handshake tolerant and does
+  not make sends droppable; an unguarded send kicks vanilla clients at login.
+- **Where state lives:** the journal is an attachment (belongs to the player,
+  survives death). World flags, reputation and givers go in **SavedData** when
+  built — they must answer for offline players. Pending offers and countdowns
+  are static maps; surviving a restart would be worse than losing them.
+- **Commands live at their plain names** (`/quest`, `/quests`); `/chronicler`
+  administers the mod and nothing else lives under it. `/quests` is a second
+  literal, not a redirect: a redirect's requirement ANDs with every child and
+  ignores merged children. Each subcommand carries its own bar; roots carry
+  none. **Any argument that can contain punctuation must not be `word()`.**
+- **Permissions** go through NeoForge's `PermissionAPI` — Standards and
+  LuckPerms are both handlers, so nothing lives in `compat/` for them. Boolean
+  nodes only; every default resolver reproduces `NODES.md`.
+
+## Soft dependencies — the seam pattern
+
+All four siblings are `type="optional"` in the mods.toml and `compileOnly` from
+their `build/libs`. **Only a class under `neoforge/compat/` may import
+`com.sablednah.standards`, `com.sablednah.legendquest`, `com.sablednah.zombiemod`
+or `me.daddychurchill.CityWorld`.** Everything else talks to a neutral bridge
+that answers sensibly when the sibling is absent (no economy → reward skipped
+and said so; no CityWorld → `lot` objective never completes and the file is
+rejected at load with a clear message).
+
+Wire each seam through `Chronicler.optionalIntegration(name, runnable)`, which
+catches **`LinkageError`** — `ModList.isLoaded` says "present", not "new
+enough", and an older Standards once took a whole server down during
+construction. Set a version floor in the mods.toml only when a seam is actually
+consumed. **Build the seam with a real consumer on the other side**, never
+speculatively: the docs say what is wired, and `/chronicler status` says what
+is detected.
+
+Seam-by-seam detail, and what we *offer* back (spawn conditions to ZombieMod,
+karma triggers to LegendQuest), is in `docs/DESIGN.md`.
+
+## Versions
+
+Branch per Minecraft version is the decided house pattern (`main` = 1.21.11,
+`mc26.1`, `mc26.2`), docs on `main` only, features cherry-picked forward, jar
+named `chronicler-<ver>+mc<mc>.jar`. Not created yet — do it once step 1 of
+the build order plays, and copy the recipe from ZombieMod's
+`docs/MULTIVERSION.md`. Known 26.x moves that will land here:
+`displayClientMessage` split (isolated in `Feedback`), `SavedDataType` id
+becomes an `Identifier` **and the file moves to a namespaced folder** (a
+migration that copies to the wrong place logs nothing), `ChatFormatting.isFormat`
+gone (already avoided), `EntityType` constants → `EntityTypes`, dyed items via
+`pick(DyeColor)`.
+
+## Releasing
+
+`CHANGELOG.md`, `CURSEFORGE.md` (not written yet), `mod_version`, tag, GitHub
+release — publishing fires `.github/workflows/curseforge.yml` and
+`modrinth.yml`, both of which skip cleanly until `CURSEFORGE_TOKEN` /
+`CURSEFORGE_PROJECT_ID` / `MODRINTH_TOKEN` / `MODRINTH_PROJECT_ID` exist. Both
+scripts were copied from MobHealth and renamed; **review `scripts/*.sh` before
+the first real release.** A 200 from CurseForge is acceptance, not
+publication; the changelog sanitiser 500s on blockquotes and autolinks;
+Modrinth rejects AI-looking artwork and icons over 256 KiB. Never handle the
+tokens.
+
+## Known traps (paid for next door, not yet here)
+
+- A `static final` collection declared after the fields that fill it is null
+  when they initialise. Declare collections first.
+- `/execute as <player> run …` does not test that player's permissions.
+- `doImmediateRespawn` is the wrong death to test with; transient attribute
+  modifiers die on respawn — repair on `PlayerEvent.Clone`.
+- An entity search on a dev server with no player needs the chunk
+  **force**-loaded and a tick to pass; `getMaxLocalRawBrightness` on an
+  unloaded chunk answers 15.
+- A negative check ("no offer shown") needs a positive control in the same
+  run, or a dead client passes it.
+- After a rewrite, grep for the name of the thing you **removed**.
+- Never copy a jar into a running instance; `deploy.sh` refuses.
+- Never edit a sibling's `CLAUDE.md`; raise it with Sable instead.

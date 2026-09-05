@@ -1,0 +1,177 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.141'
+    id 'idea'
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+// The jar carries the Minecraft version it was built against, on EVERY branch:
+// chronicler-0.1.0+mc1.21.11.jar. All version branches share a mod_version, so
+// three files called chronicler-0.1.0.jar would be indistinguishable in a mods
+// folder. The version INSIDE neoforge.mods.toml stays plain.
+version = "${mod_version}+mc${minecraft_version}"
+group = mod_group_id
+
+// A Windows-side client build (TestClient.cmd) gets its own build directory so
+// it never tries to replace artifacts the WSL dev server holds open. Standards
+// learned this one: a shared build/ fails with "Unable to delete file".
+if (project.hasProperty('winClient')) {
+    layout.buildDirectory = layout.projectDirectory.dir("build-win-${project.winClient}")
+}
+
+sourceSets.main.resources {
+    srcDir('src/generated/resources')
+    exclude("**/*.bbmodel")
+    exclude("src/generated/**/.cache")
+}
+
+repositories {
+}
+
+base {
+    archivesName = mod_id
+}
+
+// Mojang ships Java 21 to 1.21.x players. The 26.x branches say 25 here.
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+
+    if (project.parchment_minecraft_version?.trim() && project.parchment_mappings_version?.trim()) {
+        parchment {
+            minecraftVersion = project.parchment_minecraft_version
+            mappingsVersion = project.parchment_mappings_version
+        }
+    }
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        // A second pair of hands: TestBuddy auto-joins the dev server, no
+        // second account needed (the dev server is online-mode=false).
+        clientBuddy {
+            client()
+            programArguments.addAll '--username', 'TestBuddy',
+                    '--quickPlayMultiplayer', "127.0.0.1:${project.dev_server_port}".toString()
+            // Own game dir: sharing run/ with a live dev server means both
+            // fight over logs/latest.log on drvfs.
+            gameDirectory = file('runBuddy')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+            programArguments.addAll '--port', project.dev_server_port
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            // -Pselftest -> runs neoforge/SelfTest on ServerStartedEvent. A -D on
+            // the gradlew line lands on GRADLE's JVM, not the forked server, so
+            // it has to be translated here.
+            systemProperty 'chronicler.selftest', project.hasProperty('selftest') ? 'true' : 'false'
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            data()
+            programArguments.addAll '--mod', project.mod_id, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    // SnakeYAML powers the YAML front door (config/chronicler/**/*.yml served
+    // as a datapack). Embedded jar-in-jar because Minecraft does not ship it.
+    implementation 'org.yaml:snakeyaml:2.2'
+    jarJar('org.yaml:snakeyaml') {
+        version {
+            strictly '[2.2,3.0)'
+            prefer '2.2'
+        }
+    }
+
+    // SOFT dependencies: compileOnly, never jarJar'd. Chronicler builds against
+    // their APIs and must run with none of them present. Only the guarded
+    // classes under neoforge/compat may import them (see CLAUDE.md). fileTree
+    // so an absent jar leaves the API off the classpath instead of failing
+    // project configuration.
+    compileOnly fileTree(dir: '../SableCraft-Standards/build/libs', include: ['standards-*.jar'])
+    compileOnly fileTree(dir: '../LegendQuest-ReForged/build/libs', include: ['legendquest-*.jar'], exclude: ['*-sources.jar'])
+    compileOnly fileTree(dir: '../ZombieMod/ZombieMod/build/libs', include: ['zombiemod-*.jar'], exclude: ['*-sources.jar'])
+    compileOnly fileTree(dir: '../CityWorld-ReForged/build/libs', include: ['cityworld-*.jar'], exclude: ['*-sources.jar'])
+}
+
+// Expand mod metadata properties into the generated neoforge.mods.toml.
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

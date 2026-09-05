@@ -1,0 +1,141 @@
+name: Publish to Modrinth
+
+# Publishing a GitHub release publishes to Modrinth too, alongside CurseForge. Every jar attached to
+# the release is uploaded, with the Minecraft version read from its filename
+# (chronicler-2.5.1+mc26.2.jar) and the release body used as the changelog.
+#
+# Setup, once:
+#   1. Create a personal access token at https://modrinth.com/settings/pats with the
+#      "Create versions" scope
+#   2. Add it as the repository secret MODRINTH_TOKEN
+#      (Settings -> Secrets and variables -> Actions -> New repository secret)
+#   3. Add the project's ID or slug, shown on the project page, as the repository
+#      variable MODRINTH_PROJECT_ID (same screen, "Variables" tab)
+#
+# Until the secret exists this workflow skips rather than fails, so it will not redden the release.
+
+on:
+  release:
+    types: [published]
+  # Re-upload an existing release by hand, e.g. after fixing a changelog.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to upload (e.g. v2.5.1)
+        required: true
+      release_type:
+        description: Modrinth release type
+        required: false
+        default: release
+        type: choice
+        options: [release, beta, alpha]
+      debug:
+        description: Print the upload metadata (contains no credentials)
+        required: false
+        default: false
+        type: boolean
+      only:
+        description: Upload only jars whose name contains this (e.g. mc26.2) — for testing
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the Modrinth token is configured
+        id: guard
+        env:
+          TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$PROJECT_ID" ]; then
+            echo "MODRINTH_TOKEN secret or MODRINTH_PROJECT_ID variable not set — skipping."
+            echo "See the comments at the top of .github/workflows/modrinth.yml for setup."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.configured == 'true'
+        with:
+          # Every branch, not just this one: each jar's supported Minecraft range is declared in the
+          # gradle.properties of the branch that built it, and that is read back below.
+          fetch-depth: 0
+
+      - name: Download the release jars and changelog
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          mkdir -p dist
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.jar' --dir dist
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq '.body' > dist/changelog.md
+          ls -la dist
+
+      - name: Upload each jar
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          RELEASE_TYPE: ${{ inputs.release_type || 'release' }}
+          MODRINTH_DEBUG: ${{ inputs.debug && '1' || '' }}
+          ONLY: ${{ inputs.only }}
+        run: |
+          shopt -s nullglob
+
+          # Which branch built a jar for Minecraft $1, and what range did it declare it supports?
+          # Matching on minecraft_version rather than a hardcoded branch list means a fourth line
+          # starts publishing correctly the day its branch is pushed, with nothing changed here.
+          range_for_mc() {
+            local want="$1" ref props mv
+            for ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin); do
+              props="$(git show "$ref:gradle.properties" 2>/dev/null)" || continue
+              mv="$(sed -n 's/^minecraft_version=//p' <<<"$props" | head -1)"
+              [ "$mv" = "$want" ] || continue
+              sed -n 's/^minecraft_version_range=//p' <<<"$props" | head -1
+              return 0
+            done
+            return 1
+          }
+
+          jars=(dist/*.jar)
+          if [ ${#jars[@]} -eq 0 ]; then
+            echo "::error::No jars attached to the release — nothing to upload."
+            exit 1
+          fi
+          failed=0
+          for jar in "${jars[@]}"; do
+            # chronicler-2.5.1+mc26.2.jar -> 26.2
+            mc="$(basename "$jar" .jar | sed -n 's/.*+mc\(.*\)$/\1/p')"
+            if [ -z "$mc" ]; then
+              echo "::warning::Cannot read a Minecraft version from $(basename "$jar") — skipping it."
+              continue
+            fi
+            if [ -n "$ONLY" ] && [[ "$(basename "$jar")" != *"$ONLY"* ]]; then
+              echo "Skipping $(basename "$jar") — does not match '$ONLY'."
+              continue
+            fi
+            echo "::group::$(basename "$jar") -> Minecraft $mc"
+            # No branch declares this version? Then the exact build version is all we can honestly
+            # claim, which is what the upload script falls back to on an empty range.
+            if MODRINTH_VERSION_RANGE="$(range_for_mc "$mc")"; then
+              echo "Branch declaring Minecraft $mc supports $MODRINTH_VERSION_RANGE"
+            else
+              MODRINTH_VERSION_RANGE=""
+              echo "::warning::No branch builds Minecraft $mc — tagging $(basename "$jar") with $mc alone."
+            fi
+            export MODRINTH_VERSION_RANGE
+            # Keep going if one version fails, so a single bad upload does not strand the others,
+            # then fail the job at the end so the failure is not silent.
+            # Invoked via bash rather than as ./script: this repo lives on an NTFS drive with
+            # core.fileMode=false, so exec bits are easily lost again on a future commit.
+            bash scripts/modrinth-upload.sh "$jar" "$mc" dist/changelog.md "$RELEASE_TYPE" || failed=1
+            echo "::endgroup::"
+          done
+          [ "$failed" -eq 0 ] || { echo "::error::At least one upload failed."; exit 1; }

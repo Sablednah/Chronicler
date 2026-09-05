@@ -1,0 +1,14 @@
+{
+  "name": "Things in the Dark",
+  "description": "They come out at night. Make it fewer of them.",
+  "chapter": "prologue",
+  "order": 1,
+  "requires": [ "first_steps" ],
+  "objectives": [
+    { "type": "kill", "target": "minecraft:zombie", "count": 5 }
+  ],
+  "rewards": [
+    { "type": "item", "item": "minecraft:iron_sword" },
+    { "type": "money", "amount": 25 }
+  ]
+}

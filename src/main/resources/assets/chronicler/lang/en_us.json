@@ -1,0 +1,9 @@
+{
+  "chronicler.configuration.announce": "Announcements",
+  "chronicler.configuration.fanfare": "Quest Completion Fanfare",
+  "chronicler.configuration.tracker": "Quest Tracker",
+  "chronicler.configuration.actionBar": "Action Bar Tracker",
+  "chronicler.configuration.intervalTicks": "Location Check Interval (ticks)",
+  "chronicler.configuration.visibility": "Visibility",
+  "chronicler.configuration.showHiddenToOps": "Show Hidden Quests To Ops"
+}

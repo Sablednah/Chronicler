@@ -1,0 +1,65 @@
+### Gradle ###
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/**/build/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/**/out/
+
+.run/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.eclipse/
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/**/bin/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+### MobHealth: local tooling & test server (machine-specific, not source) ###
+/tools/
+/server/
+!/server/README.md
+
+### Local editor/agent settings ###
+/.claude/settings.local.json
+
+### Store screenshots (kept local, uploaded to the store listings directly) ###
+# ~34MB of PNGs that only ever get dragged into a CurseForge/Modrinth page.
+# Tracking them would put that in every clone forever to save nobody any work.
+# The upload order and captions ARE tracked, in docs/store-copy.md.
+/screenshots/
+
+### Minecraft Modding ###
+run/
+!**/src/**/run/
+**/src/generated/**/.cache/
+repo/
+!**/src/**/repo/
+
+# extracted NeoForge API sources for reference (regenerate from sources jar)
+/.apisrc/
+runBuddy/
+.gradle-buddy/
+.gradle-win/
+
+### Chronicler ###
+build-win-*/
+run-mc*/
+/venv/
