@@ -1,0 +1,15 @@
+{
+  "name": "Hot Foot",
+  "description": "You went somewhere you should not have. Bring back proof.",
+  "chapter": "prologue",
+  "order": 2,
+  "hidden": true,
+  "giver": { "type": "place", "dimension": "minecraft:the_nether", "label": "the far side of a portal" },
+  "objectives": [
+    { "type": "collect", "item": "minecraft:blaze_rod", "count": 1 }
+  ],
+  "rewards": [
+    { "type": "item", "item": "minecraft:golden_apple" },
+    { "type": "xp", "amount": 50 }
+  ]
+}

@@ -18,5 +18,11 @@
   Abandon links, an On Offer page with Accept links, a Done page. Right-click
   the item or `/quest journal`. New players get one on first join
   (`journal.giveToNewPlayers`).
+- Givers: `position` givers (a block; offer nearby, right-click accepts),
+  `place` givers (biome / structure / dimension / CityWorld lot -- ambient,
+  no coordinates), op-placed givers via `/quest giver set` in SavedData. A
+  `place` objective on the same condition. A public `api.Quests` facade and
+  registries for giver, objective and reward types, for StoryTeller and
+  friends. A hidden demo quest, Hot Foot, offered on entering the Nether.
 - Reputation: `reputation` reward and objective through Standards' new
   `api/reputation` (ships in Standards 1.5.0); a clean no-op on older builds.

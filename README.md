@@ -9,7 +9,7 @@ Built to sit beside [LegendQuest ReForged](https://github.com/Sablednah/LegendQu
 [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) — and
 needs none of them.
 
-**Status: engine + journal (0.1.0, unreleased).** Quests load from datapacks
+**Status: engine + journal + givers (0.1.0, unreleased).** Quests load from datapacks
 and YAML, can be accepted, are measured (kills, items held, places reached),
 complete with a title card and pay out. The journal is a written book with a
 page per quest and clickable links, handed to every new player. Party quests pool progress across a party when
@@ -36,9 +36,18 @@ rewards:
   - { type: money, amount: 25 }
 ```
 
+A quest can carry a **giver**: `giver: { type: position, at: [x, y, z], label: "the vault door" }`
+offers it to anyone standing near that block and accepts on right-click;
+`giver: { type: place, biome: "#minecraft:is_jungle" }` (or `structure`,
+`dimension`, `lot` for a CityWorld lot) offers it the moment a player is in
+that kind of place, with no coordinate written down. An admin can also make
+any block a giver by looking at it: `/quest giver set <quest>`. A hidden quest
+with a giver is *found* by walking up to it.
+
 Objective types today: `kill` (an entity id, a `#tag`, `any`, or a ZombieMod
 genus id), `collect` (`consume: false` to only require carrying), `visit`
-(`x`/`z`, optional `y`, `radius`, `dimension`, a `label` for the text). Reward
+(`x`/`z`, optional `y`, `radius`, `dimension`, a `label` for the text), `place`
+(`biome` / `structure` / `dimension` / `lot`, any combination). Reward
 types: `item`, `command` (`{player}` substituted, run with gamemaster
 permission), `xp`, `money` (through Standards' economy; says so if there is
 none), `reputation` (`standing` + `delta`, through Standards 1.5.0's
@@ -59,6 +68,7 @@ override `scope`. Every word a player sees lives in
 | `/quest track <quest>` | everyone — follow it on the action bar |
 | `/quest journal` | everyone — open the journal book, no item needed |
 | `/quest journal give` | everyone — a (replacement) journal item |
+| `/quest giver set <quest>` / `remove` / `list` | `chronicler.admin` or op 2 — the block you are looking at offers a quest |
 | `/chronicler reload` | `chronicler.admin` or op 2 — messages only |
 | `/chronicler status` | `chronicler.admin` or op 2 |
 | `/chronicler journal <player>` | `chronicler.admin` or op 2 — hand someone a journal |

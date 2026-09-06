@@ -215,6 +215,10 @@ public final class Journal {
         for (var h : available) {
             Identifier id = h.key().identifier();
             page.append(Feedback.colored(Lang.fmt("journal.available.quest", "name", h.value().name()))).append("\n");
+            if (h.value().giver().isPresent()) {
+                page.append(Feedback.colored(Lang.fmt("journal.available.where",
+                        "where", h.value().giver().get().describe()))).append("\n");
+            }
             page.append(commandLink(Lang.get("journal.link.accept"), "/quest accept " + id, Lang.get("button.accept.tip")))
                     .append("  ")
                     .append(commandLink(Lang.get("journal.link.info"), "/quest info " + id, Lang.get("button.info.tip")))

@@ -35,8 +35,9 @@ public final class ChroniclerServerEvents {
         Registry<Quest> quests = server.registryAccess().lookupOrThrow(ChroniclerRegistries.QUEST);
         String chapterNames = String.join(", ", chapters.keySet().stream()
                 .map(id -> id.getPath()).sorted().toList());
-        Chronicler.LOGGER.info("Chronicler: {} chapter(s) [{}], {} quest(s) loaded",
-                chapters.size(), chapterNames, quests.size());
+        Givers.index(server);
+        Chronicler.LOGGER.info("Chronicler: {} chapter(s) [{}], {} quest(s) loaded, {} with givers; {} op-placed giver(s)",
+                chapters.size(), chapterNames, quests.size(), Givers.dataCount(), GiverStore.get(server).size());
 
         if (Boolean.getBoolean("chronicler.selftest")) {
             SelfTest.run(server);

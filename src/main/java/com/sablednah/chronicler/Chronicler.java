@@ -66,6 +66,7 @@ public class Chronicler {
         // here so nothing asks before they exist.
         com.sablednah.chronicler.neoforge.Trackers.init();
         com.sablednah.chronicler.neoforge.Rewards.init();
+        com.sablednah.chronicler.data.GiverTypes.init();
         NeoForge.EVENT_BUS.register(com.sablednah.chronicler.neoforge.QuestEvents.class);
 
         if (ModList.get().isLoaded("standards")) {
@@ -82,7 +83,7 @@ public class Chronicler {
             LOGGER.info("Chronicler: ZombieMod detected (genus/horde seams not yet consumed)");
         }
         if (ModList.get().isLoaded("cityworld")) {
-            LOGGER.info("Chronicler: CityWorld detected (lot/district seams not yet consumed)");
+            optionalIntegration("lots", com.sablednah.chronicler.neoforge.compat.CityWorldLots::register);
         }
     }
 

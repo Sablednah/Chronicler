@@ -105,6 +105,15 @@ public final class Trackers {
     }
 
     static {
+        register(ObjectiveTypes.At.class, new Tracker<ObjectiveTypes.At>() {
+            @Override
+            public OptionalInt poll(ServerPlayer player, ObjectiveTypes.At spec) {
+                return OptionalInt.of(Places.isAt(player, spec.place()) ? 1 : 0);
+            }
+
+            @Override
+            public boolean latching(ObjectiveTypes.At spec) { return true; }
+        });
         register(ObjectiveTypes.Reputation.class, new Tracker<ObjectiveTypes.Reputation>() {
             @Override
             public OptionalInt poll(ServerPlayer player, ObjectiveTypes.Reputation spec) {

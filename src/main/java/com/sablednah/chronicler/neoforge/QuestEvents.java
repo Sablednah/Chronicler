@@ -32,6 +32,7 @@ public final class QuestEvents {
         tickCounter = 0;
         for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
             QuestEngine.poll(player);
+            Givers.tick(player);
         }
     }
 
@@ -42,6 +43,22 @@ public final class QuestEvents {
             Journal.giveToNewPlayer(player);
             QuestEngine.journal(player).tracked().ifPresent(id -> QuestEngine.showTracker(player, id));
         }
+    }
+
+    /** A right-click on a giver block accepts (or says why not). Main hand only, or it fires twice. */
+    @SubscribeEvent
+    static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (event.getLevel().isClientSide() || event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) return;
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (Givers.onUseBlock(player, player.level(), event.getPos())) {
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        Givers.forget(event.getEntity().getUUID());
     }
 
     /**

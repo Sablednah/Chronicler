@@ -1,0 +1,165 @@
+package com.sablednah.chronicler.neoforge;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import com.sablednah.chronicler.ChroniclerConfig;
+import com.sablednah.chronicler.data.GiverSpec;
+import com.sablednah.chronicler.data.GiverTypes;
+import com.sablednah.chronicler.data.Quest;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+
+/**
+ * Where quests come from. Two sources, one behaviour:
+ *
+ * <ul>
+ * <li><b>Data givers</b> on the quest record ({@code giver: {type: ...}}) --
+ *     a block position, or a kind of place.</li>
+ * <li><b>Op-placed givers</b> in {@link GiverStore}: {@code /quest giver set}
+ *     at the block you are looking at.</li>
+ * </ul>
+ *
+ * <p>Standing near a giver whose quest you could take gets you the <em>offer</em>:
+ * an action-bar line plus a chat line with Accept and Info, once per cooldown
+ * so it does not nag. Right-clicking a giver block accepts. Ambient givers
+ * (a biome, a structure, a dimension, a CityWorld lot) offer the moment you
+ * are in that kind of place. Hidden quests are found this way -- a giver
+ * overrides {@code hidden}, that is what hidden is for.</p>
+ */
+public final class Givers {
+
+    /** Data givers, indexed once per server start (registries are frozen). */
+    private static final List<Entry> DATA = new ArrayList<>();
+    private static final Map<String, Identifier> DATA_BLOCKS = new HashMap<>();
+    /** Per player: quest -> game time of the last offer, so a giver does not nag. */
+    private static final Map<UUID, Map<Identifier, Long>> OFFERED = new HashMap<>();
+
+    private record Entry(Identifier id, Quest quest, GiverSpec giver) {}
+
+    public static void index(MinecraftServer server) {
+        DATA.clear();
+        DATA_BLOCKS.clear();
+        QuestEngine.quests(server).listElements().forEach(h -> h.value().giver().ifPresent(g -> {
+            DATA.add(new Entry(h.key().identifier(), h.value(), g));
+            if (g instanceof GiverTypes.Position p) {
+                Identifier dim = p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
+                DATA_BLOCKS.put(dim + "|" + p.at().getX() + "," + p.at().getY() + "," + p.at().getZ(), h.key().identifier());
+            }
+        }));
+        OFFERED.clear();
+    }
+
+    public static int dataCount() {
+        return DATA.size();
+    }
+
+    /** The quest a block offers, from data or from the store. */
+    public static Optional<Identifier> questAt(ServerLevel level, BlockPos pos) {
+        Identifier data = DATA_BLOCKS.get(GiverStore.key(level, pos));
+        if (data != null) return Optional.of(data);
+        return GiverStore.get(level.getServer()).at(level, pos);
+    }
+
+    /** The tracker tick: offer whatever this player is standing near or in. */
+    public static void tick(ServerPlayer player) {
+        MinecraftServer server = player.level().getServer();
+        for (Entry e : DATA) {
+            if (!QuestEngine.available(player, e.id(), e.quest())) continue;
+            if (present(player, e.giver())) offer(player, e.id(), e.quest(), e.giver().describe());
+        }
+        GiverStore store = GiverStore.get(server);
+        if (store.size() > 0) {
+            double r = ChroniclerConfig.GIVER_RADIUS.get();
+            ServerLevel level = player.level();
+            String dim = level.dimension().identifier().toString();
+            for (var entry : store.view().entrySet()) {
+                if (!entry.getKey().startsWith(dim + "|")) continue;
+                BlockPos pos = parse(entry.getKey());
+                if (pos == null || player.blockPosition().distSqr(pos) > r * r) continue;
+                var holder = QuestEngine.quest(server, entry.getValue());
+                if (holder.isEmpty() || !QuestEngine.available(player, entry.getValue(), holder.get().value())) continue;
+                offer(player, entry.getValue(), holder.get().value(),
+                        Lang.fmt("giver.position", "x", pos.getX(), "y", pos.getY(), "z", pos.getZ()));
+            }
+        }
+    }
+
+    private static boolean present(ServerPlayer player, GiverSpec giver) {
+        if (giver instanceof GiverTypes.Position p) {
+            if (p.dimension().isPresent() && !p.dimension().get().equals(player.level().dimension().identifier())) return false;
+            if (p.dimension().isEmpty() && !player.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD)) return false;
+            double r = p.radius();
+            return player.blockPosition().distSqr(p.at()) <= r * r;
+        }
+        if (giver instanceof GiverTypes.InPlace ip) {
+            return Places.isAt(player, ip.place());
+        }
+        return false;
+    }
+
+    /** Say it once per cooldown: the action bar for the moment, a chat line with buttons to act on. */
+    public static void offer(ServerPlayer player, Identifier id, Quest quest, String where) {
+        long now = player.level().getGameTime();
+        long cooldown = ChroniclerConfig.GIVER_COOLDOWN_SECONDS.get() * 20L;
+        Map<Identifier, Long> mine = OFFERED.computeIfAbsent(player.getUUID(), k -> new HashMap<>());
+        Long last = mine.get(id);
+        if (last != null && now - last < cooldown) return;
+        mine.put(id, now);
+        Feedback.actionBar(player, Lang.fmt("msg.offer.bar", "name", quest.name()));
+        Feedback.chatWithButtons(player, Lang.fmt("msg.offer", "name", quest.name(), "where", where),
+                Feedback.button(Lang.get("button.accept"), "/quest accept " + id, Lang.get("button.accept.tip")),
+                Feedback.button(Lang.get("button.info"), "/quest info " + id, Lang.get("button.info.tip")));
+    }
+
+    /** A right-click on a giver block. Returns true if this was one. */
+    public static boolean onUseBlock(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        Optional<Identifier> id = questAt(level, pos);
+        if (id.isEmpty()) return false;
+        Optional<Holder.Reference<Quest>> holder = QuestEngine.quest(level.getServer(), id.get());
+        if (holder.isEmpty()) {
+            Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));
+            return true;
+        }
+        Quest quest = holder.get().value();
+        var log = QuestEngine.journal(player);
+        if (log.isActive(id.get())) {
+            Feedback.chat(player, Lang.fmt("msg.giver.active", "name", quest.name()));
+            QuestEngine.track(player, id.get());
+            return true;
+        }
+        var refusal = QuestEngine.accept(player, id.get());
+        if (refusal.isPresent()) {
+            Feedback.chat(player, Lang.get(switch (refusal.get()) {
+                case ALREADY_COMPLETE -> "msg.giver.done";
+                case LOCKED -> "msg.giver.locked";
+                default -> "msg.refuse.unknown";
+            }));
+        }
+        return true;
+    }
+
+    public static void forget(UUID player) {
+        OFFERED.remove(player);
+    }
+
+    private static BlockPos parse(String key) {
+        try {
+            String[] xyz = key.substring(key.indexOf('|') + 1).split(",");
+            return new BlockPos(Integer.parseInt(xyz[0]), Integer.parseInt(xyz[1]), Integer.parseInt(xyz[2]));
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private Givers() {}
+}

@@ -107,6 +107,18 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+// The most recently built <prefix>*.jar for THIS Minecraft line in a sibling's
+// build/libs, or nothing. Newest by modification time, because version strings
+// do not sort (1.10 < 1.9 as text) and a rebuilt jar keeps its old name.
+def newestJar(String dir, String prefix) {
+    def d = file(dir)
+    if (!d.isDirectory()) return []
+    def tag = "+mc${minecraft_version}.jar"
+    def jars = d.listFiles().findAll { it.name.startsWith(prefix) && it.name.endsWith(tag) && !it.name.contains('-sources') }
+    if (jars.isEmpty()) return []
+    return [jars.max { it.lastModified() }]
+}
+
 dependencies {
     // SnakeYAML powers the YAML front door (config/chronicler/**/*.yml served
     // as a datapack). Embedded jar-in-jar because Minecraft does not ship it.
@@ -120,13 +132,17 @@ dependencies {
 
     // SOFT dependencies: compileOnly, never jarJar'd. Chronicler builds against
     // their APIs and must run with none of them present. Only the guarded
-    // classes under neoforge/compat may import them (see CLAUDE.md). fileTree
-    // so an absent jar leaves the API off the classpath instead of failing
-    // project configuration.
-    compileOnly fileTree(dir: '../SableCraft-Standards/build/libs', include: ['standards-*.jar'])
-    compileOnly fileTree(dir: '../LegendQuest-ReForged/build/libs', include: ['legendquest-*.jar'], exclude: ['*-sources.jar'])
-    compileOnly fileTree(dir: '../ZombieMod/ZombieMod/build/libs', include: ['zombiemod-*.jar'], exclude: ['*-sources.jar'])
-    compileOnly fileTree(dir: '../CityWorld-ReForged/build/libs', include: ['cityworld-*.jar'], exclude: ['*-sources.jar'])
+    // classes under neoforge/compat may import them (see CLAUDE.md).
+    //
+    // The NEWEST built jar of each, not a fileTree of all of them: a tree puts
+    // every version on the classpath and javac takes whichever sorts first,
+    // which is the oldest -- so a method added last week "does not exist" while
+    // the jar that has it sits right beside it. An absent sibling leaves its
+    // API off the classpath rather than failing configuration.
+    compileOnly files(newestJar('../SableCraft-Standards/build/libs', 'standards-'))
+    compileOnly files(newestJar('../LegendQuest-ReForged/build/libs', 'legendquest-'))
+    compileOnly files(newestJar('../ZombieMod/ZombieMod/build/libs', 'zombiemod-'))
+    compileOnly files(newestJar('../CityWorld-ReForged/build/libs', 'cityworld-'))
 }
 
 // Expand mod metadata properties into the generated neoforge.mods.toml.

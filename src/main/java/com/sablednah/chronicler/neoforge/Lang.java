@@ -171,6 +171,34 @@ public final class Lang {
         def("msg.journal.new_player", "{prefix}&7A {term.journal} has been slipped into your pack. Right-click it, or &f/quest journal&7.");
     }
 
+    // --- place.* / giver.* / msg.offer.* : where things are ---
+    static {
+        def("place.lot", "a {lot}");
+        def("place.structure", "a {structure}");
+        def("place.biome", "the {biome}");
+        def("place.dimension", "the {dimension}");
+        def("place.join", " in ");
+        def("place.anywhere", "anywhere");
+        def("giver.position", "the spot at {x}, {y}, {z}");
+        def("giver.position_label", "{label}");
+        def("giver.place", "{place}");
+        def("giver.place_label", "{label}");
+        def("msg.offer", "{prefix}&e{name} &7-- from {where}.");
+        def("msg.offer.bar", "&e{term.quest} on offer: &f{name}");
+        def("msg.giver.active", "{prefix}&7You are already on &f{name}&7. Tracking it.");
+        def("msg.giver.done", "{prefix}&7Nothing more here; that one is done.");
+        def("msg.giver.locked", "{prefix}&7Not yet. Something has to happen first -- /quest info tells you what.");
+        def("msg.giver.gone", "{prefix}&7This used to offer '{id}', which no longer exists. Tell an admin.");
+        def("msg.giver.set", "{prefix}&7That block now offers &f{name}&7.");
+        def("msg.giver.removed", "{prefix}&7That block offers nothing now.");
+        def("msg.giver.none_here", "{prefix}&7That block was not a giver.");
+        def("msg.giver.look", "{prefix}&7Look at a block within reach first.");
+        def("msg.giver.list.header", "{prefix}&f{count} op-placed giver(s):");
+        def("msg.giver.list.entry", "  &7{key} &f-> {quest}");
+        def("cmd.info.giver", "&7From: &f{where}");
+        def("journal.available.where", "&8{where}");
+    }
+
     // --- obj.* / rew.* : generated from the data so text and rule agree ---
     static {
         def("obj.kill", "Kill {count} x {target}");

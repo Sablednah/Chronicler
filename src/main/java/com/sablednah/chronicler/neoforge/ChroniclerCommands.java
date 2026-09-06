@@ -85,7 +85,12 @@ public final class ChroniclerCommands {
                 .then(Commands.literal("track").then(questArg().executes(ChroniclerCommands::track)))
                 .then(Commands.literal("journal")
                         .executes(ChroniclerCommands::journalOpen)
-                        .then(Commands.literal("give").executes(ChroniclerCommands::journalGive)));
+                        .then(Commands.literal("give").executes(ChroniclerCommands::journalGive)))
+                .then(Commands.literal("giver")
+                        .requires(ChroniclerPermissions::isAdmin)
+                        .then(Commands.literal("set").then(questArg().executes(ChroniclerCommands::giverSet)))
+                        .then(Commands.literal("remove").executes(ChroniclerCommands::giverRemove))
+                        .then(Commands.literal("list").executes(ChroniclerCommands::giverList)));
     }
 
     private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, ?> questArg() {
@@ -237,6 +242,7 @@ public final class ChroniclerCommands {
         lines.add(Lang.fmt("cmd.info.chapter", "chapter", chapterName));
         q.description().ifPresent(d -> lines.add(Lang.fmt("cmd.info.description", "description", d)));
         if (QuestEngine.scopeOf(source.getServer(), q) == QuestScope.PARTY) lines.add(Lang.get("cmd.info.scope_party"));
+        q.giver().ifPresent(g -> lines.add(Lang.fmt("cmd.info.giver", "where", g.describe())));
         if (!q.requires().isEmpty()) {
             lines.add(Lang.fmt("cmd.info.requires", "list", q.requires().stream()
                     .map(r -> quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, r))
@@ -314,6 +320,52 @@ public final class ChroniclerCommands {
     private static int journalGiveTo(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         Journal.give(EntityArgument.getPlayer(ctx, "player"));
         return 1;
+    }
+
+    // --- /quest giver set|remove|list (admin) ---
+
+    private static java.util.Optional<net.minecraft.core.BlockPos> lookedAt(ServerPlayer player) {
+        var hit = player.pick(6.0D, 0.0F, false);
+        if (hit instanceof net.minecraft.world.phys.BlockHitResult b
+                && hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            return java.util.Optional.of(b.getBlockPos());
+        }
+        return java.util.Optional.empty();
+    }
+
+    private static int giverSet(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Holder.Reference<Quest> holder = resolveQuest(ctx);
+        var pos = lookedAt(player);
+        if (pos.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.giver.look"));
+            return 0;
+        }
+        GiverStore.get(player.level().getServer()).set(player.level(), pos.get(), holder.key().identifier());
+        Feedback.chat(player, Lang.fmt("msg.giver.set", "name", holder.value().name()));
+        return 1;
+    }
+
+    private static int giverRemove(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        var pos = lookedAt(player);
+        if (pos.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.giver.look"));
+            return 0;
+        }
+        boolean had = GiverStore.get(player.level().getServer()).remove(player.level(), pos.get());
+        Feedback.chat(player, Lang.get(had ? "msg.giver.removed" : "msg.giver.none_here"));
+        return had ? 1 : 0;
+    }
+
+    private static int giverList(CommandContext<CommandSourceStack> ctx) {
+        GiverStore store = GiverStore.get(ctx.getSource().getServer());
+        List<String> lines = new ArrayList<>();
+        lines.add(Lang.fmt("msg.giver.list.header", "count", store.size()));
+        store.view().forEach((k, v) -> lines.add(Lang.fmt("msg.giver.list.entry", "key", k, "quest", v)));
+        String joined = String.join("\n", lines);
+        ctx.getSource().sendSuccess(() -> Feedback.colored(joined), false);
+        return store.size();
     }
 
     // --- /quest log ---

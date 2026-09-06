@@ -90,8 +90,23 @@ public final class ObjectiveTypes {
         }
     }
 
+    /** Be in a kind of place -- a biome, a structure, a dimension, a CityWorld lot. Latching. */
+    public record At(Place place, Optional<String> label) implements ObjectiveSpec {
+        public static final MapCodec<At> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Place.MAP_CODEC.forGetter(At::place),
+                Codec.STRING.optionalFieldOf("label").forGetter(At::label))
+                .apply(i, At::new));
+
+        @Override public MapCodec<At> codec() { return MAP_CODEC; }
+        @Override public int required() { return 1; }
+        @Override public String describe() {
+            return Lang.fmt("obj.visit_label", "label", label.orElseGet(() -> place.describe()));
+        }
+    }
+
     static {
         TYPES.register("kill", Kill.MAP_CODEC);
+        TYPES.register("place", At.MAP_CODEC);
         TYPES.register("reputation", Reputation.MAP_CODEC);
         TYPES.register("collect", Collect.MAP_CODEC);
         TYPES.register("visit", Visit.MAP_CODEC);

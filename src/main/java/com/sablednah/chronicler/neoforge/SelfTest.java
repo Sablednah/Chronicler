@@ -152,6 +152,45 @@ public final class SelfTest {
             check("fifth kill completes things_in_the_dark", QuestEngine.journal(solo).isComplete(things));
             check("iron sword reward landed", Trackers.count(solo, Identifier.parse("minecraft:iron_sword")) == 1);
 
+            // Places: the world names them, we never spell coordinates.
+            Identifier overworld = net.minecraft.world.level.Level.OVERWORLD.identifier();
+            check("place: empty place is anywhere", Places.isAt(solo, new com.sablednah.chronicler.data.Place(
+                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty())));
+            check("place: overworld dimension matches", Places.isAt(solo, new com.sablednah.chronicler.data.Place(
+                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.of(overworld), java.util.Optional.empty())));
+            check("place: nether dimension does not", !Places.isAt(solo, new com.sablednah.chronicler.data.Place(
+                    java.util.Optional.empty(), java.util.Optional.empty(),
+                    java.util.Optional.of(net.minecraft.world.level.Level.NETHER.identifier()), java.util.Optional.empty())));
+            check("place: the overworld biome tag matches here", Places.isAt(solo, new com.sablednah.chronicler.data.Place(
+                    java.util.Optional.of("#minecraft:is_overworld"), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty())));
+            check("place: a lot needs CityWorld", Lots.describe(server.overworld(), solo.blockPosition()).isEmpty()
+                    || Places.isAt(solo, new com.sablednah.chronicler.data.Place(java.util.Optional.empty(),
+                            java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.of("zzz-no-such-lot"))) == false);
+            check("hot_foot ships hidden with a place giver", quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, ChroniclerIds.of("hot_foot")))
+                    .map(h -> h.value().hidden() && h.value().giver().isPresent()).orElse(false));
+
+            // Givers: an op-placed block offers, right-click accepts, the store round-trips.
+            QuestEngine.journal(solo).clear();
+            GiverStore store = GiverStore.get(server);
+            net.minecraft.core.BlockPos here = solo.blockPosition();
+            store.set(server.overworld(), here, firstSteps);
+            check("giver store answers", Givers.questAt(server.overworld(), here).map(firstSteps::equals).orElse(false));
+            // The four oak logs are still in the pack, so accepting completes it on the spot.
+            check("giver block: right-click accepts (and the logs finish it)", Givers.onUseBlock(solo, server.overworld(), here)
+                    && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));
+            check("giver block: again while active is not an error", Givers.onUseBlock(solo, server.overworld(), here));
+            check("giver block: a plain block is not a giver", !Givers.onUseBlock(solo, server.overworld(), here.above(40)));
+            check("giver store removes", store.remove(server.overworld(), here) && Givers.questAt(server.overworld(), here).isEmpty());
+            QuestEngine.journal(solo).clear();
+            QuestEngine.journal(solo).complete(firstSteps);
+            QuestEngine.journal(solo).complete(things);
+
+            // The API other mods call.
+            check("api: hot_foot is available (hidden only hides the list)", com.sablednah.chronicler.api.Quests.isAvailable(solo, ChroniclerIds.of("hot_foot")));
+            check("api: offer returns true for an available quest", com.sablednah.chronicler.api.Quests.offer(solo, ChroniclerIds.of("hot_foot"), "a test"));
+            check("api: accept", com.sablednah.chronicler.api.Quests.accept(solo, ChroniclerIds.of("hot_foot")).isEmpty()
+                    && com.sablednah.chronicler.api.Quests.isActive(solo, ChroniclerIds.of("hot_foot")));
+
             // Party pooling: two players, targets scaled, one quest between them.
             FakePlayer a = fake(server, "ChroniclerTestB");
             FakePlayer b = fake(server, "ChroniclerTestC");
@@ -197,6 +236,8 @@ public final class SelfTest {
         command(server, source, "quest sideways", false);
         command(server, source, "quest accept first_steps", false); // console has no journal
         command(server, source, "quest journal", false);             // console has no hands
+        command(server, source, "quest giver list", true);
+        command(server, source, "quest giver set first_steps", false); // console has no eyes
 
         Chronicler.LOGGER.info("=== Chronicler SelfTest: {} PASSED, {} FAILED ===", passed, FAILURES.size());
         for (String f : FAILURES) {

@@ -29,6 +29,7 @@ import net.minecraft.resources.Identifier;
  * @param order       sort key within the chapter
  * @param scope       solo or party; absent means the chapter's default
  * @param scale       for a party quest, multiply each target by party size
+ * @param giver       who or where offers it; absent means the list and the journal only
  */
 public record Quest(
         String name,
@@ -41,7 +42,8 @@ public record Quest(
         boolean hidden,
         int order,
         Optional<QuestScope> scope,
-        boolean scale) {
+        boolean scale,
+        Optional<GiverSpec> giver) {
 
     public static final Codec<Quest> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.fieldOf("name").forGetter(Quest::name),
@@ -54,6 +56,7 @@ public record Quest(
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(Quest::hidden),
             Codec.INT.optionalFieldOf("order", 0).forGetter(Quest::order),
             QuestScope.CODEC.optionalFieldOf("scope").forGetter(Quest::scope),
-            Codec.BOOL.optionalFieldOf("scale", true).forGetter(Quest::scale))
+            Codec.BOOL.optionalFieldOf("scale", true).forGetter(Quest::scale),
+            GiverTypes.CODEC.optionalFieldOf("giver").forGetter(Quest::giver))
             .apply(i, Quest::new));
 }

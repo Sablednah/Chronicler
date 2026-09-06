@@ -20,6 +20,8 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.BooleanValue SHOW_HIDDEN_TO_OPS;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> PARTY_GROUP_KINDS;
     public static final ModConfigSpec.BooleanValue JOURNAL_GIVE_NEW;
+    public static final ModConfigSpec.IntValue GIVER_COOLDOWN_SECONDS;
+    public static final ModConfigSpec.DoubleValue GIVER_RADIUS;
 
     static {
         BUILDER.comment("Announcements").push("announce");
@@ -52,6 +54,17 @@ public final class ChroniclerConfig {
                 .comment("Hand every player a journal the first time they join. Once per player,",
                         "not per world visit; /quest journal give replaces a lost one either way.")
                 .define("giveToNewPlayers", true);
+        BUILDER.pop();
+
+        BUILDER.comment("Givers -- where quests are offered").push("givers");
+        GIVER_COOLDOWN_SECONDS = BUILDER
+                .comment("Seconds before the same giver offers the same quest to the same player",
+                        "again. Standing next to a lectern should not fill the chat.")
+                .defineInRange("offerCooldownSeconds", 300, 5, 86400);
+        GIVER_RADIUS = BUILDER
+                .comment("How close (blocks) to an op-placed giver a player must be to hear the",
+                        "offer. Data-declared givers carry their own radius.")
+                .defineInRange("radius", 4.0D, 1.0D, 64.0D);
         BUILDER.pop();
 
         BUILDER.comment("Party quests").push("party");
