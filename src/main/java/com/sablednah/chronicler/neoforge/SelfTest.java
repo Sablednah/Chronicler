@@ -205,6 +205,33 @@ public final class SelfTest {
             check("stages: finishing beat 2 completes the quest", QuestEngine.journal(solo).isComplete(night));
             check("stages: shield reward landed", Trackers.count(solo, Identifier.parse("minecraft:shield")) == 1);
 
+            // Flags and availability.
+            FlagStore flags = FlagStore.get(server);
+            flags.set("SelfTest_Flag", true);
+            check("world flag set and normalised", flags.is("selftest_flag") && FlagStore.cached() == flags);
+            var needsFlag = new com.sablednah.chronicler.data.Availability(java.util.Optional.empty(), java.util.Optional.empty(),
+                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Map.of("other_flag", true), java.util.Map.of(), java.util.Map.of());
+            check("availability: an unset flag is unmet", !Conditions.unmet(solo, needsFlag).isEmpty());
+            flags.set("other_flag", true);
+            check("availability: the flag set is met", Conditions.unmet(solo, needsFlag).isEmpty());
+            flags.set("other_flag", false);
+            flags.set("selftest_flag", false);
+            check("world flags clear", flags.view().isEmpty() || !flags.is("selftest_flag"));
+            QuestEngine.journal(solo).setFlag("Chose_Mercy", true);
+            check("player flag set and normalised", QuestEngine.journal(solo).hasFlag("chose_mercy"));
+            var needsKarma = new com.sablednah.chronicler.data.Availability(java.util.Optional.of(20L), java.util.Optional.empty(),
+                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Map.of(), java.util.Map.of(), java.util.Map.of());
+            if (Sheet.available()) {
+                long before = Sheet.karma(solo).orElse(0L);
+                check("character: karma reward lands", Sheet.addKarma(solo, 5) && Sheet.karma(solo).orElse(0L) == before + 5);
+                Sheet.addKarma(solo, -5);
+                check("character: level answers", Sheet.level(solo).isPresent());
+                Chronicler.LOGGER.info("SelfTest: character sheets via {}", Sheet.providerName());
+            } else {
+                check("availability: karma needs a character system", Conditions.unmet(solo, needsKarma).size() == 1);
+                check("character rewards without a sheet are clean no-ops", !Sheet.addKarma(solo, 5));
+            }
+
             // The API other mods call.
             check("api: hot_foot is available (hidden only hides the list)", com.sablednah.chronicler.api.Quests.isAvailable(solo, ChroniclerIds.of("hot_foot")));
             check("api: offer returns true for an available quest", com.sablednah.chronicler.api.Quests.offer(solo, ChroniclerIds.of("hot_foot"), "a test"));
@@ -257,6 +284,8 @@ public final class SelfTest {
         command(server, source, "quest accept first_steps", false); // console has no journal
         command(server, source, "quest journal", false);             // console has no hands
         command(server, source, "quest giver list", true);
+        command(server, source, "chronicler flag list", true);
+        command(server, source, "chronicler flag set selftest_cmd_flag false", true);
         command(server, source, "quest giver set first_steps", false); // console has no eyes
 
         Chronicler.LOGGER.info("=== Chronicler SelfTest: {} PASSED, {} FAILED ===", passed, FAILURES.size());

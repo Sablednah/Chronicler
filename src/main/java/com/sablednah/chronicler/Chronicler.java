@@ -77,10 +77,11 @@ public class Chronicler {
             optionalIntegration("reputation", com.sablednah.chronicler.neoforge.compat.StandardsReputation::register);
         }
         if (ModList.get().isLoaded("legendquest")) {
-            LOGGER.info("Chronicler: LegendQuest detected (character seams not yet consumed)");
+            optionalIntegration("character", com.sablednah.chronicler.neoforge.compat.LegendQuestCharacter::register);
         }
         if (ModList.get().isLoaded("zombiemod")) {
-            LOGGER.info("Chronicler: ZombieMod detected (genus/horde seams not yet consumed)");
+            // What we OFFER: a spawn condition on a world flag, into their public registry.
+            optionalIntegration("spawn conditions", com.sablednah.chronicler.neoforge.compat.ZombieModConditions::register);
         }
         if (ModList.get().isLoaded("cityworld")) {
             optionalIntegration("lots", com.sablednah.chronicler.neoforge.compat.CityWorldLots::register);

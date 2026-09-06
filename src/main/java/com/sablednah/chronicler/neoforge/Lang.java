@@ -54,6 +54,7 @@ public final class Lang {
         def("term.reward", "Reward");
         def("term.rewards", "Rewards");
         def("term.journal", "Journal");
+        def("term.karma", "karma");
     }
 
     // --- prefix and status ---
@@ -133,6 +134,7 @@ public final class Lang {
         def("cmd.status.config", "&7Config: &f{path}");
         def("cmd.status.siblings", "&7Siblings: &f{list}");
         def("cmd.status.party", "&7Party membership: &f{provider}");
+        def("cmd.status.character", "&7Character sheets: &f{provider}");
     }
 
     // --- journal.* : the written book. Parchment, so dark colours; every page an unstyled root ---
@@ -211,6 +213,36 @@ public final class Lang {
         def("rew.xp", "{amount} experience");
         def("rew.money", "{amount} coin");
         def("rew.money_paid", "{amount}");
+        def("rew.karma_up", "+{amount} {term.karma}");
+        def("rew.karma_down", "-{amount} {term.karma}");
+        def("rew.class_xp", "{amount} class experience");
+        def("rew.levels", "{count} level(s)");
+        def("rew.skill_points", "{count} skill point(s)");
+        def("rew.flag_set", "Something changes.");
+        def("rew.flag_clear", "Something changes back.");
+        def("rew.flag_world_set", "The world remembers: {flag}");
+        def("rew.flag_world_clear", "The world forgets: {flag}");
+        def("obj.flag", "Wait for: {flag}");
+        def("msg.reward.no_character", "  &7({line}, but nothing on this server keeps character sheets)");
+        def("msg.reward.no_class", "  &7({line}, but you have no class yet -- pick one and it will count next time)");
+        def("msg.refuse.conditions", "{prefix}&7Not yet:");
+        def("msg.refuse.condition_line", "  &7- &f{line}");
+        def("cond.no_character", "needs a character system this server does not have");
+        def("cond.no_reputation", "needs a reputation system this server does not have");
+        def("cond.karma_min", "{term.karma} of at least {value}");
+        def("cond.karma_max", "{term.karma} of at most {value}");
+        def("cond.level_min", "level {value} or above");
+        def("cond.level_max", "level {value} or below");
+        def("cond.flag_on", "the world must know: {flag}");
+        def("cond.flag_off", "the world must not know: {flag}");
+        def("cond.player_flag_on", "you must have: {flag}");
+        def("cond.player_flag_off", "you must not have: {flag}");
+        def("cond.reputation", "standing of at least {value} with {standing}");
+        def("cmd.info.needs", "&7Needs: &f{line}");
+        def("msg.flag.set", "{prefix}&7World flag &f{flag}&7 is now &f{value}&7.");
+        def("msg.flag.list.header", "{prefix}&f{count} world flag(s) set:");
+        def("msg.flag.list.entry", "  &7- &f{flag}");
+        def("msg.flag.list.none", "{prefix}&7No world flags are set.");
         def("rew.title", "A moment.");
         def("rew.message", "A word.");
         def("rew.spawn", "Company.");

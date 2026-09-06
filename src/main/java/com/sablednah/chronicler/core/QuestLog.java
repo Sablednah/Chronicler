@@ -77,7 +77,8 @@ public final class QuestLog {
             Codec.unboundedMap(Identifier.CODEC, Codec.INT)
                     .optionalFieldOf("completed", Map.of()).forGetter(l -> l.completed),
             Identifier.CODEC.optionalFieldOf("tracked").forGetter(l -> Optional.ofNullable(l.tracked)),
-            Codec.BOOL.optionalFieldOf("journal_given", false).forGetter(l -> l.journalGiven))
+            Codec.BOOL.optionalFieldOf("journal_given", false).forGetter(l -> l.journalGiven),
+            Codec.STRING.listOf().optionalFieldOf("flags", List.of()).forGetter(l -> List.copyOf(l.flags)))
             .apply(i, QuestLog::new));
 
     private final Map<Identifier, Entry> active;
@@ -85,14 +86,17 @@ public final class QuestLog {
     private Identifier tracked;
     /** Has this player ever been handed the journal item? Once, not per world-join. */
     private boolean journalGiven;
+    /** The player's own flags -- choices made, things seen. */
+    private final java.util.Set<String> flags = new java.util.LinkedHashSet<>();
 
     public QuestLog() {
-        this(Map.of(), Map.of(), Optional.empty(), false);
+        this(Map.of(), Map.of(), Optional.empty(), false, List.of());
     }
 
     private QuestLog(Map<Identifier, Entry> active, Map<Identifier, Integer> completed, Optional<Identifier> tracked,
-            boolean journalGiven) {
+            boolean journalGiven, List<String> flags) {
         this.journalGiven = journalGiven;
+        this.flags.addAll(flags);
         this.active = new LinkedHashMap<>();
         active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets, v.stage)));
         this.completed = new LinkedHashMap<>(completed);
@@ -142,6 +146,15 @@ public final class QuestLog {
 
     public void track(Identifier quest) { tracked = quest; }
 
+    public boolean hasFlag(String name) { return flags.contains(name.trim().toLowerCase(java.util.Locale.ROOT)); }
+
+    public void setFlag(String name, boolean value) {
+        String key = name.trim().toLowerCase(java.util.Locale.ROOT);
+        if (value) flags.add(key); else flags.remove(key);
+    }
+
+    public java.util.Set<String> flags() { return Collections.unmodifiableSet(flags); }
+
     public boolean journalGiven() { return journalGiven; }
 
     public void markJournalGiven() { journalGiven = true; }
@@ -152,6 +165,7 @@ public final class QuestLog {
         completed.clear();
         tracked = null;
         journalGiven = false;
+        flags.clear();
     }
 
     public Map<Identifier, Entry> activeView() { return Collections.unmodifiableMap(active); }

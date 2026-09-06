@@ -27,5 +27,13 @@
 - Stages: ordered beats with narration, per-beat objectives and
   `on_enter` / `on_complete` effects; `title`, `message` and `spawn` effects;
   `{x}` `{y}` `{z}` in commands. Night Watch, a two-beat built-in quest.
+- Conditions: `availability` on a quest (karma / level through LegendQuest,
+  world and player flags, reputation), with the unmet lines told to the
+  player. World flags in SavedData, player flags in the journal, `flag`
+  reward and objective, `/chronicler flag`.
+- LegendQuest seam: `karma`, `class_xp`, `levels`, `skill_points` rewards
+  through its own API; karma and level availability.
+- ZombieMod seam, the other direction: a `chronicler:flag` spawn condition
+  registered into ZombieMod, so a questline can quiet a district.
 - Reputation: `reputation` reward and objective through Standards' new
   `api/reputation` (ships in Standards 1.5.0); a clean no-op on older builds.

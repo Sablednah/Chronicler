@@ -32,6 +32,7 @@ import net.minecraft.resources.Identifier;
  * @param giver       who or where offers it; absent means the list and the journal only
  * @param stages      ordered beats; when present, {@code objectives} is ignored and
  *                    each stage carries its own
+ * @param availability karma, level, flags and standing the player must meet
  */
 public record Quest(
         String name,
@@ -46,7 +47,8 @@ public record Quest(
         Optional<QuestScope> scope,
         boolean scale,
         Optional<GiverSpec> giver,
-        List<Stage> stages) {
+        List<Stage> stages,
+        Optional<Availability> availability) {
 
     /** The quest as beats: its stages, or one stage made of its objectives. Never empty. */
     public List<Stage> beats() {
@@ -72,6 +74,7 @@ public record Quest(
             QuestScope.CODEC.optionalFieldOf("scope").forGetter(Quest::scope),
             Codec.BOOL.optionalFieldOf("scale", true).forGetter(Quest::scale),
             GiverTypes.CODEC.optionalFieldOf("giver").forGetter(Quest::giver),
-            Stage.CODEC.listOf().optionalFieldOf("stages", List.of()).forGetter(Quest::stages))
+            Stage.CODEC.listOf().optionalFieldOf("stages", List.of()).forGetter(Quest::stages),
+            Availability.CODEC.optionalFieldOf("availability").forGetter(Quest::availability))
             .apply(i, Quest::new));
 }

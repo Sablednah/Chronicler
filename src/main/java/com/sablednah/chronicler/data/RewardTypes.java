@@ -120,8 +120,58 @@ public final class RewardTypes {
         @Override public String describe() { return Lang.get("rew.spawn"); }
     }
 
+    /** LegendQuest karma. */
+    public record Karma(long delta) implements RewardSpec {
+        public static final MapCodec<Karma> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.LONG.fieldOf("delta").forGetter(Karma::delta)).apply(i, Karma::new));
+        @Override public MapCodec<Karma> codec() { return MAP_CODEC; }
+        @Override public String describe() {
+            return Lang.fmt(delta >= 0 ? "rew.karma_up" : "rew.karma_down", "amount", Math.abs(delta));
+        }
+    }
+
+    /** LegendQuest class XP, into the main class. */
+    public record ClassXp(long amount) implements RewardSpec {
+        public static final MapCodec<ClassXp> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.LONG.fieldOf("amount").forGetter(ClassXp::amount)).apply(i, ClassXp::new));
+        @Override public MapCodec<ClassXp> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.fmt("rew.class_xp", "amount", amount); }
+    }
+
+    /** Whole LegendQuest levels. */
+    public record Levels(int count) implements RewardSpec {
+        public static final MapCodec<Levels> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.INT.fieldOf("count").forGetter(Levels::count)).apply(i, Levels::new));
+        @Override public MapCodec<Levels> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.fmt("rew.levels", "count", count); }
+    }
+
+    /** LegendQuest skill points. */
+    public record SkillPoints(int count) implements RewardSpec {
+        public static final MapCodec<SkillPoints> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.INT.fieldOf("count").forGetter(SkillPoints::count)).apply(i, SkillPoints::new));
+        @Override public MapCodec<SkillPoints> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.fmt("rew.skill_points", "count", count); }
+    }
+
+    /** Set or clear a flag -- the world's, or the player's own. */
+    public record Flag(String name, boolean value, boolean player) implements RewardSpec {
+        public static final MapCodec<Flag> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.STRING.fieldOf("name").forGetter(Flag::name),
+                Codec.BOOL.optionalFieldOf("value", true).forGetter(Flag::value),
+                Codec.BOOL.optionalFieldOf("player", false).forGetter(Flag::player))
+                .apply(i, Flag::new));
+        @Override public MapCodec<Flag> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get(value ? "rew.flag_set" : "rew.flag_clear"); }
+    }
+
     static {
         TYPES.register("item", Item.MAP_CODEC);
+        TYPES.register("karma", Karma.MAP_CODEC);
+        TYPES.register("class_xp", ClassXp.MAP_CODEC);
+        TYPES.register("levels", Levels.MAP_CODEC);
+        TYPES.register("skill_points", SkillPoints.MAP_CODEC);
+        TYPES.register("flag", Flag.MAP_CODEC);
         TYPES.register("title", Title.MAP_CODEC);
         TYPES.register("message", Message.MAP_CODEC);
         TYPES.register("spawn", Spawn.MAP_CODEC);

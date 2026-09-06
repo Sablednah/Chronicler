@@ -69,6 +69,14 @@ public final class ChroniclerCommands {
                         .requires(ChroniclerPermissions::isAdmin)
                         .then(Commands.argument("player", EntityArgument.player())
                                 .executes(ChroniclerCommands::journalGiveTo)))
+                .then(Commands.literal("flag")
+                        .requires(ChroniclerPermissions::isAdmin)
+                        .then(Commands.literal("list").executes(ChroniclerCommands::flagList))
+                        .then(Commands.literal("set")
+                                .then(Commands.argument("flag", com.mojang.brigadier.arguments.StringArgumentType.string())
+                                        .executes(ctx -> flagSet(ctx, true))
+                                        .then(Commands.argument("value", com.mojang.brigadier.arguments.BoolArgumentType.bool())
+                                                .executes(ctx -> flagSet(ctx, com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "value")))))))
                 .then(Commands.literal("reset")
                         .requires(ChroniclerPermissions::isAdmin)
                         .then(Commands.argument("player", EntityArgument.player())
@@ -176,7 +184,7 @@ public final class ChroniclerCommands {
                 Quest q = h.value();
                 if (q.hidden() && !seeHidden) continue;
                 Identifier id = h.key().identifier();
-                String status = statusOf(q, id, log);
+                String status = player == null ? statusOf(q, id, log) : statusOf(player, q, id);
                 if (q.hidden()) status = Lang.get("status.hidden") + " " + status;
                 if (q.repeatable()) status = status + " " + Lang.get("status.repeatable");
                 if (QuestEngine.scopeOf(source.getServer(), q) == QuestScope.PARTY) status = status + " " + Lang.get("status.party");
@@ -218,6 +226,13 @@ public final class ChroniclerCommands {
         return locked ? Lang.get("status.locked") : Lang.get("status.available");
     }
 
+    private static String statusOf(ServerPlayer player, Quest q, Identifier id) {
+        QuestLog log = QuestEngine.journal(player);
+        if (log.isActive(id)) return Lang.get("status.active");
+        if (log.isComplete(id) && !q.repeatable()) return Lang.get("status.complete");
+        return QuestEngine.available(player, id, q) ? Lang.get("status.available") : Lang.get("status.locked");
+    }
+
     private static String shortId(Identifier id, Registry<Quest> quests) {
         long sharing = quests.keySet().stream().filter(o -> o.getPath().equals(id.getPath())).count();
         return sharing == 1 ? id.getPath() : id.toString();
@@ -243,6 +258,9 @@ public final class ChroniclerCommands {
         q.description().ifPresent(d -> lines.add(Lang.fmt("cmd.info.description", "description", d)));
         if (QuestEngine.scopeOf(source.getServer(), q) == QuestScope.PARTY) lines.add(Lang.get("cmd.info.scope_party"));
         q.giver().ifPresent(g -> lines.add(Lang.fmt("cmd.info.giver", "where", g.describe())));
+        if (player != null) {
+            QuestEngine.unmet(player, q).forEach(line -> lines.add(Lang.fmt("cmd.info.needs", "line", line)));
+        }
         if (!q.requires().isEmpty()) {
             lines.add(Lang.fmt("cmd.info.requires", "list", q.requires().stream()
                     .map(r -> quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, r))
@@ -284,11 +302,18 @@ public final class ChroniclerCommands {
         Identifier id = resolveQuest(ctx).key().identifier();
         var refusal = QuestEngine.accept(player, id);
         if (refusal.isEmpty()) return 1;
+        if (refusal.get() == QuestEngine.Refusal.CONDITIONS) {
+            Feedback.chat(player, Lang.get("msg.refuse.conditions"));
+            QuestEngine.quest(player.level().getServer(), id).ifPresent(h ->
+                    QuestEngine.unmet(player, h.value()).forEach(line ->
+                            Feedback.chat(player, Lang.fmt("msg.refuse.condition_line", "line", line))));
+            return 0;
+        }
         Feedback.chat(player, Lang.get(switch (refusal.get()) {
             case UNKNOWN -> "msg.refuse.unknown";
             case ALREADY_ACTIVE -> "msg.refuse.active";
             case ALREADY_COMPLETE -> "msg.refuse.complete";
-            case LOCKED -> "msg.refuse.locked";
+            default -> "msg.refuse.locked";
         }));
         return 0;
     }
@@ -428,9 +453,31 @@ public final class ChroniclerCommands {
                         "objectives", ObjectiveTypes.TYPES.size(), "rewards", RewardTypes.TYPES.size()),
                 Lang.fmt("cmd.status.config", "path", FMLPaths.CONFIGDIR.get().resolve(Chronicler.MODID).toAbsolutePath()),
                 Lang.fmt("cmd.status.siblings", "list", siblings.isEmpty() ? "none" : String.join(", ", siblings)),
-                Lang.fmt("cmd.status.party", "provider", Party.providerName()));
+                Lang.fmt("cmd.status.party", "provider", Party.providerName()),
+                Lang.fmt("cmd.status.character", "provider", Sheet.providerName()));
         source.sendSuccess(() -> Feedback.colored(lines), false);
         return quests.size();
+    }
+
+    private static int flagSet(CommandContext<CommandSourceStack> ctx, boolean value) {
+        String flag = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "flag");
+        FlagStore.get(ctx.getSource().getServer()).set(flag, value);
+        ctx.getSource().sendSuccess(() -> Feedback.colored(Lang.fmt("msg.flag.set", "flag", FlagStore.normalise(flag), "value", value)), true);
+        return 1;
+    }
+
+    private static int flagList(CommandContext<CommandSourceStack> ctx) {
+        var flags = FlagStore.get(ctx.getSource().getServer()).view();
+        if (flags.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Feedback.colored(Lang.get("msg.flag.list.none")), false);
+            return 0;
+        }
+        List<String> lines = new ArrayList<>();
+        lines.add(Lang.fmt("msg.flag.list.header", "count", flags.size()));
+        flags.keySet().stream().sorted().forEach(f -> lines.add(Lang.fmt("msg.flag.list.entry", "flag", f)));
+        String joined = String.join("\n", lines);
+        ctx.getSource().sendSuccess(() -> Feedback.colored(joined), false);
+        return flags.size();
     }
 
     private static int reset(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

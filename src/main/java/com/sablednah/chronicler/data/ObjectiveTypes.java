@@ -104,8 +104,21 @@ public final class ObjectiveTypes {
         }
     }
 
+    /** Wait for a flag -- the world's, or the player's own -- to hold. Polled; latching. */
+    public record FlagSet(String name, boolean value, boolean player) implements ObjectiveSpec {
+        public static final MapCodec<FlagSet> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.STRING.fieldOf("name").forGetter(FlagSet::name),
+                Codec.BOOL.optionalFieldOf("value", true).forGetter(FlagSet::value),
+                Codec.BOOL.optionalFieldOf("player", false).forGetter(FlagSet::player))
+                .apply(i, FlagSet::new));
+        @Override public MapCodec<FlagSet> codec() { return MAP_CODEC; }
+        @Override public int required() { return 1; }
+        @Override public String describe() { return Lang.fmt("obj.flag", "flag", Lang.pretty(name)); }
+    }
+
     static {
         TYPES.register("kill", Kill.MAP_CODEC);
+        TYPES.register("flag", FlagSet.MAP_CODEC);
         TYPES.register("place", At.MAP_CODEC);
         TYPES.register("reputation", Reputation.MAP_CODEC);
         TYPES.register("collect", Collect.MAP_CODEC);

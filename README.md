@@ -9,7 +9,7 @@ Built to sit beside [LegendQuest ReForged](https://github.com/Sablednah/LegendQu
 [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) — and
 needs none of them.
 
-**Status: engine + journal + givers + stages (0.1.0, unreleased).** Quests load from datapacks
+**Status: engine + journal + givers + stages + conditions (0.1.0, unreleased).** Quests load from datapacks
 and YAML, can be accepted, are measured (kills, items held, places reached),
 complete with a title card and pay out. The journal is a written book with a
 page per quest and clickable links, handed to every new player. Party quests pool progress across a party when
@@ -61,15 +61,33 @@ stages:
     objectives: [ { type: kill, target: minecraft:zombie, count: 2 } ]
 ```
 
+A quest can carry **availability** conditions beyond `requires`:
+
+```yaml
+availability:
+  karma_min: 20          # LegendQuest karma (also karma_max, level_min, level_max)
+  flags: { bridge_repaired: true }     # world flags a questline set
+  player_flags: { chose_mercy: true }  # this player's own choices
+  reputation: { survivors: 10 }        # Standards 1.5.0 standing
+```
+
+**World flags** are named facts a quest sets (`{ type: flag, name: bridge_repaired }`
+as a reward or effect; `player: true` for the player's own) and anything can
+read. ZombieMod genus files can gate spawning on one with
+`{ "type": "chronicler:flag", "flag": "hospital_cleared", "value": false }`, so
+finishing a questline changes what spawns. `/chronicler flag set|list` for admins.
+
 Objective types today: `kill` (an entity id, a `#tag`, `any`, or a ZombieMod
 genus id), `collect` (`consume: false` to only require carrying), `visit`
 (`x`/`z`, optional `y`, `radius`, `dimension`, a `label` for the text), `place`
-(`biome` / `structure` / `dimension` / `lot`, any combination). Reward
+(`biome` / `structure` / `dimension` / `lot`, any combination), `flag`
+(wait for a flag), `reputation` (`standing` + `at_least`). Reward
 types: `item`, `command` (`{player}` substituted, run with gamemaster
 permission), `xp`, `money` (through Standards' economy; says so if there is
 none), `reputation` (`standing` + `delta`, through Standards 1.5.0's
-reputation seam; says so if there is none), and the effects `title`,
-`message` (`action_bar: true` for the bar) and `spawn`. Commands substitute
+reputation seam; says so if there is none), `karma`, `class_xp`, `levels` and `skill_points` through LegendQuest (say so
+without it), `flag`, and the effects `title`, `message` (`action_bar: true`
+for the bar) and `spawn`. Commands substitute
 `{player}`, `{uuid}`, `{quest}`, `{x}`, `{y}`, `{z}`. A `reputation` objective
 (`standing` + `at_least`) waits on a standing. A chapter carries `scope: solo | party` and `main: true`; a quest may
 override `scope`. Every word a player sees lives in
@@ -91,6 +109,7 @@ override `scope`. Every word a player sees lives in
 | `/chronicler reload` | `chronicler.admin` or op 2 — messages only |
 | `/chronicler status` | `chronicler.admin` or op 2 |
 | `/chronicler journal <player>` | `chronicler.admin` or op 2 — hand someone a journal |
+| `/chronicler flag set <flag> [true\|false]` / `list` | `chronicler.admin` or op 2 — world flags |
 | `/chronicler reset <player>` | `chronicler.admin` or op 2 — wipe a journal |
 
 ## Building

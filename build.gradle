@@ -110,13 +110,17 @@ configurations {
 // The most recently built <prefix>*.jar for THIS Minecraft line in a sibling's
 // build/libs, or nothing. Newest by modification time, because version strings
 // do not sort (1.10 < 1.9 as text) and a rebuilt jar keeps its old name.
+// Falls back to ./libs (gitignored) for a sibling whose build/libs has no jar
+// for this line -- ZombieMod builds 1.21.11 elsewhere; copy the instance's jar in.
 def newestJar(String dir, String prefix) {
-    def d = file(dir)
-    if (!d.isDirectory()) return []
     def tag = "+mc${minecraft_version}.jar"
-    def jars = d.listFiles().findAll { it.name.startsWith(prefix) && it.name.endsWith(tag) && !it.name.contains('-sources') }
-    if (jars.isEmpty()) return []
-    return [jars.max { it.lastModified() }]
+    for (String candidate : [dir, 'libs']) {
+        def d = file(candidate)
+        if (!d.isDirectory()) continue
+        def jars = d.listFiles().findAll { it.name.startsWith(prefix) && it.name.endsWith(tag) && !it.name.contains('-sources') }
+        if (!jars.isEmpty()) return [jars.max { it.lastModified() }]
+    }
+    return []
 }
 
 dependencies {

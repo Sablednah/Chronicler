@@ -114,6 +114,17 @@ public final class Trackers {
             @Override
             public boolean latching(ObjectiveTypes.At spec) { return true; }
         });
+        register(ObjectiveTypes.FlagSet.class, new Tracker<ObjectiveTypes.FlagSet>() {
+            @Override
+            public OptionalInt poll(ServerPlayer player, ObjectiveTypes.FlagSet spec) {
+                boolean set = spec.player()
+                        ? QuestEngine.journal(player).hasFlag(spec.name())
+                        : FlagStore.get(player.level().getServer()).is(spec.name());
+                return OptionalInt.of(set == spec.value() ? 1 : 0);
+            }
+            @Override
+            public boolean latching(ObjectiveTypes.FlagSet spec) { return true; }
+        });
         register(ObjectiveTypes.Reputation.class, new Tracker<ObjectiveTypes.Reputation>() {
             @Override
             public OptionalInt poll(ServerPlayer player, ObjectiveTypes.Reputation spec) {

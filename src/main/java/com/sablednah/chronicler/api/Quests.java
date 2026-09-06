@@ -26,7 +26,7 @@ import net.minecraft.server.level.ServerPlayer;
 public final class Quests {
 
     /** Why an accept was refused. Mirrors the engine's. */
-    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED }
+    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS }
 
     /** Offer a quest to a player as if a giver had: action bar + chat with Accept/Info. Cooldown applies. */
     public static boolean offer(ServerPlayer player, Identifier quest, String where) {
@@ -52,6 +52,15 @@ public final class Quests {
     public static boolean isAvailable(ServerPlayer player, Identifier quest) {
         var holder = QuestEngine.quest(player.level().getServer(), quest);
         return holder.isPresent() && QuestEngine.available(player, quest, holder.get().value());
+    }
+
+    /** World flags: what a questline has changed. */
+    public static boolean flag(ServerPlayer player, String name) {
+        return com.sablednah.chronicler.neoforge.FlagStore.get(player.level().getServer()).is(name);
+    }
+
+    public static void setFlag(ServerPlayer player, String name, boolean value) {
+        com.sablednah.chronicler.neoforge.FlagStore.get(player.level().getServer()).set(name, value);
     }
 
     public static Optional<Quest> quest(ServerPlayer player, Identifier quest) {

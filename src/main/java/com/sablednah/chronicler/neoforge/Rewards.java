@@ -103,6 +103,28 @@ public final class Rewards {
             Feedback.chat(player, Lang.fmt("msg.reward.given", "line", line + band));
         });
 
+        register(RewardTypes.Karma.class, (player, r, questId, quest) -> character(player, r,
+                Sheet.addKarma(player, r.delta())));
+        register(RewardTypes.ClassXp.class, (player, r, questId, quest) -> character(player, r,
+                Sheet.addClassXp(player, r.amount())));
+        register(RewardTypes.Levels.class, (player, r, questId, quest) -> character(player, r,
+                Sheet.addLevels(player, r.count())));
+        register(RewardTypes.SkillPoints.class, (player, r, questId, quest) -> character(player, r,
+                Sheet.grantSkillPoints(player, r.count())));
+
+        register(RewardTypes.Flag.class, (player, r, questId, quest) -> {
+            if (r.player()) {
+                QuestEngine.journal(player).setFlag(r.name(), r.value());
+            } else {
+                FlagStore.get(player.level().getServer()).set(r.name(), r.value());
+                Chronicler.LOGGER.info("Chronicler: world flag {} = {} (quest {} by {})",
+                        FlagStore.normalise(r.name()), r.value(), questId, player.getName().getString());
+            }
+            // Flags are plumbing, not payment: say nothing unless it was the world's.
+            if (!r.player()) Feedback.chat(player, Lang.fmt("msg.reward.given", "line",
+                    Lang.fmt(r.value() ? "rew.flag_world_set" : "rew.flag_world_clear", "flag", Lang.pretty(r.name()))));
+        });
+
         register(RewardTypes.Command.class, (player, r, questId, quest) -> {
             String expanded = r.command()
                     .replace("{player}", player.getName().getString())
@@ -165,6 +187,16 @@ public final class Rewards {
                 level.addFreshEntity(spawned);
             }
         });
+    }
+
+    private static void character(ServerPlayer player, RewardSpec r, boolean landed) {
+        if (landed) {
+            Feedback.chat(player, Lang.fmt("msg.reward.given", "line", r.describe()));
+        } else if (!Sheet.available()) {
+            Feedback.chat(player, Lang.fmt("msg.reward.no_character", "line", r.describe()));
+        } else {
+            Feedback.chat(player, Lang.fmt("msg.reward.no_class", "line", r.describe()));
+        }
     }
 
     public static void init() {}

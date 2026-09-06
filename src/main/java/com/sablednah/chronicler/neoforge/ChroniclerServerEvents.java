@@ -36,6 +36,11 @@ public final class ChroniclerServerEvents {
         String chapterNames = String.join(", ", chapters.keySet().stream()
                 .map(id -> id.getPath()).sorted().toList());
         Givers.index(server);
+        FlagStore flags = FlagStore.get(server); // primes the cache the spawn condition reads off-thread
+        if (!flags.view().isEmpty()) {
+            Chronicler.LOGGER.info("Chronicler: {} world flag(s) set: {}", flags.view().size(),
+                    String.join(", ", flags.view().keySet()));
+        }
         Chronicler.LOGGER.info("Chronicler: {} chapter(s) [{}], {} quest(s) loaded, {} with givers; {} op-placed giver(s)",
                 chapters.size(), chapterNames, quests.size(), Givers.dataCount(), GiverStore.get(server).size());
 

@@ -46,7 +46,7 @@ import net.minecraft.world.entity.LivingEntity;
  */
 public final class QuestEngine {
 
-    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED }
+    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS }
 
     // --- lookups ---
 
@@ -97,7 +97,15 @@ public final class QuestEngine {
         for (Identifier r : quest.requires()) {
             if (!log.isComplete(r)) return Optional.of(Refusal.LOCKED);
         }
+        if (quest.availability().isPresent() && !Conditions.unmet(player, quest.availability().get()).isEmpty()) {
+            return Optional.of(Refusal.CONDITIONS);
+        }
         return Optional.empty();
+    }
+
+    /** The availability lines a player does not meet, for the refusal message. */
+    public static List<String> unmet(ServerPlayer player, Quest quest) {
+        return quest.availability().map(a -> Conditions.unmet(player, a)).orElse(List.of());
     }
 
     public static boolean available(ServerPlayer player, Identifier id, Quest quest) {
