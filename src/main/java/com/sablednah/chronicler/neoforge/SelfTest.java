@@ -187,8 +187,8 @@ public final class SelfTest {
 
             // Stages: Night Watch is two beats; the first a torch, the second two kills.
             Identifier night = ChroniclerIds.of("night_watch");
-            check("night_watch has two beats", quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, night))
-                    .map(h -> h.value().beats().size() == 2).orElse(false));
+            check("night_watch has three beats", quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, night))
+                    .map(h -> h.value().beats().size() == 3).orElse(false));
             check("stages: accept", QuestEngine.accept(solo, night).isEmpty());
             check("stages: starts on beat 1", QuestEngine.journal(solo).entry(night).stage == 0);
             solo.getInventory().add(new ItemStack(Items.TORCH, 1));
@@ -202,8 +202,14 @@ public final class SelfTest {
             QuestEngine.onKill(solo, zombie);
             check("stages: a kill counts on beat 2 only", QuestEngine.journal(solo).entry(night).progress.get(0) == 1);
             QuestEngine.onKill(solo, zombie);
-            check("stages: finishing beat 2 completes the quest", QuestEngine.journal(solo).isComplete(night));
+            QuestLog.Entry decide = QuestEngine.journal(solo).entry(night);
+            check("choices: finishing beat 2 lands on the decision, not the end", decide != null && decide.stage == 2
+                    && !QuestEngine.journal(solo).isComplete(night));
+            check("choices: an option out of range is refused", !QuestEngine.choose(solo, night, 3));
+            check("choices: option 1 ends the quest", QuestEngine.choose(solo, night, 1) && QuestEngine.journal(solo).isComplete(night));
+            check("choices: the effects fired (player flag)", QuestEngine.journal(solo).hasFlag("gave_the_torch"));
             check("stages: shield reward landed", Trackers.count(solo, Identifier.parse("minecraft:shield")) == 1);
+            check("choices: nothing to choose once done", !QuestEngine.choose(solo, night, 1));
 
             // Flags and availability.
             FlagStore flags = FlagStore.get(server);
@@ -237,6 +243,14 @@ public final class SelfTest {
             check("api: offer returns true for an available quest", com.sablednah.chronicler.api.Quests.offer(solo, ChroniclerIds.of("hot_foot"), "a test"));
             check("api: accept", com.sablednah.chronicler.api.Quests.accept(solo, ChroniclerIds.of("hot_foot")).isEmpty()
                     && com.sablednah.chronicler.api.Quests.isActive(solo, ChroniclerIds.of("hot_foot")));
+
+            // Deadlines: a clock in the past fails the beat on the next poll; with no fall-back, the quest is dropped.
+            QuestLog.Entry hf = QuestEngine.journal(solo).entry(ChroniclerIds.of("hot_foot"));
+            hf.deadlineAt = server.overworld().getGameTime() - 1;
+            check("deadline: clock shows 0:00 when out", QuestEngine.clock(hf.deadlineAt - server.overworld().getGameTime()).equals("0:00"));
+            QuestEngine.poll(solo);
+            check("deadline: running out abandons a quest with no fall-back", !QuestEngine.journal(solo).isActive(ChroniclerIds.of("hot_foot")));
+            check("deadline: clock formats minutes", QuestEngine.clock(20L * 299).equals("4:59"));
 
             // Party pooling: two players, targets scaled, one quest between them.
             FakePlayer a = fake(server, "ChroniclerTestB");
@@ -283,6 +297,7 @@ public final class SelfTest {
         command(server, source, "quest sideways", false);
         command(server, source, "quest accept first_steps", false); // console has no journal
         command(server, source, "quest journal", false);             // console has no hands
+        command(server, source, "quest choose first_steps 1", false); // console has no journal
         command(server, source, "quest giver list", true);
         command(server, source, "chronicler flag list", true);
         command(server, source, "chronicler flag set selftest_cmd_flag false", true);

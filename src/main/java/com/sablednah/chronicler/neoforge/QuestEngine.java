@@ -151,14 +151,141 @@ public final class QuestEngine {
             Feedback.chat(player, Lang.get("msg.party.solo_notice"));
         }
         // A joiner lands mid-story: narrate the beat they are on, not the first.
-        for (ServerPlayer m : started) {
-            QuestLog.Entry e = journal(m).entry(id);
-            Stage stage = quest.beats().get(Math.min(e.stage, quest.beats().size() - 1));
-            narrate(m, quest, stage, e.stage);
-            if (existing == null) effects(m, stage.onEnter(), id, quest);
+        if (existing != null) {
+            for (ServerPlayer m : started) {
+                QuestLog.Entry e = journal(m).entry(id);
+                Stage stage = quest.beats().get(Math.min(e.stage, quest.beats().size() - 1));
+                narrate(m, quest, stage, e.stage);
+                if (stage.isDecision()) presentChoices(m, id, quest, stage);
+            }
+        } else {
+            enterStage(started, id, quest, 0, false);
         }
         for (ServerPlayer m : members) poll(m);
         return Optional.empty();
+    }
+
+    /**
+     * Begin a beat for everyone sharing it: narration, the clock, on_enter, and
+     * -- for a decision beat -- the choices. {@code jump} means the counters
+     * need setting (a choice or a failure sent us here); a fresh accept has
+     * them already.
+     */
+    private static void enterStage(List<ServerPlayer> members, Identifier id, Quest quest, int index, boolean jump) {
+        List<Stage> beats = quest.beats();
+        if (members.isEmpty() || beats.isEmpty()) return;
+        index = Math.min(Math.max(index, 0), beats.size() - 1);
+        Stage stage = beats.get(index);
+        if (jump) {
+            boolean party = scopeOf(members.getFirst().level().getServer(), quest) == QuestScope.PARTY;
+            int factor = party && quest.scale() ? members.size() : 1;
+            List<Integer> targets = targetsFor(stage.objectives(), factor);
+            for (ServerPlayer m : members) {
+                QuestLog.Entry e = journal(m).entry(id);
+                if (e != null) e.jump(index, targets);
+            }
+        }
+        long deadlineAt = stage.deadline().map(secs -> members.getFirst().level().getGameTime() + secs * 20L).orElse(-1L);
+        for (ServerPlayer m : members) {
+            QuestLog.Entry e = journal(m).entry(id);
+            if (e != null) e.deadlineAt = deadlineAt;
+            narrate(m, quest, stage, index);
+            if (deadlineAt >= 0) Feedback.chat(m, Lang.fmt("msg.deadline.set", "time", clock(stage.deadline().get() * 20L)));
+            effects(m, stage.onEnter(), id, quest);
+            if (stage.isDecision()) presentChoices(m, id, quest, stage);
+        }
+    }
+
+    private static void presentChoices(ServerPlayer player, Identifier id, Quest quest, Stage stage) {
+        Feedback.chat(player, Lang.get("msg.choice.header"));
+        for (int n = 0; n < stage.choices().size(); n++) {
+            String label = stage.choices().get(n).label();
+            Feedback.chatWithButtons(player, Lang.fmt("msg.choice.option", "n", n + 1),
+                    Feedback.button(Lang.fmt("msg.choice.button", "label", label),
+                            "/quest choose " + id + " " + (n + 1), Lang.get("msg.choice.tip")));
+        }
+    }
+
+    /** A player picks option {@code n} (1-based) at the current decision beat. */
+    public static boolean choose(ServerPlayer player, Identifier id, int n) {
+        MinecraftServer server = player.level().getServer();
+        var holder = quest(server, id);
+        QuestLog.Entry e = journal(player).entry(id);
+        if (holder.isEmpty() || e == null) {
+            Feedback.chat(player, Lang.get("msg.not_active"));
+            return false;
+        }
+        Quest quest = holder.get().value();
+        Stage stage = quest.beats().get(Math.min(e.stage, quest.beats().size() - 1));
+        if (!stage.isDecision()) {
+            Feedback.chat(player, Lang.get("msg.choice.none"));
+            return false;
+        }
+        if (n < 1 || n > stage.choices().size()) {
+            Feedback.chat(player, Lang.get("msg.choice.bad"));
+            return false;
+        }
+        com.sablednah.chronicler.data.Choice choice = stage.choices().get(n - 1);
+        List<ServerPlayer> members = new ArrayList<>();
+        for (ServerPlayer m : sharers(player, quest)) {
+            if (journal(m).isActive(id)) members.add(m);
+        }
+        int index = e.stage;
+        for (ServerPlayer m : members) {
+            Feedback.chat(m, Lang.fmt("msg.choice.made", "label", choice.label()));
+            choice.text().ifPresent(t -> Feedback.chat(m, Lang.fmt("msg.choice.text", "text", t)));
+            effects(m, choice.effects(), id, quest);
+            choice.start().ifPresent(other -> accept(m, other));
+        }
+        if (choice.end()) {
+            complete(members, player, id, quest);
+            return true;
+        }
+        int next = choice.next().map(v -> v - 1).orElse(index + 1);
+        if (next >= quest.beats().size()) {
+            complete(members, player, id, quest);
+            return true;
+        }
+        enterStage(members, id, quest, next, true);
+        for (ServerPlayer m : members) {
+            poll(m);
+            if (journal(m).entry(id) != null) showTracker(m, id);
+        }
+        return true;
+    }
+
+    /** The clock ran out on this beat for everyone sharing it. */
+    private static void failStage(ServerPlayer player, Identifier id, Quest quest) {
+        List<ServerPlayer> members = new ArrayList<>();
+        for (ServerPlayer m : sharers(player, quest)) {
+            if (journal(m).isActive(id)) members.add(m);
+        }
+        if (members.isEmpty()) return;
+        QuestLog.Entry lead = journal(members.getFirst()).entry(id);
+        Stage stage = quest.beats().get(Math.min(lead.stage, quest.beats().size() - 1));
+        for (ServerPlayer m : members) {
+            Feedback.chat(m, Lang.fmt("msg.deadline.failed", "name", quest.name()));
+            effects(m, stage.onFail(), id, quest);
+        }
+        if (stage.fail().isPresent()) {
+            enterStage(members, id, quest, stage.fail().get() - 1, true);
+            for (ServerPlayer m : members) {
+                poll(m);
+                if (journal(m).entry(id) != null) showTracker(m, id);
+            }
+            return;
+        }
+        for (ServerPlayer m : members) {
+            journal(m).abandon(id);
+            Feedback.chat(m, Lang.get("msg.deadline.abandoned"));
+        }
+        Chronicler.LOGGER.info("Chronicler: {} ran out of time on {}", player.getName().getString(), id);
+    }
+
+    /** "4:59" from ticks. */
+    public static String clock(long ticks) {
+        long secs = Math.max(0, ticks) / 20L;
+        return (secs / 60) + ":" + String.format("%02d", secs % 60);
     }
 
     private static void narrate(ServerPlayer player, Quest quest, Stage stage, int index) {
@@ -220,9 +347,16 @@ public final class QuestEngine {
             QuestLog.Entry e = log.entry(id);
             if (holder.isEmpty() || e == null) continue;
             Quest quest = holder.get().value();
+            if (e.deadlineAt >= 0 && player.level().getGameTime() >= e.deadlineAt) {
+                failStage(player, id, quest);
+                continue;
+            }
             List<ServerPlayer> members = sharers(player, quest);
             List<ObjectiveSpec> objectives = currentObjectives(quest, e);
             int stage = e.stage;
+            if (e.deadlineAt >= 0 && log.tracked().map(id::equals).orElse(true)) {
+                showTracker(player, id); // the countdown is worth a line a second
+            }
             for (int n = 0; n < objectives.size(); n++) {
                 ObjectiveSpec spec = objectives.get(n);
                 var tracker = Trackers.of(spec);
@@ -262,7 +396,7 @@ public final class QuestEngine {
         if (!changed) return;
         for (ServerPlayer m : members) {
             QuestLog.Entry e = journal(m).entry(id);
-            if (e != null && e.done()) {
+            if (e != null && e.done() && !e.targets.isEmpty()) {
                 finishStage(m, id, quest);
                 return;
             }
@@ -296,16 +430,10 @@ public final class QuestEngine {
         for (ServerPlayer m : members) effects(m, stage.onComplete(), id, quest);
 
         if (index + 1 < beats.size()) {
-            Stage next = beats.get(index + 1);
-            boolean party = scopeOf(player.level().getServer(), quest) == QuestScope.PARTY;
-            int factor = party && quest.scale() ? members.size() : 1;
-            List<Integer> targets = targetsFor(next.objectives(), factor);
             for (ServerPlayer m : members) {
-                journal(m).entry(id).advance(targets);
                 Feedback.chat(m, Lang.fmt("msg.stage.done", "stage", index + 1, "stages", beats.size()));
-                narrate(m, quest, next, index + 1);
-                effects(m, next.onEnter(), id, quest);
             }
+            enterStage(members, id, quest, index + 1, true);
             for (ServerPlayer m : members) {
                 poll(m);
                 if (journal(m).entry(id) != null) showTracker(m, id);
@@ -361,10 +489,12 @@ public final class QuestEngine {
         if (log.tracked().map(t -> !t.equals(id)).orElse(false)) return;
         QuestLog.Entry e = log.entry(id);
         if (e == null || n >= e.targets.size()) return;
-        Feedback.actionBar(player, Lang.fmt("msg.progress",
+        String key = e.deadlineAt >= 0 ? "msg.deadline.bar" : "msg.progress";
+        Feedback.actionBar(player, Lang.fmt(key,
                 "quest", quest.name(),
                 "objective", currentObjectives(quest, e).get(n).describe(),
-                "done", e.progress.get(n), "target", e.targets.get(n)));
+                "done", e.progress.get(n), "target", e.targets.get(n),
+                "time", clock(e.deadlineAt - player.level().getGameTime())));
     }
 
     public static void showTracker(ServerPlayer player, Identifier id) {

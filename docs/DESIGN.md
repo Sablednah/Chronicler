@@ -303,7 +303,7 @@ spike comes first because that is how this family works
 | 4 | **Stages** — ordered beats, per-stage text and effects, `on_enter` spawn/command. *Built 2026-09-07 (overnight): stage index in the journal, party-aware advance, `title`/`message`/`spawn` effects.* | quests tell a story |
 | 5 | **Standards + LegendQuest seams** — `money`, `class_xp`, `karma` rewards; karma/level availability; party-shared progress. *Built 2026-09-07 (overnight); reputation too.* | RPG consequences |
 | 6 | **CityWorld + ZombieMod seams** — `lot` objectives, ambient givers, `genus_kill`, horde/boss triggers, our spawn condition into their registry. *Mostly built 2026-09-07: `lot` places, genus kill targets, `chronicler:flag` spawn condition. Not yet: horde/boss triggers (ZombieMod fires no events; needs a hook there).* | the city and the zombies are quest-aware |
-| 7 | **Choices, flags, reputation, deadlines** — *flags and reputation built 2026-09-07; choices and deadlines still open.* | branching and the world pushing back |
+| 7 | **Choices, flags, reputation, deadlines** — *all built 2026-09-07 (overnight).* | branching and the world pushing back |
 | 8 | **ZARP questline** as a shipped datapack; fantasy prologue built in | the reason for all of it |
 | 9 | **Modded-client sugar** — HUD tracker, journal screen | prettier, never required |
 | 10 | **Version branches** `mc26.1` / `mc26.2`, CI matrix, store copy | the treadmill |

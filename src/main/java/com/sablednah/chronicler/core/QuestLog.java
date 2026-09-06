@@ -33,26 +33,36 @@ public final class QuestLog {
         public final List<Integer> targets;
         /** Which beat of the quest these counters belong to. */
         public int stage;
+        /** Game time by which this beat must be done, or -1 for no clock. */
+        public long deadlineAt = -1;
 
         Entry(List<Integer> progress, List<Integer> targets) {
-            this(progress, targets, 0);
+            this(progress, targets, 0, -1L);
         }
 
-        Entry(List<Integer> progress, List<Integer> targets, int stage) {
+        Entry(List<Integer> progress, List<Integer> targets, int stage, long deadlineAt) {
             this.progress = new ArrayList<>(progress);
             this.targets = new ArrayList<>(targets);
             this.stage = stage;
+            this.deadlineAt = deadlineAt;
         }
 
         static final Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.listOf().fieldOf("progress").forGetter(e -> e.progress),
                 Codec.INT.listOf().fieldOf("targets").forGetter(e -> e.targets),
-                Codec.INT.optionalFieldOf("stage", 0).forGetter(e -> e.stage))
+                Codec.INT.optionalFieldOf("stage", 0).forGetter(e -> e.stage),
+                Codec.LONG.optionalFieldOf("deadline_at", -1L).forGetter(e -> e.deadlineAt))
                 .apply(i, Entry::new));
 
         /** Move to the next beat: fresh counters against its targets. */
         public void advance(List<Integer> nextTargets) {
-            stage++;
+            jump(stage + 1, nextTargets);
+        }
+
+        /** Move to any beat: fresh counters, clock cleared. */
+        public void jump(int toStage, List<Integer> nextTargets) {
+            stage = toStage;
+            deadlineAt = -1;
             progress.clear();
             targets.clear();
             targets.addAll(nextTargets);
@@ -98,7 +108,7 @@ public final class QuestLog {
         this.journalGiven = journalGiven;
         this.flags.addAll(flags);
         this.active = new LinkedHashMap<>();
-        active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets, v.stage)));
+        active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets, v.stage, v.deadlineAt)));
         this.completed = new LinkedHashMap<>(completed);
         this.tracked = tracked.orElse(null);
     }
@@ -121,7 +131,7 @@ public final class QuestLog {
 
     /** Start a quest at somebody else's progress -- a party member joining a quest already under way. */
     public void startFrom(Identifier quest, Entry other) {
-        active.put(quest, new Entry(other.progress, other.targets, other.stage));
+        active.put(quest, new Entry(other.progress, other.targets, other.stage, other.deadlineAt));
         if (tracked == null) tracked = quest;
     }
 

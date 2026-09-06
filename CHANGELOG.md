@@ -27,6 +27,10 @@
 - Stages: ordered beats with narration, per-beat objectives and
   `on_enter` / `on_complete` effects; `title`, `message` and `spawn` effects;
   `{x}` `{y}` `{z}` in commands. Night Watch, a two-beat built-in quest.
+- Choices: decision beats with clickable options, effects, `next` / `end`,
+  `start` another quest; `/quest choose`. Deadlines: a timed beat with a
+  countdown, `on_fail`, and a fall-back stage or abandonment. Night Watch
+  ends on a choice.
 - Conditions: `availability` on a quest (karma / level through LegendQuest,
   world and player flags, reputation), with the unmet lines told to the
   player. World flags in SavedData, player flags in the journal, `flag`

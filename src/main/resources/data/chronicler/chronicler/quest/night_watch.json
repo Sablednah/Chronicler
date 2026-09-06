@@ -26,6 +26,28 @@
       "on_complete": [
         { "type": "message", "text": "&7Quiet again. For now." }
       ]
+    },
+    {
+      "text": "A stranger steps into the light and asks for your torch. Theirs went out hours ago.",
+      "choices": [
+        {
+          "label": "Give it",
+          "text": "They nod once and are gone into the dark.",
+          "effects": [
+            { "type": "karma", "delta": 5 },
+            { "type": "flag", "name": "gave_the_torch", "player": true }
+          ],
+          "end": true
+        },
+        {
+          "label": "Keep it",
+          "text": "They do not argue. You do not see them again.",
+          "effects": [
+            { "type": "karma", "delta": -5 }
+          ],
+          "end": true
+        }
+      ]
     }
   ],
   "rewards": [

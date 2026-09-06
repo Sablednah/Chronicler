@@ -196,6 +196,14 @@ public final class Journal {
                         page.append(Feedback.colored(Lang.fmt("journal.quest.text", "text", t))).append("\n"));
             }
             page.append("\n");
+            com.sablednah.chronicler.data.Stage beat = q.beats().get(Math.min(e.stage, q.beats().size() - 1));
+            if (beat.isDecision()) {
+                page.append(Feedback.colored(Lang.get("journal.quest.decision"))).append("\n");
+                for (int n = 0; n < beat.choices().size(); n++) {
+                    page.append(commandLink(Lang.fmt("journal.choice", "label", beat.choices().get(n).label()),
+                            "/quest choose " + id + " " + (n + 1), Lang.get("msg.choice.tip"))).append("\n");
+                }
+            }
             for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
                 String line = objectives.get(n).describe();
                 page.append(Feedback.colored(e.objectiveDone(n)

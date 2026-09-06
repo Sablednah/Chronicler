@@ -9,7 +9,7 @@ Built to sit beside [LegendQuest ReForged](https://github.com/Sablednah/LegendQu
 [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) — and
 needs none of them.
 
-**Status: engine + journal + givers + stages + conditions (0.1.0, unreleased).** Quests load from datapacks
+**Status: engine + journal + givers + stages + conditions + choices (0.1.0, unreleased).** Quests load from datapacks
 and YAML, can be accepted, are measured (kills, items held, places reached),
 complete with a title card and pay out. The journal is a written book with a
 page per quest and clickable links, handed to every new player. Party quests pool progress across a party when
@@ -77,6 +77,20 @@ read. ZombieMod genus files can gate spawning on one with
 `{ "type": "chronicler:flag", "flag": "hospital_cleared", "value": false }`, so
 finishing a questline changes what spawns. `/chronicler flag set|list` for admins.
 
+A stage with `choices` and no objectives is a **decision**: the options are
+put to the player as clickable buttons (and in the journal), each with its
+own `text`, `effects`, and either `next: <stage number>`, `end: true`, or
+nothing (the following stage). A stage with a `deadline` (seconds) shows a
+countdown on the action bar and, when it runs out, fires `on_fail` and falls
+back to stage `fail` or drops the quest.
+
+```yaml
+  - text: A stranger asks for your torch.
+    choices:
+      - { label: Give it, effects: [ { type: karma, delta: 5 } ], end: true }
+      - { label: Keep it, effects: [ { type: karma, delta: -5 } ], end: true }
+```
+
 Objective types today: `kill` (an entity id, a `#tag`, `any`, or a ZombieMod
 genus id), `collect` (`consume: false` to only require carrying), `visit`
 (`x`/`z`, optional `y`, `radius`, `dimension`, a `label` for the text), `place`
@@ -103,6 +117,7 @@ override `scope`. Every word a player sees lives in
 | `/quest accept <quest>` | everyone |
 | `/quest abandon <quest>` | everyone |
 | `/quest track <quest>` | everyone — follow it on the action bar |
+| `/quest choose <quest> <n>` | everyone — pick an option at a decision |
 | `/quest journal` | everyone — open the journal book, no item needed |
 | `/quest journal give` | everyone — a (replacement) journal item |
 | `/quest giver set <quest>` / `remove` / `list` | `chronicler.admin` or op 2 — the block you are looking at offers a quest |

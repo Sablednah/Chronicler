@@ -91,6 +91,9 @@ public final class ChroniclerCommands {
                 .then(Commands.literal("accept").then(questArg().executes(ChroniclerCommands::accept)))
                 .then(Commands.literal("abandon").then(questArg().executes(ChroniclerCommands::abandon)))
                 .then(Commands.literal("track").then(questArg().executes(ChroniclerCommands::track)))
+                .then(Commands.literal("choose")
+                        .then(questArg().then(Commands.argument("option", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                                .executes(ChroniclerCommands::choose))))
                 .then(Commands.literal("journal")
                         .executes(ChroniclerCommands::journalOpen)
                         .then(Commands.literal("give").executes(ChroniclerCommands::journalGive)))
@@ -335,6 +338,13 @@ public final class ChroniclerCommands {
         }
         Feedback.chat(player, Lang.get("msg.not_active"));
         return 0;
+    }
+
+    private static int choose(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Identifier id = resolveQuest(ctx).key().identifier();
+        int n = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "option");
+        return QuestEngine.choose(player, id, n) ? 1 : 0;
     }
 
     // --- /quest journal ---
