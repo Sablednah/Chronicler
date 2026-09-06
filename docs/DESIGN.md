@@ -120,10 +120,24 @@ mechanisms already exist next door:
 
 Not every quest is picked up from a giver. Some **arrive**:
 
-- **Ambient**: entering a CityWorld lot type for the first time (`lot:
-  hospital`, `context: industrial`) offers a quest on the action bar. The
-  city becomes a quest board without a single coordinate written down —
-  CityWorld's API answers "what is this place" for any chunk, generated or not.
+- **Ambient**: entering a *place* for the first time offers a quest on the
+  action bar. Places are anything the world already knows how to name, so no
+  coordinate is ever written down:
+  - a **CityWorld lot** (`lot: hospital`, `context: industrial`) — the city
+    becomes a quest board; CityWorld's API answers "what is this place" for
+    any chunk, generated or not;
+  - a **biome** (`biome: minecraft:mushroom_fields`, or a `#tag`) — "find a
+    mushroom island";
+  - a **vanilla structure** (`structure: minecraft:pillager_outpost`,
+    `minecraft:stronghold`, `minecraft:ancient_city`) — "find the illager
+    outpost", or "the cure needs something from the End" that sends the
+    player through the stronghold portal. CityWorld keeps strongholds, trial
+    chambers and ancient cities on purpose, so these exist in ZARP worlds too;
+  - a **dimension** (`dimension: minecraft:the_end`).
+  All four are one `place` condition with alternatives, checked on the same
+  interval as the `visit` objective, and the same condition doubles as an
+  objective (`type: place`) so "go there" and "you are there, here is a quest"
+  are one mechanism.
 - **Triggered**: a ZombieMod horde ending, a boss phase change, a player death,
   nightfall, a date (ZombieMod has a `date` condition already), a LegendQuest
   level-up, a Factions raid. Chronicler listens; quests declare `trigger:`.
@@ -147,6 +161,28 @@ changes and completions (`Feedback.fanfare`, already written).
 
 A modded client, later, gets a HUD panel and a map pin. Same answers, nicer
 surface — Standards' `CLIENT.md` rule. **Not step 1.**
+
+## Main questline and side quests — the framing
+
+The shape every RPG player already knows: **one main questline** that carries
+the story from the first step to the ending, and **side quests** that arrive
+from the world around it. Chronicler makes that a first-class distinction
+rather than a naming convention:
+
+- A **chapter** is `main: true` or not. Main chapters are the spine; the
+  journal lists them first and the tracker defaults to the main quest when
+  nothing else is tracked.
+- **Side quests** are everything triggered ambiently (a place, a biome, a
+  structure), by a giver you happened to walk past, or by an event. They
+  may feed the main line (`sets flags the main line reads`) but never block
+  it unless a main quest says `requires` on them.
+- **Bounties** are repeatable side quests on a reset clock, offered from a
+  board-style giver (a sign or lectern at the survivor camp): clear a block,
+  fetch medicine, kill *n* of a genus. They are what a server does on day 40,
+  and they pay through Standards' economy so the money loop closes.
+
+So a ZARP player sees: *Main — Find Patient Zero (Act II: The Hospital)*,
+then a handful of side quests they tripped over, then the bounty board.
 
 ## Smaller ideas worth keeping
 
@@ -181,18 +217,18 @@ surface — Standards' `CLIENT.md` rule. **Not step 1.**
 ## Data model (target shape)
 
 ```
-chronicler:chapter   name, description, order, requires[chapters], icon
+chronicler:chapter   name, description, order, requires[chapters], icon, main
 chronicler:quest     name, description, chapter, order
                      giver?          { kind, at?, lot?, label }
                      availability?   { requires[quests], karma_min/max, level_min,
-                                       flags{}, reputation{}, trigger?, repeat? }
+                                       flags{}, reputation{}, trigger?, place?, repeat? }
                      stages[]        { text, objectives[], on_enter[], on_complete[],
                                        choices[]?, deadline?, fail?: stage|quest }
                      rewards[]       on final completion
                      hidden, repeatable, shared
-objective types      kill, collect, visit, interact, craft, advancement, command,
-                     lot (CityWorld), genus_kill (ZombieMod), level (LegendQuest),
-                     flag, reputation, wait
+objective types      kill, collect, visit, place (lot | biome | structure | dimension),
+                     interact, craft, advancement, command, genus_kill (ZombieMod),
+                     level (LegendQuest), flag, reputation, wait
 reward/effect types  item, xp, money, command, karma, class_xp, reputation, flag,
                      spawn, teleport, title, unlock, run_quest
 ```
