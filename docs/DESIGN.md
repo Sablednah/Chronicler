@@ -297,7 +297,7 @@ spike comes first because that is how this family works
 | # | Step | Proves |
 |---|---|---|
 | 0 | **Skeleton** — registries, YAML, commands, journal, self-test. *Done 2026-09-05: builds, boots, self-test 19/19, JSON and YAML content both load.* | content loads, vanilla surface exists |
-| 1 | **The engine** — accept/abandon/track, `kill`/`collect`/`visit` measured on real events, progress on the action bar, completion fanfare, `item`/`xp`/`command`/`money` rewards granted, party pooling via Standards Groups. *Built 2026-09-06; self-test drives it end to end with FakePlayers; not yet played by a human.* | a quest can be played start to finish on a vanilla client |
+| 1 | **The engine** — accept/abandon/track, `kill`/`collect`/`visit` measured on real events, progress on the action bar, completion fanfare, `item`/`xp`/`command`/`money` rewards granted, party pooling via Standards Groups. *Built 2026-09-06; self-test drives it end to end with FakePlayers; play-tested by Sable the same evening, both built-in quests completed.* | a quest can be played start to finish on a vanilla client |
 | 2 | **The book** — `/quest journal` as a written book with clickable links; `[Track]` | the vanilla UI |
 | 3 | **Givers** — lectern / named-stand / block givers, `/quest giver set`, proximity offer | quests live in the world |
 | 4 | **Stages** — ordered beats, per-stage text and effects, `on_enter` spawn/command | quests tell a story |
