@@ -4,6 +4,7 @@
   "chapter": "prologue",
   "order": 1,
   "requires": [ "first_steps" ],
+  "scope": "party",
   "objectives": [
     { "type": "kill", "target": "minecraft:zombie", "count": 5 }
   ],

@@ -1,6 +1,8 @@
 package com.sablednah.chronicler.neoforge;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -45,6 +47,27 @@ public final class Feedback {
                         net.minecraft.sounds.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE),
                 net.minecraft.sounds.SoundSource.PLAYERS,
                 player.getX(), player.getY(), player.getZ(), 1.0F, 1.0F, 0L));
+    }
+
+    /**
+     * A clickable button in chat, e.g. {@code [Accept]} running {@code /quest accept x}.
+     * Plain vanilla components, so it works on an unmodified client -- which is the
+     * whole reason to do it. "How do I accept?" is answered without a client mod, a
+     * tutorial, or any reading. (Standards proved the mechanism on /tpa.)
+     */
+    public static Component button(String label, String command, String tooltip) {
+        return colored(label).copy().withStyle(style -> style
+                .withClickEvent(new ClickEvent.RunCommand(command))
+                .withHoverEvent(new HoverEvent.ShowText(colored(tooltip))));
+    }
+
+    /** A line of text with buttons appended, sent as one message. */
+    public static void chatWithButtons(ServerPlayer player, String text, Component... buttons) {
+        MutableComponent line = colored(text).copy();
+        for (Component b : buttons) {
+            line.append(Component.literal(" ")).append(b);
+        }
+        player.displayClientMessage(line, false);
     }
 
     /**

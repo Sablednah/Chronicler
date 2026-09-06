@@ -65,6 +65,43 @@ public final class Lang {
         def("status.locked", "&8locked");
         def("status.hidden", "&8[hidden]");
         def("status.repeatable", "&7(repeatable)");
+        def("status.tracked", "&b(tracked)");
+        def("status.party", "&d(party)");
+    }
+
+    // --- msg.* : the engine talking ---
+    static {
+        def("msg.accept", "{prefix}&aAccepted: &f{name}");
+        def("msg.accept.party", "{prefix}&a{who} accepted for the party: &f{name}");
+        def("msg.accept.objective", "  &7- &f{line}");
+        def("msg.refuse.unknown", "{prefix}&cNo such {term.quest}.");
+        def("msg.refuse.active", "{prefix}&7You are already on that one. /quest log shows how far.");
+        def("msg.refuse.complete", "{prefix}&7Done already, and it does not repeat.");
+        def("msg.refuse.locked", "{prefix}&7Not yet. Finish what comes before it -- /quest info tells you what.");
+        def("msg.abandon", "{prefix}&7Abandoned: &f{name}&7. It will be there if you change your mind.");
+        def("msg.not_active", "{prefix}&7You are not on that {term.quest}.");
+        def("msg.track", "{prefix}&7Now tracking &f{name}&7.");
+        def("msg.progress", "&e{quest}&7: {objective} &f({done}/{target})");
+        def("msg.objective_done", "{prefix}&a\u2714 &f{line}");
+        def("msg.complete", "{prefix}&6&l{term.quest} complete: &r&f{name}");
+        def("msg.complete.title", "&6&l{name}");
+        def("msg.complete.subtitle", "&e{term.quest} complete");
+        def("msg.reward.given", "  &a+ &f{line}");
+        def("msg.reward.unknown_item", "  &c(a reward names an item this server does not have: {item} -- tell an admin)");
+        def("msg.reward.reputation_none", "  &7({line}, but nothing on this server keeps reputation)");
+        def("msg.reward.reputation_band", " &7-- {standing} now think of you as &f{band}");
+        def("msg.reward.money_none", "  &7(+{amount} coin, but this server has no economy to pay it into)");
+        def("msg.new_available", "{prefix}&eNew {term.quest} available: &f{name}");
+        def("msg.party.solo_notice", "{prefix}&7This is a party {term.quest}, but nothing on this server tracks parties -- so it is yours alone.");
+        def("msg.reset", "{prefix}&7Wiped {player}'s {term.journal}.");
+        def("button.accept", "&a[Accept]");
+        def("button.accept.tip", "Take this {term.quest}");
+        def("button.info", "&7[Info]");
+        def("button.info.tip", "What it asks and what it pays");
+        def("button.track", "&b[Track]");
+        def("button.track.tip", "Follow this one on the action bar");
+        def("button.abandon", "&c[Abandon]");
+        def("button.abandon.tip", "Drop it. Progress is lost.");
     }
 
     // --- cmd.* : command output ---
@@ -84,6 +121,10 @@ public final class Lang {
         def("cmd.info.reward", "  &7- &f{line}");
         def("cmd.info.none", "  &8(none)");
         def("cmd.log.header", "{prefix}&fYour {term.journal}: &e{active} &7in progress, &a{completed} &7complete.");
+        def("cmd.log.quest", "  &f{name} &7{progress}");
+        def("cmd.log.objective", "    &7- {line} &f({done}/{target})");
+        def("cmd.info.progress", "  &7- &f{line} &7({done}/{target})");
+        def("cmd.info.scope_party", "&7Scope: &dparty &7-- progress is shared, targets scale with party size.");
         def("cmd.log.empty", "{prefix}&7Your {term.journal} is empty. /quest list shows what is on offer.");
         def("cmd.unknown_quest", "No {term.quest} called '{id}'. /quest list names them.");
         def("cmd.ambiguous", "More than one {term.quest} is called that: {ids}. Use the full id.");
@@ -91,6 +132,7 @@ public final class Lang {
         def("cmd.status", "{prefix}&f{chapters} {term.chapters}, {quests} {term.quests}, {objectives} objective types, {rewards} reward types.");
         def("cmd.status.config", "&7Config: &f{path}");
         def("cmd.status.siblings", "&7Siblings: &f{list}");
+        def("cmd.status.party", "&7Party membership: &f{provider}");
     }
 
     // --- obj.* / rew.* : generated from the data so text and rule agree ---
@@ -104,6 +146,10 @@ public final class Lang {
         def("rew.command", "Something happens.");
         def("rew.xp", "{amount} experience");
         def("rew.money", "{amount} coin");
+        def("rew.money_paid", "{amount}");
+        def("rew.reputation_up", "+{amount} standing with {standing}");
+        def("rew.reputation_down", "-{amount} standing with {standing}");
+        def("obj.reputation", "Be held in at least {amount} regard by {standing}");
     }
 
     /** Resolve a key to its (term- and prefix-substituted) template. Unknown key = the key, loudly. */

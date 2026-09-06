@@ -5,7 +5,7 @@ so SableCraft Standards' handler and LuckPerms both manage it.
 
 | Node | Default | What it allows |
 |---|---|---|
-| `chronicler.admin` | nobody; **op level 2 also passes** | the `/chronicler` tree (`reload`, `status`) |
+| `chronicler.admin` | nobody; **op level 2 also passes** | the `/chronicler` tree (`reload`, `status`, `reset <player>`) |
 
 Everything under `/quest` is open to every player and carries no node.
 

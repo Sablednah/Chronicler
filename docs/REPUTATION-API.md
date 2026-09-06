@@ -1,8 +1,9 @@
 # Reputation — a proposed Standards seam
 
-**Status: proposal, 2026-09-06. Nothing built anywhere.** Written in
-Chronicler to hand to the Standards session; Standards decides the shape and
-owns the code. Sable's call: reputation is a concept Chronicler *and*
+**Status: BUILT by the Standards session on 2026-09-06**, in
+`SableCraft-Standards` (`api/reputation`, docs in its `REPUTATION-API.md`,
+ships in 1.5.0). This file is the original proposal, kept for the reasoning;
+the differences from what shipped are listed in `DESIGN.md` under decision 2. Sable's call: reputation is a concept Chronicler *and*
 StoryTeller both want to grant, so it belongs in Standards like the economy.
 
 ## What it is

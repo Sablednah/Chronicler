@@ -9,9 +9,11 @@ Built to sit beside [LegendQuest ReForged](https://github.com/Sablednah/LegendQu
 [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) — and
 needs none of them.
 
-**Status: skeleton (0.1.0, unreleased).** Content loads from datapacks and
-YAML, `/quest list` and `/quest info` work, nothing is tracked yet. The design
-and build order are in [docs/DESIGN.md](docs/DESIGN.md).
+**Status: engine (0.1.0, unreleased).** Quests load from datapacks and YAML,
+can be accepted, are measured (kills, items held, places reached), complete
+with a title card and pay out. Party quests pool progress across a party when
+SableCraft Standards is present. The design and build order are in
+[docs/DESIGN.md](docs/DESIGN.md).
 
 ## Writing content
 
@@ -33,8 +35,15 @@ rewards:
   - { type: money, amount: 25 }
 ```
 
-Objective types today: `kill`, `collect`, `visit`. Reward types: `item`,
-`command`, `xp`, `money`. Every word a player sees lives in
+Objective types today: `kill` (an entity id, a `#tag`, `any`, or a ZombieMod
+genus id), `collect` (`consume: false` to only require carrying), `visit`
+(`x`/`z`, optional `y`, `radius`, `dimension`, a `label` for the text). Reward
+types: `item`, `command` (`{player}` substituted, run with gamemaster
+permission), `xp`, `money` (through Standards' economy; says so if there is
+none), `reputation` (`standing` + `delta`, through Standards 1.5.0's
+reputation seam; says so if there is none). A `reputation` objective
+(`standing` + `at_least`) waits on a standing. A chapter carries `scope: solo | party` and `main: true`; a quest may
+override `scope`. Every word a player sees lives in
 `config/chronicler/messages.yml`.
 
 ## Commands
@@ -44,8 +53,12 @@ Objective types today: `kill`, `collect`, `visit`. Reward types: `item`,
 | `/quest list` (`/quests list`) | everyone |
 | `/quest info <quest>` | everyone |
 | `/quest log` | everyone |
+| `/quest accept <quest>` | everyone |
+| `/quest abandon <quest>` | everyone |
+| `/quest track <quest>` | everyone — follow it on the action bar |
 | `/chronicler reload` | `chronicler.admin` or op 2 — messages only |
 | `/chronicler status` | `chronicler.admin` or op 2 |
+| `/chronicler reset <player>` | `chronicler.admin` or op 2 — wipe a journal |
 
 ## Building
 

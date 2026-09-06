@@ -297,7 +297,7 @@ spike comes first because that is how this family works
 | # | Step | Proves |
 |---|---|---|
 | 0 | **Skeleton** — registries, YAML, commands, journal, self-test. *Done 2026-09-05: builds, boots, self-test 19/19, JSON and YAML content both load.* | content loads, vanilla surface exists |
-| 1 | **The engine** — accept/abandon, `kill`/`collect`/`visit` measured on real events, progress on the action bar, completion fanfare, `item`/`xp`/`command` rewards granted | a quest can be played start to finish on a vanilla client |
+| 1 | **The engine** — accept/abandon/track, `kill`/`collect`/`visit` measured on real events, progress on the action bar, completion fanfare, `item`/`xp`/`command`/`money` rewards granted, party pooling via Standards Groups. *Built 2026-09-06; self-test drives it end to end with FakePlayers; not yet played by a human.* | a quest can be played start to finish on a vanilla client |
 | 2 | **The book** — `/quest journal` as a written book with clickable links; `[Track]` | the vanilla UI |
 | 3 | **Givers** — lectern / named-stand / block givers, `/quest giver set`, proximity offer | quests live in the world |
 | 4 | **Stages** — ordered beats, per-stage text and effects, `on_enter` spawn/command | quests tell a story |
@@ -352,10 +352,17 @@ Chronicler's private state. **It becomes a Standards seam**, `api/reputation`,
 in the mould of the economy: a facade other mods call, a store Standards keeps
 (SavedData, so it answers for offline players), named standings created on
 first use (`survivors`, `raiders`, `the_hospital`) with no registry to
-declare. `docs/REPUTATION-API.md` here is the proposal to hand to the Standards
-session; nothing is built until they take it. Until then Chronicler's
-`reputation` reward and condition are a neutral bridge that logs once and
-does nothing, so quest files can be written now.
+declare. `docs/REPUTATION-API.md` here was the proposal; **the Standards session built
+it the same day** (`com.sablednah.standards.api.reputation.Reputation`, ships
+in Standards 1.5.0). Their changes, all accepted: standing names are
+normalised in the facade (lower-cased, trimmed); bands are config and display
+only, never quest logic -- a threshold is a number and `ReputationEvent.crossed(n)`
+is the hook; one provider owns every standing; the clamp lives in the provider;
+zero is stored as absence. `adjust` returns where the value landed, so the
+reward text prints the real movement, not the number in the file. Chronicler's
+`reputation` reward and objective are wired through `neoforge/Rep` and
+`compat/StandardsReputation`, and answer "nothing keeps reputation here"
+without Standards.
 
 ### 3. Quest items: both, tagged invisibly
 

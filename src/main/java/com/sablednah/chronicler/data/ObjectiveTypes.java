@@ -76,8 +76,23 @@ public final class ObjectiveTypes {
         }
     }
 
+    /** Hold a standing of at least {@code at_least} with a group. Polled; not latching. */
+    public record Reputation(String standing, int atLeast) implements ObjectiveSpec {
+        public static final MapCodec<Reputation> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.STRING.fieldOf("standing").forGetter(Reputation::standing),
+                Codec.INT.fieldOf("at_least").forGetter(Reputation::atLeast))
+                .apply(i, Reputation::new));
+
+        @Override public MapCodec<Reputation> codec() { return MAP_CODEC; }
+        @Override public int required() { return Math.max(1, atLeast); }
+        @Override public String describe() {
+            return Lang.fmt("obj.reputation", "amount", atLeast, "standing", Lang.pretty(standing));
+        }
+    }
+
     static {
         TYPES.register("kill", Kill.MAP_CODEC);
+        TYPES.register("reputation", Reputation.MAP_CODEC);
         TYPES.register("collect", Collect.MAP_CODEC);
         TYPES.register("visit", Visit.MAP_CODEC);
     }

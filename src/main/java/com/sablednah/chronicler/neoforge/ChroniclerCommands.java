@@ -17,6 +17,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.sablednah.chronicler.Chronicler;
 import com.sablednah.chronicler.ChroniclerRegistries;
 import com.sablednah.chronicler.core.QuestLog;
+import com.sablednah.chronicler.core.QuestScope;
 import com.sablednah.chronicler.data.Chapter;
 import com.sablednah.chronicler.data.ObjectiveTypes;
 import com.sablednah.chronicler.data.Quest;
@@ -25,9 +26,12 @@ import com.sablednah.chronicler.data.RewardTypes;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
@@ -40,9 +44,8 @@ import net.neoforged.fml.loading.FMLPaths;
  *
  * <p>{@code /quests} is a second literal built from the same tree, not a
  * Brigadier redirect: a redirect node's requirement is ANDed with every child
- * and a redirect ignores children merged into it later -- both bit sibling
- * mods. Each subcommand carries its own bar; the roots carry none, so nothing
- * a player is meant to see is ever behind an op check by accident.</p>
+ * and a redirect ignores children merged into it later. Each subcommand
+ * carries its own bar; the roots carry none.</p>
  */
 public final class ChroniclerCommands {
 
@@ -61,27 +64,30 @@ public final class ChroniclerCommands {
                         .executes(ChroniclerCommands::reload))
                 .then(Commands.literal("status")
                         .requires(ChroniclerPermissions::isAdmin)
-                        .executes(ChroniclerCommands::status)));
+                        .executes(ChroniclerCommands::status))
+                .then(Commands.literal("reset")
+                        .requires(ChroniclerPermissions::isAdmin)
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ChroniclerCommands::reset))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> questTree(String root) {
         return Commands.literal(root)
                 .then(Commands.literal("list").executes(ChroniclerCommands::list))
                 .then(Commands.literal("log").executes(ChroniclerCommands::log))
-                .then(Commands.literal("info")
-                        .then(Commands.argument("quest", ResourceKeyArgument.key(ChroniclerRegistries.QUEST))
-                                .suggests(ChroniclerCommands::suggestQuests)
-                                .executes(ChroniclerCommands::info)));
+                .then(Commands.literal("info").then(questArg().executes(ChroniclerCommands::info)))
+                .then(Commands.literal("accept").then(questArg().executes(ChroniclerCommands::accept)))
+                .then(Commands.literal("abandon").then(questArg().executes(ChroniclerCommands::abandon)))
+                .then(Commands.literal("track").then(questArg().executes(ChroniclerCommands::track)));
+    }
+
+    private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, ?> questArg() {
+        return Commands.argument("quest", ResourceKeyArgument.key(ChroniclerRegistries.QUEST))
+                .suggests(ChroniclerCommands::suggestQuests);
     }
 
     // --- resolution: accept the bare name, report ambiguity, never guess ---
 
-    /**
-     * {@code first_steps} instead of {@code chronicler:first_steps}. An id with
-     * no namespace parses as {@code minecraft:<path>} -- the signal it was
-     * omitted -- so match on path across every namespace. Exact wins; two packs
-     * sharing a short name is reported. (ZombieMod's resolver, via LegendQuest.)
-     */
     private static Holder.Reference<Quest> resolveQuest(CommandContext<CommandSourceStack> ctx)
             throws CommandSyntaxException {
         ResourceKey<Quest> typed = ResourceKeyArgument.getRegistryKey(ctx, "quest",
@@ -126,30 +132,32 @@ public final class ChroniclerCommands {
         Registry<Quest> quests = source.registryAccess().lookupOrThrow(ChroniclerRegistries.QUEST);
         boolean seeHidden = com.sablednah.chronicler.ChroniclerConfig.SHOW_HIDDEN_TO_OPS.get()
                 && ChroniclerPermissions.isAdmin(source);
-        QuestLog log = source.getEntity() instanceof ServerPlayer p ? journal(p) : null;
+        ServerPlayer player = source.getEntity() instanceof ServerPlayer p ? p : null;
+        QuestLog log = player == null ? null : QuestEngine.journal(player);
 
         if (quests.size() == 0) {
             source.sendSuccess(() -> Feedback.colored(Lang.get("cmd.list.empty")), false);
             return 0;
         }
 
-        // Group by chapter, chapters by order then name, quests by order then name.
+        // Main chapters first, then by order, then name.
         Map<Identifier, List<Holder.Reference<Quest>>> byChapter = new TreeMap<>(Comparator
-                .comparingInt((Identifier c) -> chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, c))
+                .comparing((Identifier c) -> !chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, c))
+                        .map(h -> h.value().main()).orElse(false))
+                .thenComparingInt(c -> chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, c))
                         .map(h -> h.value().order()).orElse(Integer.MAX_VALUE))
                 .thenComparing(Identifier::toString));
         quests.listElements().forEach(h -> byChapter
                 .computeIfAbsent(h.value().chapter(), k -> new ArrayList<>()).add(h));
 
-        List<String> lines = new ArrayList<>();
-        lines.add(Lang.get("cmd.list.header"));
+        MutableComponent out = Feedback.colored(Lang.get("cmd.list.header")).copy();
         int shown = 0;
         for (var entry : byChapter.entrySet()) {
             var chapter = chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, entry.getKey()));
-            lines.add(chapter.map(h -> Lang.fmt("cmd.list.chapter",
+            out.append("\n").append(Feedback.colored(chapter.map(h -> Lang.fmt("cmd.list.chapter",
                             "name", h.value().name(),
                             "description", h.value().description().orElse("")))
-                    .orElseGet(() -> Lang.fmt("cmd.list.orphan_chapter", "id", entry.getKey())));
+                    .orElseGet(() -> Lang.fmt("cmd.list.orphan_chapter", "id", entry.getKey()))));
             entry.getValue().sort(Comparator.comparingInt((Holder.Reference<Quest> h) -> h.value().order())
                     .thenComparing(h -> h.key().identifier().toString()));
             for (var h : entry.getValue()) {
@@ -159,13 +167,35 @@ public final class ChroniclerCommands {
                 String status = statusOf(q, id, log);
                 if (q.hidden()) status = Lang.get("status.hidden") + " " + status;
                 if (q.repeatable()) status = status + " " + Lang.get("status.repeatable");
-                lines.add(Lang.fmt("cmd.list.quest", "name", q.name(), "id", shortId(id, quests), "status", status));
+                if (QuestEngine.scopeOf(source.getServer(), q) == QuestScope.PARTY) status = status + " " + Lang.get("status.party");
+                if (log != null && log.tracked().map(id::equals).orElse(false)) status = status + " " + Lang.get("status.tracked");
+                out.append("\n").append(Feedback.colored(Lang.fmt("cmd.list.quest",
+                        "name", q.name(), "id", shortId(id, quests), "status", status)));
+                if (player != null) {
+                    for (Component b : buttonsFor(player, id, q)) out.append(" ").append(b);
+                }
                 shown++;
             }
         }
-        String joined = String.join("\n", lines);
-        source.sendSuccess(() -> Feedback.colored(joined), false);
+        final Component result = out;
+        source.sendSuccess(() -> result, false);
         return shown;
+    }
+
+    /** The buttons that make sense for this player's state -- never one that would be refused. */
+    private static List<Component> buttonsFor(ServerPlayer player, Identifier id, Quest q) {
+        QuestLog log = QuestEngine.journal(player);
+        List<Component> out = new ArrayList<>();
+        if (log.isActive(id)) {
+            if (!log.tracked().map(id::equals).orElse(false)) {
+                out.add(Feedback.button(Lang.get("button.track"), "/quest track " + id, Lang.get("button.track.tip")));
+            }
+            out.add(Feedback.button(Lang.get("button.abandon"), "/quest abandon " + id, Lang.get("button.abandon.tip")));
+        } else if (QuestEngine.available(player, id, q)) {
+            out.add(Feedback.button(Lang.get("button.accept"), "/quest accept " + id, Lang.get("button.accept.tip")));
+            out.add(Feedback.button(Lang.get("button.info"), "/quest info " + id, Lang.get("button.info.tip")));
+        }
+        return out;
     }
 
     private static String statusOf(Quest q, Identifier id, QuestLog log) {
@@ -176,7 +206,6 @@ public final class ChroniclerCommands {
         return locked ? Lang.get("status.locked") : Lang.get("status.available");
     }
 
-    /** Bare path when unambiguous across namespaces, else the full id. */
     private static String shortId(Identifier id, Registry<Quest> quests) {
         long sharing = quests.keySet().stream().filter(o -> o.getPath().equals(id.getPath())).count();
         return sharing == 1 ? id.getPath() : id.toString();
@@ -191,6 +220,8 @@ public final class ChroniclerCommands {
         Identifier id = holder.key().identifier();
         Registry<Chapter> chapters = source.registryAccess().lookupOrThrow(ChroniclerRegistries.CHAPTER);
         Registry<Quest> quests = source.registryAccess().lookupOrThrow(ChroniclerRegistries.QUEST);
+        ServerPlayer player = source.getEntity() instanceof ServerPlayer p ? p : null;
+        QuestLog.Entry entry = player == null ? null : QuestEngine.journal(player).entry(id);
 
         List<String> lines = new ArrayList<>();
         lines.add(Lang.fmt("cmd.info.header", "name", q.name(), "id", id));
@@ -198,6 +229,7 @@ public final class ChroniclerCommands {
                 .map(h -> h.value().name()).orElse(q.chapter().toString());
         lines.add(Lang.fmt("cmd.info.chapter", "chapter", chapterName));
         q.description().ifPresent(d -> lines.add(Lang.fmt("cmd.info.description", "description", d)));
+        if (QuestEngine.scopeOf(source.getServer(), q) == QuestScope.PARTY) lines.add(Lang.get("cmd.info.scope_party"));
         if (!q.requires().isEmpty()) {
             lines.add(Lang.fmt("cmd.info.requires", "list", q.requires().stream()
                     .map(r -> quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, r))
@@ -206,32 +238,89 @@ public final class ChroniclerCommands {
         }
         lines.add(Lang.get("cmd.info.objectives"));
         if (q.objectives().isEmpty()) lines.add(Lang.get("cmd.info.none"));
-        q.objectives().forEach(o -> lines.add(Lang.fmt("cmd.info.objective", "line", o.describe())));
+        for (int n = 0; n < q.objectives().size(); n++) {
+            String desc = q.objectives().get(n).describe();
+            lines.add(entry == null
+                    ? Lang.fmt("cmd.info.objective", "line", desc)
+                    : Lang.fmt("cmd.info.progress", "line", desc, "done", entry.progress.get(n), "target", entry.targets.get(n)));
+        }
         lines.add(Lang.get("cmd.info.rewards"));
         if (q.rewards().isEmpty()) lines.add(Lang.get("cmd.info.none"));
         q.rewards().forEach(r -> lines.add(Lang.fmt("cmd.info.reward", "line", r.describe())));
 
-        String joined = String.join("\n", lines);
-        source.sendSuccess(() -> Feedback.colored(joined), false);
+        MutableComponent out = Feedback.colored(String.join("\n", lines)).copy();
+        if (player != null) {
+            for (Component b : buttonsFor(player, id, q)) out.append(" ").append(b);
+        }
+        final Component result = out;
+        source.sendSuccess(() -> result, false);
         return 1;
+    }
+
+    // --- /quest accept | abandon | track ---
+
+    private static int accept(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Identifier id = resolveQuest(ctx).key().identifier();
+        var refusal = QuestEngine.accept(player, id);
+        if (refusal.isEmpty()) return 1;
+        Feedback.chat(player, Lang.get(switch (refusal.get()) {
+            case UNKNOWN -> "msg.refuse.unknown";
+            case ALREADY_ACTIVE -> "msg.refuse.active";
+            case ALREADY_COMPLETE -> "msg.refuse.complete";
+            case LOCKED -> "msg.refuse.locked";
+        }));
+        return 0;
+    }
+
+    private static int abandon(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Identifier id = resolveQuest(ctx).key().identifier();
+        if (QuestEngine.abandon(player, id)) return 1;
+        Feedback.chat(player, Lang.get("msg.not_active"));
+        return 0;
+    }
+
+    private static int track(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Holder.Reference<Quest> holder = resolveQuest(ctx);
+        if (QuestEngine.track(player, holder.key().identifier())) {
+            Feedback.chat(player, Lang.fmt("msg.track", "name", holder.value().name()));
+            return 1;
+        }
+        Feedback.chat(player, Lang.get("msg.not_active"));
+        return 0;
     }
 
     // --- /quest log ---
 
     private static int log(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
-        QuestLog log = journal(player);
+        QuestLog log = QuestEngine.journal(player);
         if (log.activeCount() == 0 && log.completedCount() == 0) {
             Feedback.chat(player, Lang.get("cmd.log.empty"));
             return 0;
         }
-        Feedback.chat(player, Lang.fmt("cmd.log.header",
-                "active", log.activeCount(), "completed", log.completedCount()));
+        MutableComponent out = Feedback.colored(Lang.fmt("cmd.log.header",
+                "active", log.activeCount(), "completed", log.completedCount())).copy();
+        for (var e : log.activeView().entrySet()) {
+            var holder = QuestEngine.quest(player.level().getServer(), e.getKey());
+            String name = holder.map(h -> h.value().name()).orElse(e.getKey().toString());
+            String tracked = log.tracked().map(e.getKey()::equals).orElse(false) ? Lang.get("status.tracked") : "";
+            out.append("\n").append(Feedback.colored(Lang.fmt("cmd.log.quest", "name", name, "progress", tracked)));
+            holder.ifPresent(h -> {
+                for (int n = 0; n < h.value().objectives().size(); n++) {
+                    out.append("\n").append(Feedback.colored(Lang.fmt("cmd.log.objective",
+                            "line", h.value().objectives().get(n).describe(),
+                            "done", e.getValue().progress.get(n), "target", e.getValue().targets.get(n))));
+                }
+            });
+            for (Component b : holder.map(h -> buttonsFor(player, e.getKey(), h.value())).orElse(List.of())) {
+                out.append(" ").append(b);
+            }
+        }
+        Feedback.chat(player, out);
         return log.activeCount() + log.completedCount();
-    }
-
-    public static QuestLog journal(ServerPlayer player) {
-        return player.getData(ChroniclerAttachments.JOURNAL);
     }
 
     // --- /chronicler ---
@@ -247,17 +336,25 @@ public final class ChroniclerCommands {
         Registry<Chapter> chapters = source.registryAccess().lookupOrThrow(ChroniclerRegistries.CHAPTER);
         Registry<Quest> quests = source.registryAccess().lookupOrThrow(ChroniclerRegistries.QUEST);
         List<String> siblings = new ArrayList<>();
-        for (String id : List.of("legendquest", "standards", "zombiemod", "cityworld")) {
+        for (String id : List.of("legendquest", "standards", "zombiemod", "cityworld", "storyteller")) {
             if (ModList.get().isLoaded(id)) siblings.add(id);
         }
         String lines = String.join("\n",
                 Lang.fmt("cmd.status", "chapters", chapters.size(), "quests", quests.size(),
                         "objectives", ObjectiveTypes.TYPES.size(), "rewards", RewardTypes.TYPES.size()),
-                // The path exists to be COPIED, which is why it must never carry a section code.
                 Lang.fmt("cmd.status.config", "path", FMLPaths.CONFIGDIR.get().resolve(Chronicler.MODID).toAbsolutePath()),
-                Lang.fmt("cmd.status.siblings", "list", siblings.isEmpty() ? "none" : String.join(", ", siblings)));
+                Lang.fmt("cmd.status.siblings", "list", siblings.isEmpty() ? "none" : String.join(", ", siblings)),
+                Lang.fmt("cmd.status.party", "provider", Party.providerName()));
         source.sendSuccess(() -> Feedback.colored(lines), false);
         return quests.size();
+    }
+
+    private static int reset(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        QuestEngine.journal(target).clear();
+        ctx.getSource().sendSuccess(() -> Feedback.colored(
+                Lang.fmt("msg.reset", "player", target.getName().getString())), true);
+        return 1;
     }
 
     private ChroniclerCommands() {}

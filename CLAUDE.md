@@ -39,7 +39,7 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 ./gradlew compileJava             # fast inner loop
 ./gradlew build                   # -> build/libs/chronicler-<ver>+mc<mc>.jar
-./gradlew runServer               # headless dedicated server on port 25570
+./gradlew runServer               # headless dedicated server on port 25573
 ./gradlew runServer -Pselftest    # the same, running neoforge/SelfTest on ServerStartedEvent
 ./deploy.sh                       # build + copy into the CurseForge test instance
 .\TestClient.cmd                  # (Windows) TestBuddy dev client, auto-joins the dev server
@@ -59,7 +59,8 @@ export PATH="$JAVA_HOME/bin:$PATH"
   a generated `mods.toml`.** `minecraft_version` is what we build against;
   `minecraft_version_range` / `neo_version_range` are what the jar runs on.
 - `run/` is gitignored. A fresh checkout needs `run/eula.txt` and a
-  `run/server.properties` with the port pair below (`rcon.password=chrdev`).
+  `run/server.properties` with `server-port=25573`, `enable-rcon=true`,
+  `rcon.port=25583`, `rcon.password=chrdev`, `online-mode=false`.
 - **Compiling with the dev server running takes minutes; stopped, seconds.**
   Stop it before reaching for `wsl --shutdown`. If Gradle genuinely hangs on
   `:compileJava` with no CPU, that is the known `/mnt/d` degradation.
@@ -79,7 +80,15 @@ and RCON's only symptom is "auth failed". Chronicler owns:
 | ZombieMod | 25567 | 25577 |
 | CityWorld | 25568 (default 25565 in places) | 25578 |
 | MobHealth | 25569 | 25579 |
-| **Chronicler** | **25570** | **25580** |
+| StoryTeller | 25570 | 25580 |
+| **Chronicler** | **25573** | **25583** |
+
+Chronicler was on 25570/25580 for one day; the StoryTeller session picked the
+identical "next free pair" the same afternoon and its server was already
+holding it, so Chronicler moved. **The table above is what each repo claims,
+not a registry** -- two sessions reading the same table and adding one will
+collide again. Raise a shared port file with Sable rather than editing a
+sibling's `CLAUDE.md`.
 
 Before assuming a port is yours, `ss -ltnp | grep 2557`. **Never kill a JVM
 without checking whose it is** — match on this repo's classes directory, not on
@@ -233,6 +242,10 @@ tokens.
 
 - A `static final` collection declared after the fields that fill it is null
   when they initialise. Declare collections first.
+- **Config cannot be read during mod construction** -- `Cannot get config
+  value before config is loaded` fails construction and takes the server
+  down. Read config values lazily at use time, or register on
+  `FMLCommonSetupEvent`. Hit here on the first Standards boot.
 - `/execute as <player> run …` does not test that player's permissions.
 - `doImmediateRespawn` is the wrong death to test with; transient attribute
   modifiers die on respawn — repair on `PlayerEvent.Clone`.

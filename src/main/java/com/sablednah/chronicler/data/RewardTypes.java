@@ -61,8 +61,26 @@ public final class RewardTypes {
         @Override public String describe() { return Lang.fmt("rew.money", "amount", amount); }
     }
 
+    /**
+     * Move a standing with a named group. Lives in Standards' reputation seam;
+     * without it the reward says so and the rest of the packet still lands.
+     */
+    public record Reputation(String standing, int delta) implements RewardSpec {
+        public static final MapCodec<Reputation> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.STRING.fieldOf("standing").forGetter(Reputation::standing),
+                Codec.INT.fieldOf("delta").forGetter(Reputation::delta))
+                .apply(i, Reputation::new));
+
+        @Override public MapCodec<Reputation> codec() { return MAP_CODEC; }
+        @Override public String describe() {
+            return Lang.fmt(delta >= 0 ? "rew.reputation_up" : "rew.reputation_down",
+                    "amount", Math.abs(delta), "standing", Lang.pretty(standing));
+        }
+    }
+
     static {
         TYPES.register("item", Item.MAP_CODEC);
+        TYPES.register("reputation", Reputation.MAP_CODEC);
         TYPES.register("command", Command.MAP_CODEC);
         TYPES.register("xp", Xp.MAP_CODEC);
         TYPES.register("money", Money.MAP_CODEC);

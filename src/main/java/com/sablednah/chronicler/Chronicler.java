@@ -60,10 +60,20 @@ public class Chronicler {
         // costs one seam, not the server -- LinkageError, not Exception, since
         // a missing class is an Error. (LegendQuest paid for this lesson.)
         //
-        // Nothing is wired yet: the seams are designed in docs/DESIGN.md and
-        // each one lands with a real consumer on the other side, not before.
+        // Standards' economy and groups are consumed; the rest are designed in
+        // docs/DESIGN.md and each lands with a real consumer on the far side.
+        // Built-in trackers and granters register in static blocks; touch them
+        // here so nothing asks before they exist.
+        com.sablednah.chronicler.neoforge.Trackers.init();
+        com.sablednah.chronicler.neoforge.Rewards.init();
+        NeoForge.EVENT_BUS.register(com.sablednah.chronicler.neoforge.QuestEvents.class);
+
         if (ModList.get().isLoaded("standards")) {
-            LOGGER.info("Chronicler: SableCraft Standards detected (economy/groups/chat seams not yet consumed)");
+            optionalIntegration("economy", com.sablednah.chronicler.neoforge.compat.StandardsEconomy::register);
+            optionalIntegration("groups", com.sablednah.chronicler.neoforge.compat.StandardsGroups::register);
+            // api/reputation ships in Standards 1.5.0; on an older Standards this
+            // is the seam LinkageError takes away, and nothing else.
+            optionalIntegration("reputation", com.sablednah.chronicler.neoforge.compat.StandardsReputation::register);
         }
         if (ModList.get().isLoaded("legendquest")) {
             LOGGER.info("Chronicler: LegendQuest detected (character seams not yet consumed)");

@@ -18,6 +18,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.BooleanValue TRACKER_ACTION_BAR;
     public static final ModConfigSpec.IntValue TRACKER_INTERVAL_TICKS;
     public static final ModConfigSpec.BooleanValue SHOW_HIDDEN_TO_OPS;
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> PARTY_GROUP_KINDS;
 
     static {
         BUILDER.comment("Announcements").push("announce");
@@ -43,6 +44,16 @@ public final class ChroniclerConfig {
                 .comment("Quests marked hidden are listed to ops (level 2+) with a [hidden] tag.",
                         "Off hides them from everyone until unlocked.")
                 .define("showHiddenToOps", true);
+        BUILDER.pop();
+
+        BUILDER.comment("Party quests").push("party");
+        PARTY_GROUP_KINDS = BUILDER
+                .comment("Which Standards group kind is 'the party', first registered kind wins.",
+                        "Only consulted when SableCraft Standards is installed; without it every",
+                        "quest is effectively solo. LegendQuest parties are the intended provider.")
+                .defineListAllowEmpty("groupKinds",
+                        java.util.List.of("legendquest:party", "standards:group"),
+                        () -> "", o -> o instanceof String);
         BUILDER.pop();
     }
 
