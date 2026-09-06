@@ -107,7 +107,10 @@ public final class Rewards {
             String expanded = r.command()
                     .replace("{player}", player.getName().getString())
                     .replace("{uuid}", player.getUUID().toString())
-                    .replace("{quest}", questId.toString());
+                    .replace("{quest}", questId.toString())
+                    .replace("{x}", Integer.toString(player.blockPosition().getX()))
+                    .replace("{y}", Integer.toString(player.blockPosition().getY()))
+                    .replace("{z}", Integer.toString(player.blockPosition().getZ()));
             // Run AS the player with gamemaster permission, the way a LegendQuest
             // skill runs its commands: the quest is the authority, not the player's
             // own rank, so a reward may grant what the player could not ask for.
@@ -115,6 +118,52 @@ public final class Rewards {
                     .withPermission(LevelBasedPermissionSet.GAMEMASTER);
             if (r.silent()) source = source.withSuppressedOutput();
             player.level().getServer().getCommands().performPrefixedCommand(source, expanded);
+        });
+    }
+
+    static {
+        register(RewardTypes.Title.class, (player, r, questId, quest) ->
+                Feedback.title(player, r.title(), r.subtitle().orElse("")));
+
+        register(RewardTypes.Message.class, (player, r, questId, quest) -> {
+            if (r.actionBar()) Feedback.actionBar(player, r.text()); else Feedback.chat(player, r.text());
+        });
+
+        register(RewardTypes.Spawn.class, (player, r, questId, quest) -> {
+            var level = player.level();
+            var rng = level.getRandom();
+            for (int n = 0; n < r.count(); n++) {
+                double angle = rng.nextDouble() * Math.PI * 2;
+                double dist = 2 + rng.nextDouble() * Math.max(0, r.radius() - 2);
+                int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
+                int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
+                var at = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                        new net.minecraft.core.BlockPos(x, 0, z));
+                if (r.genus().isPresent()) {
+                    // ZombieMod's own command, so no import and a clean nothing without it.
+                    if (!net.neoforged.fml.ModList.get().isLoaded("zombiemod")) {
+                        Chronicler.LOGGER.warn("Chronicler: quest {} spawns genus {} but ZombieMod is not installed", questId, r.genus().get());
+                        return;
+                    }
+                    level.getServer().getCommands().performPrefixedCommand(
+                            level.getServer().createCommandSourceStack().withSuppressedOutput(),
+                            "zombiemod spawn " + r.genus().get() + " " + at.getX() + " " + at.getY() + " " + at.getZ());
+                    continue;
+                }
+                var type = r.entity().flatMap(id -> BuiltInRegistries.ENTITY_TYPE.get(id));
+                if (type.isEmpty()) {
+                    Chronicler.LOGGER.warn("Chronicler: quest {} spawns unknown entity {}", questId, r.entity().orElse(null));
+                    return;
+                }
+                var spawned = type.get().value().create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT);
+                if (spawned == null) return;
+                spawned.snapTo(at.getX() + 0.5D, at.getY(), at.getZ() + 0.5D, rng.nextFloat() * 360F, 0F);
+                if (spawned instanceof net.minecraft.world.entity.Mob mob) {
+                    mob.finalizeSpawn(level, level.getCurrentDifficultyAt(at),
+                            net.minecraft.world.entity.EntitySpawnReason.EVENT, null);
+                }
+                level.addFreshEntity(spawned);
+            }
         });
     }
 

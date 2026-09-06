@@ -27,6 +27,17 @@ public final class Feedback {
         player.displayClientMessage(message, false);
     }
 
+    /** A title card alone -- a scene change, no chime. */
+    public static void title(ServerPlayer player, String title, String subtitle) {
+        if (player.connection == null) return;
+        player.connection.send(new net.minecraft.network.protocol.game
+                .ClientboundSetTitlesAnimationPacket(10, 60, 20));
+        player.connection.send(new net.minecraft.network.protocol.game
+                .ClientboundSetTitleTextPacket(colored(title)));
+        player.connection.send(new net.minecraft.network.protocol.game
+                .ClientboundSetSubtitleTextPacket(colored(subtitle)));
+    }
+
     /**
      * An occasion: chat line, title card, and the toast chime. All vanilla
      * packets, so an unmodded client gets the whole show. The sound goes down

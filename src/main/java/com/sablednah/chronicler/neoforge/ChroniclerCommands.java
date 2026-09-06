@@ -250,10 +250,17 @@ public final class ChroniclerCommands {
                     .collect(Collectors.joining(", "))));
         }
         lines.add(Lang.get("cmd.info.objectives"));
-        if (q.objectives().isEmpty()) lines.add(Lang.get("cmd.info.none"));
-        for (int n = 0; n < q.objectives().size(); n++) {
-            String desc = q.objectives().get(n).describe();
+        List<com.sablednah.chronicler.data.ObjectiveSpec> objectives =
+                entry == null ? q.objectivesAt(0) : QuestEngine.currentObjectives(q, entry);
+        if (q.beats().size() > 1) {
             lines.add(entry == null
+                    ? Lang.fmt("cmd.info.stages", "count", q.beats().size())
+                    : Lang.fmt("cmd.info.stage_now", "stage", entry.stage + 1, "stages", q.beats().size()));
+        }
+        if (objectives.isEmpty()) lines.add(Lang.get("cmd.info.none"));
+        for (int n = 0; n < objectives.size(); n++) {
+            String desc = objectives.get(n).describe();
+            lines.add(entry == null || n >= entry.targets.size()
                     ? Lang.fmt("cmd.info.objective", "line", desc)
                     : Lang.fmt("cmd.info.progress", "line", desc, "done", entry.progress.get(n), "target", entry.targets.get(n)));
         }
@@ -385,9 +392,10 @@ public final class ChroniclerCommands {
             String tracked = log.tracked().map(e.getKey()::equals).orElse(false) ? Lang.get("status.tracked") : "";
             out.append("\n").append(Feedback.colored(Lang.fmt("cmd.log.quest", "name", name, "progress", tracked)));
             holder.ifPresent(h -> {
-                for (int n = 0; n < h.value().objectives().size(); n++) {
+                var objectives = QuestEngine.currentObjectives(h.value(), e.getValue());
+                for (int n = 0; n < objectives.size() && n < e.getValue().targets.size(); n++) {
                     out.append("\n").append(Feedback.colored(Lang.fmt("cmd.log.objective",
-                            "line", h.value().objectives().get(n).describe(),
+                            "line", objectives.get(n).describe(),
                             "done", e.getValue().progress.get(n), "target", e.getValue().targets.get(n))));
                 }
             });

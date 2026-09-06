@@ -211,6 +211,15 @@ public final class Lang {
         def("rew.xp", "{amount} experience");
         def("rew.money", "{amount} coin");
         def("rew.money_paid", "{amount}");
+        def("rew.title", "A moment.");
+        def("rew.message", "A word.");
+        def("rew.spawn", "Company.");
+        def("msg.stage.enter", "{prefix}&e{text}");
+        def("msg.stage.done", "{prefix}&7Stage {stage} of {stages} done.");
+        def("cmd.info.stages", "&7{count} stages. The first:");
+        def("cmd.info.stage_now", "&7Stage {stage} of {stages}:");
+        def("journal.quest.stage", "&8Stage {stage} of {stages}");
+        def("journal.quest.text", "&0{text}");
         def("rew.reputation_up", "+{amount} standing with {standing}");
         def("rew.reputation_down", "-{amount} standing with {standing}");
         def("obj.reputation", "Be held in at least {amount} regard by {standing}");

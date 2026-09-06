@@ -31,16 +31,33 @@ public final class QuestLog {
     public static final class Entry {
         public final List<Integer> progress;
         public final List<Integer> targets;
+        /** Which beat of the quest these counters belong to. */
+        public int stage;
 
         Entry(List<Integer> progress, List<Integer> targets) {
+            this(progress, targets, 0);
+        }
+
+        Entry(List<Integer> progress, List<Integer> targets, int stage) {
             this.progress = new ArrayList<>(progress);
             this.targets = new ArrayList<>(targets);
+            this.stage = stage;
         }
 
         static final Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.listOf().fieldOf("progress").forGetter(e -> e.progress),
-                Codec.INT.listOf().fieldOf("targets").forGetter(e -> e.targets))
+                Codec.INT.listOf().fieldOf("targets").forGetter(e -> e.targets),
+                Codec.INT.optionalFieldOf("stage", 0).forGetter(e -> e.stage))
                 .apply(i, Entry::new));
+
+        /** Move to the next beat: fresh counters against its targets. */
+        public void advance(List<Integer> nextTargets) {
+            stage++;
+            progress.clear();
+            targets.clear();
+            targets.addAll(nextTargets);
+            for (int n = 0; n < nextTargets.size(); n++) progress.add(0);
+        }
 
         public boolean done() {
             for (int n = 0; n < targets.size(); n++) {
@@ -77,7 +94,7 @@ public final class QuestLog {
             boolean journalGiven) {
         this.journalGiven = journalGiven;
         this.active = new LinkedHashMap<>();
-        active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets)));
+        active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets, v.stage)));
         this.completed = new LinkedHashMap<>(completed);
         this.tracked = tracked.orElse(null);
     }
@@ -100,7 +117,7 @@ public final class QuestLog {
 
     /** Start a quest at somebody else's progress -- a party member joining a quest already under way. */
     public void startFrom(Identifier quest, Entry other) {
-        active.put(quest, new Entry(other.progress, other.targets));
+        active.put(quest, new Entry(other.progress, other.targets, other.stage));
         if (tracked == null) tracked = quest;
     }
 

@@ -185,6 +185,26 @@ public final class SelfTest {
             QuestEngine.journal(solo).complete(firstSteps);
             QuestEngine.journal(solo).complete(things);
 
+            // Stages: Night Watch is two beats; the first a torch, the second two kills.
+            Identifier night = ChroniclerIds.of("night_watch");
+            check("night_watch has two beats", quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, night))
+                    .map(h -> h.value().beats().size() == 2).orElse(false));
+            check("stages: accept", QuestEngine.accept(solo, night).isEmpty());
+            check("stages: starts on beat 1", QuestEngine.journal(solo).entry(night).stage == 0);
+            solo.getInventory().add(new ItemStack(Items.TORCH, 1));
+            QuestEngine.poll(solo);
+            QuestLog.Entry nw = QuestEngine.journal(solo).entry(night);
+            check("stages: the torch moves it to beat 2", nw != null && nw.stage == 1);
+            check("stages: beat 2 has fresh counters against 2", nw != null && nw.targets.equals(List.of(2)) && nw.progress.equals(List.of(0)));
+            // The on_enter spawn is not asserted: an entity added this tick is not in the
+            // index until the next one, and ServerStartedEvent is a single tick. A wrong
+            // entity id logs a warning, which the boot check reads.
+            QuestEngine.onKill(solo, zombie);
+            check("stages: a kill counts on beat 2 only", QuestEngine.journal(solo).entry(night).progress.get(0) == 1);
+            QuestEngine.onKill(solo, zombie);
+            check("stages: finishing beat 2 completes the quest", QuestEngine.journal(solo).isComplete(night));
+            check("stages: shield reward landed", Trackers.count(solo, Identifier.parse("minecraft:shield")) == 1);
+
             // The API other mods call.
             check("api: hot_foot is available (hidden only hides the list)", com.sablednah.chronicler.api.Quests.isAvailable(solo, ChroniclerIds.of("hot_foot")));
             check("api: offer returns true for an available quest", com.sablednah.chronicler.api.Quests.offer(solo, ChroniclerIds.of("hot_foot"), "a test"));

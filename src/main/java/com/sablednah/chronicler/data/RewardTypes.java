@@ -1,5 +1,7 @@
 package com.sablednah.chronicler.data;
 
+import java.util.Optional;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -78,8 +80,51 @@ public final class RewardTypes {
         }
     }
 
+    /** A title card. An effect more than a reward: the scene changes. */
+    public record Title(String title, Optional<String> subtitle) implements RewardSpec {
+        public static final MapCodec<Title> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.STRING.fieldOf("title").forGetter(Title::title),
+                Codec.STRING.optionalFieldOf("subtitle").forGetter(Title::subtitle))
+                .apply(i, Title::new));
+
+        @Override public MapCodec<Title> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.title"); }
+    }
+
+    /** A line of narration in chat, or on the action bar. */
+    public record Message(String text, boolean actionBar) implements RewardSpec {
+        public static final MapCodec<Message> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.STRING.fieldOf("text").forGetter(Message::text),
+                Codec.BOOL.optionalFieldOf("action_bar", false).forGetter(Message::actionBar))
+                .apply(i, Message::new));
+
+        @Override public MapCodec<Message> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.message"); }
+    }
+
+    /**
+     * Put creatures in the world near the player: a vanilla entity id, or a
+     * ZombieMod genus (which goes through {@code /zombiemod spawn}, so it needs
+     * no import and quietly does nothing without ZombieMod).
+     */
+    public record Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius)
+            implements RewardSpec {
+        public static final MapCodec<Spawn> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Identifier.CODEC.optionalFieldOf("entity").forGetter(Spawn::entity),
+                Codec.STRING.optionalFieldOf("genus").forGetter(Spawn::genus),
+                Codec.INT.optionalFieldOf("count", 1).forGetter(Spawn::count),
+                Codec.DOUBLE.optionalFieldOf("radius", 8.0D).forGetter(Spawn::radius))
+                .apply(i, Spawn::new));
+
+        @Override public MapCodec<Spawn> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.spawn"); }
+    }
+
     static {
         TYPES.register("item", Item.MAP_CODEC);
+        TYPES.register("title", Title.MAP_CODEC);
+        TYPES.register("message", Message.MAP_CODEC);
+        TYPES.register("spawn", Spawn.MAP_CODEC);
         TYPES.register("reputation", Reputation.MAP_CODEC);
         TYPES.register("command", Command.MAP_CODEC);
         TYPES.register("xp", Xp.MAP_CODEC);

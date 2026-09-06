@@ -30,6 +30,8 @@ import net.minecraft.resources.Identifier;
  * @param scope       solo or party; absent means the chapter's default
  * @param scale       for a party quest, multiply each target by party size
  * @param giver       who or where offers it; absent means the list and the journal only
+ * @param stages      ordered beats; when present, {@code objectives} is ignored and
+ *                    each stage carries its own
  */
 public record Quest(
         String name,
@@ -43,7 +45,19 @@ public record Quest(
         int order,
         Optional<QuestScope> scope,
         boolean scale,
-        Optional<GiverSpec> giver) {
+        Optional<GiverSpec> giver,
+        List<Stage> stages) {
+
+    /** The quest as beats: its stages, or one stage made of its objectives. Never empty. */
+    public List<Stage> beats() {
+        return stages.isEmpty() ? List.of(Stage.of(objectives)) : stages;
+    }
+
+    /** The objectives of one beat, clamped to the last -- a saved stage past the end reads as the end. */
+    public List<ObjectiveSpec> objectivesAt(int stage) {
+        List<Stage> b = beats();
+        return b.get(Math.min(Math.max(stage, 0), b.size() - 1)).objectives();
+    }
 
     public static final Codec<Quest> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.fieldOf("name").forGetter(Quest::name),
@@ -57,6 +71,7 @@ public record Quest(
             Codec.INT.optionalFieldOf("order", 0).forGetter(Quest::order),
             QuestScope.CODEC.optionalFieldOf("scope").forGetter(Quest::scope),
             Codec.BOOL.optionalFieldOf("scale", true).forGetter(Quest::scale),
-            GiverTypes.CODEC.optionalFieldOf("giver").forGetter(Quest::giver))
+            GiverTypes.CODEC.optionalFieldOf("giver").forGetter(Quest::giver),
+            Stage.CODEC.listOf().optionalFieldOf("stages", List.of()).forGetter(Quest::stages))
             .apply(i, Quest::new));
 }

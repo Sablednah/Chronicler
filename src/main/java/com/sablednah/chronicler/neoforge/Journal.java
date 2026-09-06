@@ -189,9 +189,15 @@ public final class Journal {
                 page.append(Feedback.colored(Lang.get("journal.quest.party"))).append("\n");
             }
             q.description().ifPresent(d -> page.append(Feedback.colored(Lang.fmt("journal.quest.description", "description", d))).append("\n"));
+            List<com.sablednah.chronicler.data.ObjectiveSpec> objectives = QuestEngine.currentObjectives(q, e);
+            if (q.beats().size() > 1) {
+                page.append(Feedback.colored(Lang.fmt("journal.quest.stage", "stage", e.stage + 1, "stages", q.beats().size()))).append("\n");
+                q.beats().get(Math.min(e.stage, q.beats().size() - 1)).text().ifPresent(t ->
+                        page.append(Feedback.colored(Lang.fmt("journal.quest.text", "text", t))).append("\n"));
+            }
             page.append("\n");
-            for (int n = 0; n < q.objectives().size(); n++) {
-                String line = q.objectives().get(n).describe();
+            for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
+                String line = objectives.get(n).describe();
                 page.append(Feedback.colored(e.objectiveDone(n)
                         ? Lang.fmt("journal.objective.done", "line", line)
                         : Lang.fmt("journal.objective.open", "line", line, "done", e.progress.get(n), "target", e.targets.get(n))))

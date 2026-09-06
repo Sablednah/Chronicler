@@ -1,0 +1,35 @@
+{
+  "name": "Night Watch",
+  "description": "Somebody has to keep the fire lit. Tonight that is you.",
+  "chapter": "prologue",
+  "order": 3,
+  "requires": [ "things_in_the_dark" ],
+  "stages": [
+    {
+      "text": "Get a light. The dark is not empty.",
+      "objectives": [
+        { "type": "collect", "item": "minecraft:torch", "count": 1, "consume": false }
+      ],
+      "on_enter": [
+        { "type": "message", "text": "&7You hear something shuffle, somewhere behind you." }
+      ]
+    },
+    {
+      "text": "They found you. Hold until it is quiet.",
+      "objectives": [
+        { "type": "kill", "target": "minecraft:zombie", "count": 2 }
+      ],
+      "on_enter": [
+        { "type": "title", "title": "&cThey are here", "subtitle": "&7Hold the line" },
+        { "type": "spawn", "entity": "minecraft:zombie", "count": 2, "radius": 6 }
+      ],
+      "on_complete": [
+        { "type": "message", "text": "&7Quiet again. For now." }
+      ]
+    }
+  ],
+  "rewards": [
+    { "type": "item", "item": "minecraft:shield" },
+    { "type": "xp", "amount": 40 }
+  ]
+}

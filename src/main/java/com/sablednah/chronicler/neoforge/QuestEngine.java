@@ -14,6 +14,7 @@ import com.sablednah.chronicler.data.Chapter;
 import com.sablednah.chronicler.data.ObjectiveSpec;
 import com.sablednah.chronicler.data.Quest;
 import com.sablednah.chronicler.data.RewardSpec;
+import com.sablednah.chronicler.data.Stage;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -24,22 +25,27 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * The engine: accept, measure, complete, reward. Everything here is the
- * <em>rule</em>; the commands and events are thin callers, so the self-test
- * and a future StoryTeller NPC drive exactly the code a player does.
+ * The engine: accept, measure, advance, complete, reward. Everything here is
+ * the <em>rule</em>; the commands, events, journal and API are thin callers,
+ * so the self-test and a StoryTeller NPC drive exactly the code a player does.
+ *
+ * <h2>Stages</h2>
+ *
+ * <p>A quest is a list of beats ({@link Quest#beats()}); a plain quest is one
+ * beat. The journal entry records which beat the player is on and holds
+ * counters for that beat only. Finishing a beat fires its {@code on_complete}
+ * effects, then either enters the next (narration, {@code on_enter}, fresh
+ * counters) or completes the quest (rewards).</p>
  *
  * <h2>Party quests</h2>
  *
- * <p>A party quest is one quest for the whole party. Every member's journal
- * holds the same entry (targets scaled by party size at acceptance), and every
- * write goes to every member -- a kill by one moves everyone's counter, a poll
- * sums everyone's inventory. Membership comes from {@link Party}, which
- * answers "just you" without Standards, so a party quest quietly becomes a
- * solo one there and says so once.</p>
+ * <p>One quest for the whole party: every member's journal holds the same
+ * entry (targets scaled by party size at acceptance), and every write goes to
+ * every member. Membership comes from {@link Party}, which answers "just you"
+ * without Standards, so a party quest quietly becomes a solo one there.</p>
  */
 public final class QuestEngine {
 
-    /** Why an accept was refused, for the message. */
     public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED }
 
     // --- lookups ---
@@ -66,10 +72,20 @@ public final class QuestEngine {
         return player.getData(ChroniclerAttachments.JOURNAL);
     }
 
-    /** Who shares this quest's progress: the party for a party quest, just the player otherwise. */
     private static List<ServerPlayer> sharers(ServerPlayer player, Quest quest) {
         return scopeOf(player.level().getServer(), quest) == QuestScope.PARTY
                 ? Party.members(player) : List.of(player);
+    }
+
+    /** The objectives the player is currently working on. */
+    public static List<ObjectiveSpec> currentObjectives(Quest quest, QuestLog.Entry entry) {
+        return quest.objectivesAt(entry.stage);
+    }
+
+    private static List<Integer> targetsFor(List<ObjectiveSpec> objectives, int factor) {
+        List<Integer> targets = new ArrayList<>();
+        for (ObjectiveSpec o : objectives) targets.add(Math.max(1, o.required() * factor));
+        return targets;
     }
 
     // --- availability ---
@@ -90,7 +106,6 @@ public final class QuestEngine {
 
     // --- accept / abandon / track ---
 
-    /** Accept for the player (and, for a party quest, for every member). Returns the refusal, if any. */
     public static Optional<Refusal> accept(ServerPlayer player, Identifier id) {
         MinecraftServer server = player.level().getServer();
         var holder = quest(server, id);
@@ -100,38 +115,53 @@ public final class QuestEngine {
         if (why.isPresent()) return why;
 
         List<ServerPlayer> members = sharers(player, quest);
-        boolean party = members.size() > 1 || scopeOf(server, quest) == QuestScope.PARTY;
+        boolean party = scopeOf(server, quest) == QuestScope.PARTY;
         int factor = party && quest.scale() ? members.size() : 1;
-        List<Integer> targets = new ArrayList<>();
-        for (ObjectiveSpec o : quest.objectives()) targets.add(Math.max(1, o.required() * factor));
+        Stage first = quest.beats().getFirst();
+        List<Integer> targets = targetsFor(first.objectives(), factor);
 
-        // A member already on it? Then this is somebody joining a quest under way.
         QuestLog.Entry existing = null;
         for (ServerPlayer m : members) {
             QuestLog.Entry e = journal(m).entry(id);
             if (e != null) { existing = e; break; }
         }
 
+        List<ServerPlayer> started = new ArrayList<>();
         for (ServerPlayer m : members) {
-            if (m != player && !available(m, id, quest) && !journal(m).isActive(id)) continue;
+            if (m != player && !available(m, id, quest)) continue;
             QuestLog log = journal(m);
             if (log.isActive(id)) continue;
             if (existing != null) log.startFrom(id, existing); else log.start(id, targets);
+            started.add(m);
             if (m == player) {
                 Feedback.chat(m, Lang.fmt("msg.accept", "name", quest.name()));
             } else {
                 Feedback.chat(m, Lang.fmt("msg.accept.party", "name", quest.name(), "who", player.getName().getString()));
             }
-            for (ObjectiveSpec o : quest.objectives()) {
-                Feedback.chat(m, Lang.fmt("msg.accept.objective", "line", o.describe()));
-            }
         }
-        if (scopeOf(server, quest) == QuestScope.PARTY && members.size() == 1 && Party.providerName().equals("none")) {
+        if (party && members.size() == 1 && Party.providerName().equals("none")) {
             Feedback.chat(player, Lang.get("msg.party.solo_notice"));
         }
-        // Things already in the pack, places already stood in: count them now.
+        // A joiner lands mid-story: narrate the beat they are on, not the first.
+        for (ServerPlayer m : started) {
+            QuestLog.Entry e = journal(m).entry(id);
+            Stage stage = quest.beats().get(Math.min(e.stage, quest.beats().size() - 1));
+            narrate(m, quest, stage, e.stage);
+            if (existing == null) effects(m, stage.onEnter(), id, quest);
+        }
         for (ServerPlayer m : members) poll(m);
         return Optional.empty();
+    }
+
+    private static void narrate(ServerPlayer player, Quest quest, Stage stage, int index) {
+        stage.text().ifPresent(t -> Feedback.chat(player, Lang.fmt("msg.stage.enter", "text", t)));
+        for (ObjectiveSpec o : stage.objectives()) {
+            Feedback.chat(player, Lang.fmt("msg.accept.objective", "line", o.describe()));
+        }
+    }
+
+    private static void effects(ServerPlayer player, List<RewardSpec> effects, Identifier id, Quest quest) {
+        for (RewardSpec r : effects) Rewards.grant(player, r, id, quest);
     }
 
     public static boolean abandon(ServerPlayer player, Identifier id) {
@@ -153,36 +183,40 @@ public final class QuestEngine {
 
     // --- measuring ---
 
-    /** A kill: bump every matching event objective on every active quest. */
     public static void onKill(ServerPlayer killer, LivingEntity victim) {
         QuestLog log = journal(killer);
         if (log.activeCount() == 0) return;
         MinecraftServer server = killer.level().getServer();
         for (Identifier id : List.copyOf(log.activeView().keySet())) {
             var holder = quest(server, id);
-            if (holder.isEmpty()) continue;
+            QuestLog.Entry e = log.entry(id);
+            if (holder.isEmpty() || e == null) continue;
             Quest quest = holder.get().value();
-            for (int n = 0; n < quest.objectives().size(); n++) {
-                ObjectiveSpec spec = quest.objectives().get(n);
+            List<ObjectiveSpec> objectives = currentObjectives(quest, e);
+            for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
+                ObjectiveSpec spec = objectives.get(n);
                 if (Trackers.of(spec).countsKill(killer, victim, spec)) {
-                    bump(killer, id, quest, n, 1);
+                    set(killer, id, quest, n, e.progress.get(n) + 1, false);
+                    if (journal(killer).entry(id) == null || journal(killer).entry(id).stage != e.stage) break;
                 }
             }
         }
     }
 
-    /** Recompute every polled objective on every active quest for this player. */
     public static void poll(ServerPlayer player) {
         QuestLog log = journal(player);
         if (log.activeCount() == 0) return;
         MinecraftServer server = player.level().getServer();
         for (Identifier id : List.copyOf(log.activeView().keySet())) {
             var holder = quest(server, id);
-            if (holder.isEmpty()) continue;
+            QuestLog.Entry e = log.entry(id);
+            if (holder.isEmpty() || e == null) continue;
             Quest quest = holder.get().value();
             List<ServerPlayer> members = sharers(player, quest);
-            for (int n = 0; n < quest.objectives().size(); n++) {
-                ObjectiveSpec spec = quest.objectives().get(n);
+            List<ObjectiveSpec> objectives = currentObjectives(quest, e);
+            int stage = e.stage;
+            for (int n = 0; n < objectives.size(); n++) {
+                ObjectiveSpec spec = objectives.get(n);
                 var tracker = Trackers.of(spec);
                 int sum = 0;
                 boolean polled = false;
@@ -192,23 +226,19 @@ public final class QuestEngine {
                 }
                 if (!polled) continue;
                 set(player, id, quest, n, sum, tracker.latching(spec));
+                QuestLog.Entry now = journal(player).entry(id);
+                if (now == null || now.stage != stage) break; // the beat moved on under us
             }
         }
     }
 
-    private static void bump(ServerPlayer player, Identifier id, Quest quest, int n, int delta) {
-        QuestLog.Entry own = journal(player).entry(id);
-        if (own == null) return;
-        set(player, id, quest, n, own.progress.get(n) + delta, false);
-    }
-
-    /** Write one objective's progress to every sharer, tell them, and complete if that was the last. */
+    /** Write one objective's progress to every sharer, tell them, and move on if that was the last. */
     private static void set(ServerPlayer player, Identifier id, Quest quest, int n, int value, boolean latching) {
         List<ServerPlayer> members = sharers(player, quest);
         boolean changed = false;
         for (ServerPlayer m : members) {
             QuestLog.Entry e = journal(m).entry(id);
-            if (e == null) continue;
+            if (e == null || n >= e.targets.size()) continue;
             int target = e.targets.get(n);
             int before = e.progress.get(n);
             int after = Math.min(value, target);
@@ -217,7 +247,7 @@ public final class QuestEngine {
             e.progress.set(n, after);
             changed = true;
             if (after >= target) {
-                Feedback.chat(m, Lang.fmt("msg.objective_done", "line", quest.objectives().get(n).describe()));
+                Feedback.chat(m, Lang.fmt("msg.objective_done", "line", currentObjectives(quest, e).get(n).describe()));
             }
             showProgress(m, id, quest, n);
         }
@@ -225,32 +255,59 @@ public final class QuestEngine {
         for (ServerPlayer m : members) {
             QuestLog.Entry e = journal(m).entry(id);
             if (e != null && e.done()) {
-                complete(m, id, quest);
-                return; // complete() handles every sharer
+                finishStage(m, id, quest);
+                return;
             }
         }
     }
 
-    // --- completion ---
+    // --- stages and completion ---
 
-    public static void complete(ServerPlayer player, Identifier id, Quest quest) {
+    /** The current beat is done for everyone sharing it: settle, fire, advance or complete. */
+    private static void finishStage(ServerPlayer player, Identifier id, Quest quest) {
         List<ServerPlayer> members = new ArrayList<>();
         for (ServerPlayer m : sharers(player, quest)) {
             if (journal(m).isActive(id)) members.add(m);
         }
         if (members.isEmpty()) return;
+        QuestLog.Entry lead = journal(members.getFirst()).entry(id);
+        int index = lead.stage;
+        List<Stage> beats = quest.beats();
+        Stage stage = beats.get(Math.min(index, beats.size() - 1));
 
         // Settle: take what was gathered, from whoever holds it, up to the target.
-        for (int n = 0; n < quest.objectives().size(); n++) {
-            ObjectiveSpec spec = quest.objectives().get(n);
+        for (int n = 0; n < stage.objectives().size() && n < lead.targets.size(); n++) {
+            ObjectiveSpec spec = stage.objectives().get(n);
             var tracker = Trackers.of(spec);
-            int remaining = journal(members.getFirst()).entry(id).targets.get(n);
+            int remaining = lead.targets.get(n);
             for (ServerPlayer m : members) {
                 if (remaining <= 0) break;
                 remaining -= tracker.settle(m, spec, remaining);
             }
         }
+        for (ServerPlayer m : members) effects(m, stage.onComplete(), id, quest);
 
+        if (index + 1 < beats.size()) {
+            Stage next = beats.get(index + 1);
+            boolean party = scopeOf(player.level().getServer(), quest) == QuestScope.PARTY;
+            int factor = party && quest.scale() ? members.size() : 1;
+            List<Integer> targets = targetsFor(next.objectives(), factor);
+            for (ServerPlayer m : members) {
+                journal(m).entry(id).advance(targets);
+                Feedback.chat(m, Lang.fmt("msg.stage.done", "stage", index + 1, "stages", beats.size()));
+                narrate(m, quest, next, index + 1);
+                effects(m, next.onEnter(), id, quest);
+            }
+            for (ServerPlayer m : members) {
+                poll(m);
+                if (journal(m).entry(id) != null) showTracker(m, id);
+            }
+            return;
+        }
+        complete(members, player, id, quest);
+    }
+
+    private static void complete(List<ServerPlayer> members, ServerPlayer player, Identifier id, Quest quest) {
         for (ServerPlayer m : members) {
             journal(m).complete(id);
             Feedback.fanfare(m, Lang.fmt("msg.complete", "name", quest.name()),
@@ -264,7 +321,15 @@ public final class QuestEngine {
                 members.size() > 1 ? " with " + (members.size() - 1) + " party member(s)" : "");
     }
 
-    /** "New quest available" -- the moment a completion unlocks something, with a button. */
+    /** Complete outright -- an admin or a StoryTeller finishing a quest by hand. */
+    public static void complete(ServerPlayer player, Identifier id, Quest quest) {
+        List<ServerPlayer> members = new ArrayList<>();
+        for (ServerPlayer m : sharers(player, quest)) {
+            if (journal(m).isActive(id)) members.add(m);
+        }
+        if (!members.isEmpty()) complete(members, player, id, quest);
+    }
+
     private static void announceUnlocked(ServerPlayer player, Identifier justDone) {
         MinecraftServer server = player.level().getServer();
         QuestLog log = journal(player);
@@ -287,21 +352,21 @@ public final class QuestEngine {
         QuestLog log = journal(player);
         if (log.tracked().map(t -> !t.equals(id)).orElse(false)) return;
         QuestLog.Entry e = log.entry(id);
-        if (e == null) return;
+        if (e == null || n >= e.targets.size()) return;
         Feedback.actionBar(player, Lang.fmt("msg.progress",
                 "quest", quest.name(),
-                "objective", quest.objectives().get(n).describe(),
+                "objective", currentObjectives(quest, e).get(n).describe(),
                 "done", e.progress.get(n), "target", e.targets.get(n)));
     }
 
-    /** The tracked quest's first unfinished objective, on the action bar. */
     public static void showTracker(ServerPlayer player, Identifier id) {
         if (!ChroniclerConfig.TRACKER_ACTION_BAR.get()) return;
         var holder = quest(player.level().getServer(), id);
         QuestLog.Entry e = journal(player).entry(id);
         if (holder.isEmpty() || e == null) return;
         Quest quest = holder.get().value();
-        for (int n = 0; n < quest.objectives().size(); n++) {
+        List<ObjectiveSpec> objectives = currentObjectives(quest, e);
+        for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
             if (!e.objectiveDone(n)) {
                 showProgress(player, id, quest, n);
                 return;

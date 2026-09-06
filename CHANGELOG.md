@@ -24,5 +24,8 @@
   `place` objective on the same condition. A public `api.Quests` facade and
   registries for giver, objective and reward types, for StoryTeller and
   friends. A hidden demo quest, Hot Foot, offered on entering the Nether.
+- Stages: ordered beats with narration, per-beat objectives and
+  `on_enter` / `on_complete` effects; `title`, `message` and `spawn` effects;
+  `{x}` `{y}` `{z}` in commands. Night Watch, a two-beat built-in quest.
 - Reputation: `reputation` reward and objective through Standards' new
   `api/reputation` (ships in Standards 1.5.0); a clean no-op on older builds.
