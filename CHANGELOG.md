@@ -13,5 +13,10 @@
 - Party quests: `scope` on chapters and quests, pooled progress, targets
   scaled by party size, everyone rewarded; membership through Standards'
   Groups seam, money through its economy.
+- The journal: a written book regenerated from the player's log on every
+  open -- contents page, a page per active quest with progress and Track /
+  Abandon links, an On Offer page with Accept links, a Done page. Right-click
+  the item or `/quest journal`. New players get one on first join
+  (`journal.giveToNewPlayers`).
 - Reputation: `reputation` reward and objective through Standards' new
   `api/reputation` (ships in Standards 1.5.0); a clean no-op on older builds.

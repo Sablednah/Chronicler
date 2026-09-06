@@ -5,5 +5,9 @@
   "chronicler.configuration.actionBar": "Action Bar Tracker",
   "chronicler.configuration.intervalTicks": "Location Check Interval (ticks)",
   "chronicler.configuration.visibility": "Visibility",
-  "chronicler.configuration.showHiddenToOps": "Show Hidden Quests To Ops"
+  "chronicler.configuration.showHiddenToOps": "Show Hidden Quests To Ops",
+  "chronicler.configuration.journal": "Journal",
+  "chronicler.configuration.giveToNewPlayers": "Give Journal To New Players",
+  "chronicler.configuration.party": "Party Quests",
+  "chronicler.configuration.groupKinds": "Party Group Kinds"
 }

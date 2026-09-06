@@ -122,6 +122,22 @@ public final class SelfTest {
 
             // Kills: a zombie counts, a cow does not, and the fifth completes it.
             check("things_in_the_dark now accepts", QuestEngine.accept(solo, things).isEmpty());
+            // The journal, while a quest is active and one is done: pages, links, the marker.
+            check("journal is not just any written book", !Journal.is(new ItemStack(Items.WRITTEN_BOOK)));
+            ItemStack journal = Journal.make(solo);
+            check("journal item carries the marker", Journal.is(journal));
+            var pages = Journal.pages(solo);
+            check("journal has contents + quest + offer + done pages", pages.size() >= 4);
+            String contents = pages.get(0).raw().getString();
+            check("journal contents name the active quest", contents.contains("Things in the Dark"));
+            check("journal pages carry no section signs", pages.stream().noneMatch(pg -> pg.raw().getString().contains("§")));
+            check("journal quest page shows progress", pages.get(1).raw().getString().contains("/"));
+            Journal.give(solo);
+            check("journal given is remembered", QuestEngine.journal(solo).journalGiven());
+            check("journal item in the pack", count(solo) == 1);
+            Journal.giveToNewPlayer(solo);
+            check("new-player give does not double up", count(solo) == 1);
+
             Zombie zombie = new Zombie(server.overworld());
             Cow cow = new Cow(net.minecraft.world.entity.EntityType.COW, server.overworld());
             QuestEngine.onKill(solo, cow);
@@ -180,11 +196,19 @@ public final class SelfTest {
         command(server, source, "quest info no_such_quest", false);
         command(server, source, "quest sideways", false);
         command(server, source, "quest accept first_steps", false); // console has no journal
+        command(server, source, "quest journal", false);             // console has no hands
 
         Chronicler.LOGGER.info("=== Chronicler SelfTest: {} PASSED, {} FAILED ===", passed, FAILURES.size());
         for (String f : FAILURES) {
             Chronicler.LOGGER.error("  FAILED: {}", f);
         }
+    }
+
+    private static int count(net.minecraft.server.level.ServerPlayer player) {
+        int n = 0;
+        var inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) if (Journal.is(inv.getItem(i))) n++;
+        return n;
     }
 
     private static FakePlayer fake(MinecraftServer server, String name) {

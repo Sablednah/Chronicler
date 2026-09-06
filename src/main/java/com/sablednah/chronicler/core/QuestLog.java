@@ -59,18 +59,23 @@ public final class QuestLog {
                     .optionalFieldOf("active", Map.of()).forGetter(l -> l.active),
             Codec.unboundedMap(Identifier.CODEC, Codec.INT)
                     .optionalFieldOf("completed", Map.of()).forGetter(l -> l.completed),
-            Identifier.CODEC.optionalFieldOf("tracked").forGetter(l -> Optional.ofNullable(l.tracked)))
+            Identifier.CODEC.optionalFieldOf("tracked").forGetter(l -> Optional.ofNullable(l.tracked)),
+            Codec.BOOL.optionalFieldOf("journal_given", false).forGetter(l -> l.journalGiven))
             .apply(i, QuestLog::new));
 
     private final Map<Identifier, Entry> active;
     private final Map<Identifier, Integer> completed;
     private Identifier tracked;
+    /** Has this player ever been handed the journal item? Once, not per world-join. */
+    private boolean journalGiven;
 
     public QuestLog() {
-        this(Map.of(), Map.of(), Optional.empty());
+        this(Map.of(), Map.of(), Optional.empty(), false);
     }
 
-    private QuestLog(Map<Identifier, Entry> active, Map<Identifier, Integer> completed, Optional<Identifier> tracked) {
+    private QuestLog(Map<Identifier, Entry> active, Map<Identifier, Integer> completed, Optional<Identifier> tracked,
+            boolean journalGiven) {
+        this.journalGiven = journalGiven;
         this.active = new LinkedHashMap<>();
         active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets)));
         this.completed = new LinkedHashMap<>(completed);
@@ -120,11 +125,16 @@ public final class QuestLog {
 
     public void track(Identifier quest) { tracked = quest; }
 
+    public boolean journalGiven() { return journalGiven; }
+
+    public void markJournalGiven() { journalGiven = true; }
+
     /** Wipe everything -- an admin reset, or a test fixture. */
     public void clear() {
         active.clear();
         completed.clear();
         tracked = null;
+        journalGiven = false;
     }
 
     public Map<Identifier, Entry> activeView() { return Collections.unmodifiableMap(active); }

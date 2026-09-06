@@ -135,6 +135,42 @@ public final class Lang {
         def("cmd.status.party", "&7Party membership: &f{provider}");
     }
 
+    // --- journal.* : the written book. Parchment, so dark colours; every page an unstyled root ---
+    static {
+        def("journal.title", "{term.journal}");
+        def("journal.author", "Chronicler");
+        def("journal.heading", "&0&l{term.journal}");
+        def("journal.counts", "&8{active} in progress, {completed} done");
+        def("journal.none_active", "&8Nothing under way. Turn to what is on offer.");
+        def("journal.contents.quest", "&1\u00bb {name}");
+        def("journal.contents.tracked", "&1\u00bb {name} &3\u2726");
+        def("journal.contents.available", "&2On offer ({count}) \u00bb");
+        def("journal.contents.done", "&8Done ({count}) \u00bb");
+        def("journal.tip.turn", "Turn to that page");
+        def("journal.tip.contents", "Back to the contents");
+        def("journal.quest.name", "&0&l{name}");
+        def("journal.quest.chapter", "&8{chapter}");
+        def("journal.quest.party", "&5Shared with your party.");
+        def("journal.quest.description", "&0{description}");
+        def("journal.quest.gone", "&8This {term.quest} ({id}) no longer exists on this server.");
+        def("journal.objective.done", "&2\u2714 {line}");
+        def("journal.objective.open", "&0\u2610 {line} &8({done}/{target})");
+        def("journal.link.track", "&3[Track]");
+        def("journal.link.abandon", "&4[Abandon]");
+        def("journal.link.accept", "&2[Accept]");
+        def("journal.link.info", "&8[Info]");
+        def("journal.link.back", "&8\u00ab Contents");
+        def("journal.available.heading", "&0&lOn offer");
+        def("journal.available.none", "&8Nothing right now. Finish what you have, or go and look.");
+        def("journal.available.quest", "&0{name}");
+        def("journal.done.heading", "&0&lDone");
+        def("journal.done.none", "&8Nothing yet. It is a long book.");
+        def("journal.done.quest", "&2\u2714 &0{name}");
+        def("journal.done.quest_times", "&2\u2714 &0{name} &8x{times}");
+        def("msg.journal.given", "{prefix}&7Here is your {term.journal}. Right-click it to read; &f/quest journal&7 opens it from anywhere.");
+        def("msg.journal.new_player", "{prefix}&7A {term.journal} has been slipped into your pack. Right-click it, or &f/quest journal&7.");
+    }
+
     // --- obj.* / rew.* : generated from the data so text and rule agree ---
     static {
         def("obj.kill", "Kill {count} x {target}");

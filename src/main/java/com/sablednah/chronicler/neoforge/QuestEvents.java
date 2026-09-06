@@ -5,7 +5,9 @@ import com.sablednah.chronicler.ChroniclerConfig;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.minecraft.world.InteractionResult;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 /** Game-bus hooks that feed the engine. Thin: the rules live in {@link QuestEngine}. */
@@ -33,12 +35,29 @@ public final class QuestEvents {
         }
     }
 
-    /** Remind a returning player what they were doing. */
+    /** Remind a returning player what they were doing; hand a new one the book. */
     @SubscribeEvent
     static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            Journal.giveToNewPlayer(player);
             QuestEngine.journal(player).tracked().ifPresent(id -> QuestEngine.showTracker(player, id));
         }
+    }
+
+    /**
+     * The journal item: fresh pages before vanilla opens it. Server side only,
+     * and cancelled so vanilla's own open does not race ours -- the pages have
+     * to be rewritten and synced to the client BEFORE the open packet, or the
+     * player reads last week's progress.
+     */
+    @SubscribeEvent
+    static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        if (event.getLevel().isClientSide()) return;
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (!Journal.is(event.getItemStack())) return;
+        event.setCancellationResult(InteractionResult.SUCCESS);
+        event.setCanceled(true);
+        Journal.onUse(player, event.getItemStack(), event.getHand());
     }
 
     private QuestEvents() {}

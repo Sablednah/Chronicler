@@ -65,6 +65,10 @@ public final class ChroniclerCommands {
                 .then(Commands.literal("status")
                         .requires(ChroniclerPermissions::isAdmin)
                         .executes(ChroniclerCommands::status))
+                .then(Commands.literal("journal")
+                        .requires(ChroniclerPermissions::isAdmin)
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ChroniclerCommands::journalGiveTo)))
                 .then(Commands.literal("reset")
                         .requires(ChroniclerPermissions::isAdmin)
                         .then(Commands.argument("player", EntityArgument.player())
@@ -78,7 +82,10 @@ public final class ChroniclerCommands {
                 .then(Commands.literal("info").then(questArg().executes(ChroniclerCommands::info)))
                 .then(Commands.literal("accept").then(questArg().executes(ChroniclerCommands::accept)))
                 .then(Commands.literal("abandon").then(questArg().executes(ChroniclerCommands::abandon)))
-                .then(Commands.literal("track").then(questArg().executes(ChroniclerCommands::track)));
+                .then(Commands.literal("track").then(questArg().executes(ChroniclerCommands::track)))
+                .then(Commands.literal("journal")
+                        .executes(ChroniclerCommands::journalOpen)
+                        .then(Commands.literal("give").executes(ChroniclerCommands::journalGive)));
     }
 
     private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, ?> questArg() {
@@ -290,6 +297,23 @@ public final class ChroniclerCommands {
         }
         Feedback.chat(player, Lang.get("msg.not_active"));
         return 0;
+    }
+
+    // --- /quest journal ---
+
+    private static int journalOpen(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Journal.open(ctx.getSource().getPlayerOrException());
+        return 1;
+    }
+
+    private static int journalGive(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Journal.give(ctx.getSource().getPlayerOrException());
+        return 1;
+    }
+
+    private static int journalGiveTo(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Journal.give(EntityArgument.getPlayer(ctx, "player"));
+        return 1;
     }
 
     // --- /quest log ---
