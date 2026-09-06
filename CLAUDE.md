@@ -202,6 +202,13 @@ that answers sensibly when the sibling is absent (no economy → reward skipped
 and said so; no CityWorld → `lot` objective never completes and the file is
 rejected at load with a clear message).
 
+**Floors are what is consumed, not what is newest.** Standards 1.5.0 (released
+2026-09-06) carries `api/reputation`, but the floor stays `[1.2.0,)` because
+economy and groups are what is consumed unconditionally and every 1.21.11 test
+instance still runs 1.2.0 -- NeoForge refuses to start when an optional
+dependency is present but below its floor. Raise it only when the instances
+have moved and a seam genuinely needs the newer build.
+
 Wire each seam through `Chronicler.optionalIntegration(name, runnable)`, which
 catches **`LinkageError`** — `ModList.isLoaded` says "present", not "new
 enough", and an older Standards once took a whole server down during
@@ -233,7 +240,9 @@ release — publishing fires `.github/workflows/curseforge.yml` and
 `modrinth.yml`, both of which skip cleanly until `CURSEFORGE_TOKEN` /
 `CURSEFORGE_PROJECT_ID` / `MODRINTH_TOKEN` / `MODRINTH_PROJECT_ID` exist. Both
 scripts were copied from MobHealth and renamed; **review `scripts/*.sh` before
-the first real release.** A 200 from CurseForge is acceptance, not
+the first real release**, and copy Standards' `only_mc` workflow input so one
+Minecraft line can be re-uploaded after a partial failure without duplicating
+the others (CurseForge has 500'd one of three jars twice across these repos). A 200 from CurseForge is acceptance, not
 publication; the changelog sanitiser 500s on blockquotes and autolinks;
 Modrinth rejects AI-looking artwork and icons over 256 KiB. Never handle the
 tokens.
