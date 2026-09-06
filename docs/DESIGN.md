@@ -311,17 +311,92 @@ spike comes first because that is how this family works
 Steps 1–4 are the mod. Steps 5–7 are what make it *this* mod. Step 8 is what
 it is for.
 
-## Open questions for Sable
+## Decisions (Sable, 2026-09-06)
 
-- **Giver placement**: data-declared coordinates, op-placed in world, or
-  CityWorld-lot-relative ("the nearest hospital")? Recommend all three, in
-  that order of building; lot-relative is the one that makes ZARP portable
-  across seeds.
-- **Reputation**: Chronicler's own small system, or lean entirely on karma +
-  Factions? Recommend own, tiny — factions are membership, karma is one axis,
-  and "the survivors like you" is a third thing.
-- **Quest items**: one `chronicler:quest_item` with data components, or
-  vanilla items tagged by name? Recommend the former; it cannot be crafted or
-  confused.
-- **Party sharing default**: `shared: false` unless declared? Recommend yes —
-  most quests are personal, and a shared kill counter is surprising.
+The four open questions were put to Sable and answered. These are settled;
+the design above is read through them.
+
+### 1. Givers: all three placements, and a *modular* giver seam
+
+Lot/place-relative, op-placed and data-declared coordinates are all wanted,
+built in that order of value (place-relative is what makes a shipped ZARP pack
+portable across seeds; op-placed is what a server owner authoring their own
+story reaches for; coordinates are for fixed sets like the vault).
+
+**And givers are a registry, like LegendQuest skills.** `GiverSpec` is a
+codec-dispatched record with a public `GiverTypes.register`, exactly the shape
+objectives and rewards already have, so other mods add giver kinds *and
+trigger kinds* Chronicler could not have guessed at. Built-in kinds: `lectern`,
+`stand` (named armour stand + head + nameplate), `block`, `sign`, `place`
+(ambient), `event`. The first external kind is already known:
+
+**StoryTeller NPCs are quest givers.** `../LegendQuest-StoryTeller` exists
+(milestone 1 and possession shipped 2026-09-06; the NPC cast is its roadmap
+§3, with `quest-giver` listed as a preset behaviour). An NPC there is a full
+LegendQuest character sheet with a nameplate, and StoryTeller has a voice
+(`/st say`). So Chronicler offers a small API — `Quests.offer(player, quest)`,
+`Quests.accept`, `Quests.progress`, and `GiverTypes.register` — and
+StoryTeller registers an `npc` giver kind that spawns its cast member and
+speaks the offer through its own chat. Chronicler never imports StoryTeller;
+StoryTeller imports Chronicler's `api` package, guarded, the same way every
+sibling seam works. **Division to confirm with the StoryTeller session:**
+Chronicler owns the beat/stage data model and the journal; StoryTeller's
+"story planner" (its roadmap §5) drives Chronicler stages live rather than
+growing a second engine. Two planners with different rules would be the
+FTB Teams / LQ party collision again.
+
+### 2. Reputation is a shared concept, and Standards owns it
+
+Sable wants StoryTeller to grant reputation as a reward too, so it cannot be
+Chronicler's private state. **It becomes a Standards seam**, `api/reputation`,
+in the mould of the economy: a facade other mods call, a store Standards keeps
+(SavedData, so it answers for offline players), named standings created on
+first use (`survivors`, `raiders`, `the_hospital`) with no registry to
+declare. `docs/REPUTATION-API.md` here is the proposal to hand to the Standards
+session; nothing is built until they take it. Until then Chronicler's
+`reputation` reward and condition are a neutral bridge that logs once and
+does nothing, so quest files can be written now.
+
+### 3. Quest items: both, tagged invisibly
+
+A single `chronicler:quest_item` for story items (data-driven look and name,
+cannot be crafted, vanishes on completion) **and** `collect` accepting a
+renamed vanilla item for cheap bounties (`match: name`).
+
+**Identity lives in `CUSTOM_DATA`, never in the name.** Factions learned this
+with captured standards: a name is something anybody can type into an anvil,
+so "rename a banner and claim the flag" is a day-one exploit. Custom data is
+not player-writable. Chronicler writes `{"chronicler:quest": "<quest id>",
+"chronicler:item": "<item key>"}` into the stack's `CUSTOM_DATA`; the `collect`
+objective checks the marker first and the name only when the quest says
+`match: name`. Loot tables can emit the marked stack with vanilla's
+`set_custom_data` function, so a genus or a chest can drop one with no code.
+Same `DAMAGE_RESISTANT` fire-proofing as the trophy: losing the vial to lava
+is a shrug, not danger.
+
+### 4. Party scope: per-chapter default, quest override, and the whole thing
+multiplayer-aware
+
+Chapters carry `scope: solo | party`; quests override. Main chapters will
+default to `party`, bounties and personal side quests to `solo`.
+
+A **party** quest is one quest for the whole party, not one copy each:
+
+- every member has it active and sees the same progress;
+- progress is **pooled** — any member's kill counts — and the target is
+  **scaled by party size at acceptance** (`scale: true` by default): "kill 5
+  zombies" becomes 15 for three people, which is Sable's "x per player";
+- it completes for everyone at once and **every member is rewarded**;
+- a member who joins mid-quest joins at current progress with the target
+  rescaled; one who leaves keeps a solo copy at their share, so nobody loses
+  a quest by leaving a party.
+
+Membership comes through Standards' Groups seam (LegendQuest parties are the
+intended provider). Without Standards, every quest is effectively solo and
+`scope: party` quests say so once when accepted. A quest marked `scope: solo`
+in a party chapter stays personal — the escape hatch for "your own choice"
+beats.
+
+**What this changes in the build order:** the Groups seam moves up from step 5
+into step 1's design (the journal has to know about pooled progress from the
+start, or it gets rewritten), and a `GiverSpec` registry joins step 3.
