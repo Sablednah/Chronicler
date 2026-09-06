@@ -45,32 +45,37 @@ displayURL="https://sablecraft.co.uk/chronicler/"
 
 # Everything below is OPTIONAL. Chronicler must start, load content and run
 # quests with none of them installed. Ordering AFTER so their registries and
-# APIs exist by the time ours look for them. Version floors are set when a
-# seam is first consumed, not before -- an unconsumed floor is a lie.
+# APIs exist by the time ours look for them.
+#
+# Version floors are set when a seam is first consumed, not before -- an
+# unconsumed floor is a lie, and it is not a harmless one: NeoForge treats an
+# optional dependency that is PRESENT but below the floor as a hard error and
+# refuses to start. Standards: economy + groups are consumed and exist from
+# 1.2.0; reputation (1.5.0) is behind a LinkageError guard and needs no floor.
 [[dependencies.${mod_id}]]
     modId="legendquest"
     type="optional"
-    versionRange="[2.4.0,)"
+    versionRange="[1,)"
     ordering="AFTER"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="standards"
     type="optional"
-    versionRange="[1.4.0,)"
+    versionRange="[1.2.0,)"
     ordering="AFTER"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="zombiemod"
     type="optional"
-    versionRange="[3.4.0,)"
+    versionRange="[1,)"
     ordering="AFTER"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="cityworld"
     type="optional"
-    versionRange="[5.0.0,)"
+    versionRange="[1,)"
     ordering="AFTER"
     side="BOTH"
