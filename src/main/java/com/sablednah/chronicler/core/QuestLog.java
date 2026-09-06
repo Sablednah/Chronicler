@@ -88,7 +88,8 @@ public final class QuestLog {
                     .optionalFieldOf("completed", Map.of()).forGetter(l -> l.completed),
             Identifier.CODEC.optionalFieldOf("tracked").forGetter(l -> Optional.ofNullable(l.tracked)),
             Codec.BOOL.optionalFieldOf("journal_given", false).forGetter(l -> l.journalGiven),
-            Codec.STRING.listOf().optionalFieldOf("flags", List.of()).forGetter(l -> List.copyOf(l.flags)))
+            Codec.STRING.listOf().optionalFieldOf("flags", List.of()).forGetter(l -> List.copyOf(l.flags)),
+            Codec.unboundedMap(Identifier.CODEC, Codec.LONG).optionalFieldOf("completed_at", Map.of()).forGetter(l -> l.completedAt))
             .apply(i, QuestLog::new));
 
     private final Map<Identifier, Entry> active;
@@ -99,14 +100,18 @@ public final class QuestLog {
     /** The player's own flags -- choices made, things seen. */
     private final java.util.Set<String> flags = new java.util.LinkedHashSet<>();
 
+    /** Wall-clock millis of the last completion, for repeatable cooldowns (game time pauses with the server). */
+    private final Map<Identifier, Long> completedAt;
+
     public QuestLog() {
-        this(Map.of(), Map.of(), Optional.empty(), false, List.of());
+        this(Map.of(), Map.of(), Optional.empty(), false, List.of(), Map.of());
     }
 
     private QuestLog(Map<Identifier, Entry> active, Map<Identifier, Integer> completed, Optional<Identifier> tracked,
-            boolean journalGiven, List<String> flags) {
+            boolean journalGiven, List<String> flags, Map<Identifier, Long> completedAt) {
         this.journalGiven = journalGiven;
         this.flags.addAll(flags);
+        this.completedAt = new LinkedHashMap<>(completedAt);
         this.active = new LinkedHashMap<>();
         active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets, v.stage, v.deadlineAt)));
         this.completed = new LinkedHashMap<>(completed);
@@ -144,6 +149,7 @@ public final class QuestLog {
     public void complete(Identifier quest) {
         active.remove(quest);
         completed.merge(quest, 1, Integer::sum);
+        completedAt.put(quest, System.currentTimeMillis());
         if (quest.equals(tracked)) tracked = active.isEmpty() ? null : active.keySet().iterator().next();
     }
 
@@ -155,6 +161,11 @@ public final class QuestLog {
     public Optional<Identifier> tracked() { return Optional.ofNullable(tracked); }
 
     public void track(Identifier quest) { tracked = quest; }
+
+    public long completedAt(Identifier quest) { return completedAt.getOrDefault(quest, 0L); }
+
+    /** Test fixtures: pretend it was done long ago. */
+    public void setCompletedAt(Identifier quest, long millis) { completedAt.put(quest, millis); }
 
     public boolean hasFlag(String name) { return flags.contains(name.trim().toLowerCase(java.util.Locale.ROOT)); }
 
@@ -176,6 +187,7 @@ public final class QuestLog {
         tracked = null;
         journalGiven = false;
         flags.clear();
+        completedAt.clear();
     }
 
     public Map<Identifier, Entry> activeView() { return Collections.unmodifiableMap(active); }

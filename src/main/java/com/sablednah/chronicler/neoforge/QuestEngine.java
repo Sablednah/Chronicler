@@ -46,7 +46,7 @@ import net.minecraft.world.entity.LivingEntity;
  */
 public final class QuestEngine {
 
-    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS }
+    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS, COOLDOWN }
 
     // --- lookups ---
 
@@ -94,6 +94,7 @@ public final class QuestEngine {
         QuestLog log = journal(player);
         if (log.isActive(id)) return Optional.of(Refusal.ALREADY_ACTIVE);
         if (log.isComplete(id) && !quest.repeatable()) return Optional.of(Refusal.ALREADY_COMPLETE);
+        if (quest.repeatable() && quest.cooldown() > 0 && cooldownLeft(log, id, quest) > 0) return Optional.of(Refusal.COOLDOWN);
         for (Identifier r : quest.requires()) {
             if (!log.isComplete(r)) return Optional.of(Refusal.LOCKED);
         }
@@ -101,6 +102,13 @@ public final class QuestEngine {
             return Optional.of(Refusal.CONDITIONS);
         }
         return Optional.empty();
+    }
+
+    /** Millis until a repeatable may be taken again; 0 when it may. */
+    public static long cooldownLeft(QuestLog log, Identifier id, Quest quest) {
+        long at = log.completedAt(id);
+        if (at <= 0 || quest.cooldown() <= 0) return 0;
+        return Math.max(0, at + quest.cooldown() * 1000L - System.currentTimeMillis());
     }
 
     /** The availability lines a player does not meet, for the refusal message. */

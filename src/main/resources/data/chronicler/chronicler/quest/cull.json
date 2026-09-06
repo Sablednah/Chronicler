@@ -1,0 +1,16 @@
+{
+  "name": "Cull",
+  "description": "The board at the camp always says the same thing. Fewer of them.",
+  "chapter": "prologue",
+  "order": 10,
+  "repeatable": true,
+  "cooldown": 600,
+  "requires": [ "things_in_the_dark" ],
+  "objectives": [
+    { "type": "kill", "target": "minecraft:zombie", "count": 10 }
+  ],
+  "rewards": [
+    { "type": "money", "amount": 10 },
+    { "type": "xp", "amount": 15 }
+  ]
+}

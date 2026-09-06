@@ -233,6 +233,9 @@ public final class ChroniclerCommands {
         QuestLog log = QuestEngine.journal(player);
         if (log.isActive(id)) return Lang.get("status.active");
         if (log.isComplete(id) && !q.repeatable()) return Lang.get("status.complete");
+        if (q.repeatable() && QuestEngine.cooldownLeft(log, id, q) > 0) {
+            return Lang.fmt("status.cooldown", "time", QuestEngine.clock(QuestEngine.cooldownLeft(log, id, q) / 50L));
+        }
         return QuestEngine.available(player, id, q) ? Lang.get("status.available") : Lang.get("status.locked");
     }
 
@@ -310,6 +313,12 @@ public final class ChroniclerCommands {
             QuestEngine.quest(player.level().getServer(), id).ifPresent(h ->
                     QuestEngine.unmet(player, h.value()).forEach(line ->
                             Feedback.chat(player, Lang.fmt("msg.refuse.condition_line", "line", line))));
+            return 0;
+        }
+        if (refusal.get() == QuestEngine.Refusal.COOLDOWN) {
+            long left = QuestEngine.quest(player.level().getServer(), id)
+                    .map(h -> QuestEngine.cooldownLeft(QuestEngine.journal(player), id, h.value())).orElse(0L);
+            Feedback.chat(player, Lang.fmt("msg.refuse.cooldown", "time", QuestEngine.clock(left / 50L)));
             return 0;
         }
         Feedback.chat(player, Lang.get(switch (refusal.get()) {

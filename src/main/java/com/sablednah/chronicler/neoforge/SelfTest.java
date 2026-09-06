@@ -238,6 +238,19 @@ public final class SelfTest {
                 check("character rewards without a sheet are clean no-ops", !Sheet.addKarma(solo, 5));
             }
 
+            // Repeatable bounties on a cooldown: Cull can be done again, but not at once.
+            Identifier cull = ChroniclerIds.of("cull");
+            var cullQ = quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, cull)).map(h -> h.value());
+            check("cull ships repeatable with a cooldown", cullQ.map(q -> q.repeatable() && q.cooldown() > 0).orElse(false));
+            check("cooldown: accept the first time", QuestEngine.accept(solo, cull).isEmpty());
+            for (int i = 0; i < 10; i++) QuestEngine.onKill(solo, zombie);
+            check("cooldown: ten kills complete it", QuestEngine.journal(solo).isComplete(cull));
+            check("cooldown: refused straight after", QuestEngine.accept(solo, cull).map(r -> r == QuestEngine.Refusal.COOLDOWN).orElse(false));
+            QuestEngine.journal(solo).setCompletedAt(cull, 1L);
+            check("cooldown: available again once it has passed", QuestEngine.accept(solo, cull).isEmpty()
+                    && QuestEngine.journal(solo).completions(cull) == 1);
+            QuestEngine.abandon(solo, cull);
+
             // The API other mods call.
             check("api: hot_foot is available (hidden only hides the list)", com.sablednah.chronicler.api.Quests.isAvailable(solo, ChroniclerIds.of("hot_foot")));
             check("api: offer returns true for an available quest", com.sablednah.chronicler.api.Quests.offer(solo, ChroniclerIds.of("hot_foot"), "a test"));

@@ -9,7 +9,7 @@ Built to sit beside [LegendQuest ReForged](https://github.com/Sablednah/LegendQu
 [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) — and
 needs none of them.
 
-**Status: engine + journal + givers + stages + conditions + choices (0.1.0, unreleased).** Quests load from datapacks
+**Status: 0.1.0 (unreleased) — engine, journal, givers, stages, conditions, choices, deadlines, bounties.** Quests load from datapacks
 and YAML, can be accepted, are measured (kills, items held, places reached),
 complete with a title card and pay out. The journal is a written book with a
 page per quest and clickable links, handed to every new player. Party quests pool progress across a party when
@@ -90,6 +90,11 @@ back to stage `fail` or drops the quest.
       - { label: Give it, effects: [ { type: karma, delta: 5 } ], end: true }
       - { label: Keep it, effects: [ { type: karma, delta: -5 } ], end: true }
 ```
+
+A `repeatable` quest with a `cooldown` (seconds) is a **bounty**: done again
+and again, but not at once. Built-in examples in the Prologue: First Steps,
+Things in the Dark (party), Night Watch (three beats, ends on a choice), Hot
+Foot (hidden, found on entering the Nether), Cull (a bounty).
 
 Objective types today: `kill` (an entity id, a `#tag`, `any`, or a ZombieMod
 genus id), `collect` (`consume: false` to only require carrying), `visit`

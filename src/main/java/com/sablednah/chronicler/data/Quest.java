@@ -33,6 +33,7 @@ import net.minecraft.resources.Identifier;
  * @param stages      ordered beats; when present, {@code objectives} is ignored and
  *                    each stage carries its own
  * @param availability karma, level, flags and standing the player must meet
+ * @param cooldown    seconds after completing before a repeatable is offered again
  */
 public record Quest(
         String name,
@@ -48,7 +49,8 @@ public record Quest(
         boolean scale,
         Optional<GiverSpec> giver,
         List<Stage> stages,
-        Optional<Availability> availability) {
+        Optional<Availability> availability,
+        int cooldown) {
 
     /** The quest as beats: its stages, or one stage made of its objectives. Never empty. */
     public List<Stage> beats() {
@@ -75,6 +77,7 @@ public record Quest(
             Codec.BOOL.optionalFieldOf("scale", true).forGetter(Quest::scale),
             GiverTypes.CODEC.optionalFieldOf("giver").forGetter(Quest::giver),
             Stage.CODEC.listOf().optionalFieldOf("stages", List.of()).forGetter(Quest::stages),
-            Availability.CODEC.optionalFieldOf("availability").forGetter(Quest::availability))
+            Availability.CODEC.optionalFieldOf("availability").forGetter(Quest::availability),
+            Codec.INT.optionalFieldOf("cooldown", 0).forGetter(Quest::cooldown))
             .apply(i, Quest::new));
 }

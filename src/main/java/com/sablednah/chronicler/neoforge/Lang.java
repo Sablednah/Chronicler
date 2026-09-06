@@ -67,6 +67,8 @@ public final class Lang {
         def("status.hidden", "&8[hidden]");
         def("status.repeatable", "&7(repeatable)");
         def("status.tracked", "&b(tracked)");
+        def("status.cooldown", "&8again in {time}");
+        def("msg.refuse.cooldown", "{prefix}&7Done recently. Again in &f{time}&7.");
         def("status.party", "&d(party)");
     }
 

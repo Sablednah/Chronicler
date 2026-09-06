@@ -27,6 +27,7 @@
 - Stages: ordered beats with narration, per-beat objectives and
   `on_enter` / `on_complete` effects; `title`, `message` and `spawn` effects;
   `{x}` `{y}` `{z}` in commands. Night Watch, a two-beat built-in quest.
+- Bounties: `cooldown` on a repeatable quest; Cull as the built-in example.
 - Choices: decision beats with clickable options, effects, `next` / `end`,
   `start` another quest; `/quest choose`. Deadlines: a timed beat with a
   countdown, `on_fail`, and a fall-back stage or abandonment. Night Watch

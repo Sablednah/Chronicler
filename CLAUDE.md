@@ -100,6 +100,34 @@ ps -eo pid,etime,args | grep "[f]ml.modFolders" | grep "Chronicler/build/classes
 
 `pkill -f "gradlew runServer"` kills the shell you type it in. Don't.
 
+### The self-test boot, as it is actually run
+
+```bash
+cp ../SableCraft-Standards/build/libs/standards-*+mc1.21.11.jar \
+   ../LegendQuest-ReForged/build/libs/legendquest-*+mc1.21.11.jar \
+   libs/zombiemod-*+mc1.21.11.jar run/mods/        # the seams only link with a consumer present
+./gradlew runServer -Pselftest > server.log 2>&1 & # then wait for "Chronicler SelfTest:"
+grep -nE "SelfTest:|FAILED:" server.log; grep -nE "ERROR|FATAL" server.log
+kill <the JVM whose cmdline has Chronicler/build/classes>; rm run/mods/*.jar
+```
+
+- **Run it in the foreground of a single command, not as a harness background
+  task.** With five sibling dev servers and their Gradle daemons on the box,
+  the background-task memory monitor killed two boots mid world-load and
+  reported "BUILD FAILED" with no cause. The server heap is capped at 2G in
+  `build.gradle` for the same reason.
+- **Boot with the siblings AND without.** The compat classes only link when
+  the mod is present; 47 checks pass with nobody there, 106 with everybody,
+  and both numbers matter.
+- **`libs/` (gitignored) holds a sibling jar that has no `build/libs` for this
+  line** -- ZombieMod builds 1.21.11 elsewhere, so its jar is copied from the
+  CurseForge instance. `build.gradle` compiles against the NEWEST jar of each
+  sibling by mtime, never an alphabetical fileTree (which quietly picked the
+  oldest and "lost" a method added last week).
+- **A FakePlayer is a real ServerPlayer with a journal**, and the self-test
+  drives the real engine with three of them: solo, and a two-player party.
+  What it cannot see: anything drawn, and anything a second real client does.
+
 ### Testing
 
 `SelfTest` runs headless and is the only route to "does the command work"
@@ -152,12 +180,20 @@ well-chosen emoji is polish, a row of them is clutter.
 data/<pack>/chronicler/{chapter,quest}/<name>.json   datapack registries
 config/chronicler/{chapters,quests}/<name>.yml       the YAML front door (same schema)
         ↓  Chapter.CODEC / Quest.CODEC
-data/                        loader-light records; ObjectiveSpec / RewardSpec dispatch on "type"
-core/QuestLog                the player's journal (attachment, copyOnDeath)
-neoforge/                    events, commands, permissions, Lang, Feedback, Net, SelfTest
-yaml/                        YAML -> JSON pack
-network/                     (empty) wire formats, when a client half exists
-neoforge/compat/             (empty) ONE guarded class per sibling mod
+data/                loader-light records: Quest, Chapter, Stage, Choice, Place, Availability;
+                     ObjectiveSpec / RewardSpec / GiverSpec dispatch on "type" via SpecTypes
+core/QuestLog        the player's journal (attachment, copyOnDeath): entries with stage,
+                     counters, targets, deadline; completions; flags; tracked
+neoforge/QuestEngine accept / measure / advance / choose / fail / complete / reward
+neoforge/Trackers    how an objective is measured (poll or event), keyed by spec class
+neoforge/Rewards     how a reward or effect is granted, keyed by spec class
+neoforge/Givers      offers near a block or in a kind of place; GiverStore = op-placed (SavedData)
+neoforge/Journal     the written book; FlagStore = world flags (SavedData, cached for off-thread)
+neoforge/Party|Money|Rep|Sheet|Lots   neutral bridges, "nothing here" without a sibling
+neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEconomy,
+                     StandardsReputation, LegendQuestCharacter, CityWorldLots, ZombieModConditions
+api/Quests           the door for other mods (StoryTeller): offer / accept / flags / registries
+yaml/                YAML -> JSON pack
 ```
 
 - **Content is a frozen registry.** `/reload` rebuilds tags and functions,
@@ -251,6 +287,12 @@ tokens.
 
 - A `static final` collection declared after the fields that fill it is null
   when they initialise. Declare collections first.
+- **Do not name a class `Character`** (or `Process`, `Thread`, ...): it shadows
+  `java.lang` inside its own package and the error lands in an unrelated file.
+  The sheet bridge is `Sheet` for that reason.
+- **A decision beat has no objectives, so `Entry.done()` is vacuously true.**
+  `set()` guards on a non-empty target list; forget that and a choice screen
+  completes itself.
 - **Config cannot be read during mod construction** -- `Cannot get config
   value before config is loaded` fails construction and takes the server
   down. Read config values lazily at use time, or register on

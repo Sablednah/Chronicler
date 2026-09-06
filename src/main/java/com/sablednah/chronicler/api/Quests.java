@@ -26,7 +26,7 @@ import net.minecraft.server.level.ServerPlayer;
 public final class Quests {
 
     /** Why an accept was refused. Mirrors the engine's. */
-    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS }
+    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS, COOLDOWN }
 
     /** Offer a quest to a player as if a giver had: action bar + chat with Accept/Info. Cooldown applies. */
     public static boolean offer(ServerPlayer player, Identifier quest, String where) {
