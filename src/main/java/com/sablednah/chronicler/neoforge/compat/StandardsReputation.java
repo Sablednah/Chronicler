@@ -14,15 +14,18 @@ import net.minecraft.server.level.ServerPlayer;
  * Standards too old to carry the package costs this seam and nothing else.
  *
  * <p>Standing names are normalised by the facade (lower-cased, trimmed);
- * we hand them over as written and let it agree with itself. Bands are
- * display-only and not in the API yet; {@link #band} answers empty until
- * Standards exposes a text lookup.</p>
+ * we hand them over as written and let it agree with itself. Bands are the
+ * store's own words for a value ({@code Reputation.band}), configurable per
+ * standing over there -- <b>text only, never a condition</b>; a threshold is
+ * a number and {@code ReputationEvent.crossed(n)} is the hook for it.</p>
  */
 public final class StandardsReputation {
 
     public static void register() {
-        // Touch the facade so a missing class fails HERE, inside the guard.
+        // Touch the facade so a missing class or method fails HERE, inside the
+        // guard: a LinkageError at reward time would be caught by nothing.
         Reputation.normalise("probe");
+        Reputation.band("probe", 0);
         Rep.install(new Rep.Provider() {
             @Override public boolean available() { return Reputation.isAvailable(); }
             @Override public int get(ServerPlayer player, String standing) {
@@ -32,7 +35,7 @@ public final class StandardsReputation {
                 return Reputation.adjust(player.getUUID(), standing, delta, reason);
             }
             @Override public Optional<String> band(String standing, int value) {
-                return Optional.empty();
+                return Reputation.band(standing, value);
             }
         });
         Chronicler.LOGGER.info("Chronicler: reputation via Standards");
