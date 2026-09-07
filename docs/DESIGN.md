@@ -464,3 +464,15 @@ beats.
 **What this changes in the build order:** the Groups seam moves up from step 5
 into step 1's design (the journal has to know about pooled progress from the
 start, or it gets rewritten), and a `GiverSpec` registry joins step 3.
+
+### Giver marks are per player (2026-09-07)
+
+The mark over a giver is not an entity. A `text_display` in the world is one
+thing seen by everyone, so it could never say "done" to one player and "!" to
+another. Instead each player is sent a private display by packets, the way
+Cast draws a phantom: built server-side, never added to a level, spawned onto
+that client within 64 blocks, re-sent when its text changes, removed when they
+walk away. Four config strings under `givers`: `markerText` (available, `&e&l!`),
+`markerActive` (`&7&l?`), `markerComplete` (`&a&l✔`; repeatables show
+`markerText` again), `markerLocked` (empty = nothing). Nothing to reap after
+a restart, because nothing was ever in the world.

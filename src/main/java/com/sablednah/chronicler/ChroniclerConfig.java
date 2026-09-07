@@ -25,6 +25,9 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.IntValue GIVER_SECOND_CLICK_SECONDS;
     public static final ModConfigSpec.BooleanValue GIVER_MARKERS;
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_TEXT;
+    public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_ACTIVE;
+    public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_COMPLETE;
+    public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_LOCKED;
 
     static {
         BUILDER.comment("Announcements").push("announce");
@@ -73,12 +76,23 @@ public final class ChroniclerConfig {
                         "seconds accepts it (so does the Accept button). 0 accepts on the first click.")
                 .defineInRange("secondClickSeconds", 20, 0, 600);
         GIVER_MARKERS = BUILDER
-                .comment("Float a marker over every giver (a block, an op-placed block, an NPC).",
-                        "A text_display, so vanilla clients see it. One per giver, for everyone.")
+                .comment("Float a mark over every giver (a block, an op-placed block, an NPC).",
+                        "Sent to each player privately, so it shows THEIR state; vanilla clients see it.")
                 .define("markers", true);
         GIVER_MARKER_TEXT = BUILDER
-                .comment("What the marker says. '&' colour codes work; {quest} is the quest's name.")
+                .comment("The mark while the player could take the quest. '&' colour codes work;",
+                        "{quest} is the quest's name. Empty hides it.")
                 .define("markerText", "&e&l!");
+        GIVER_MARKER_ACTIVE = BUILDER
+                .comment("The mark while the player is on the quest.")
+                .define("markerActive", "&7&l?");
+        GIVER_MARKER_COMPLETE = BUILDER
+                .comment("The mark once the player has finished it (repeatables show markerText again).")
+                .define("markerComplete", "&a&l\u2714");
+        GIVER_MARKER_LOCKED = BUILDER
+                .comment("The mark while the quest is locked for the player (prerequisites, conditions,",
+                        "cooldown). Empty, the default, shows nothing.")
+                .define("markerLocked", "");
         BUILDER.pop();
 
         BUILDER.comment("Party quests").push("party");

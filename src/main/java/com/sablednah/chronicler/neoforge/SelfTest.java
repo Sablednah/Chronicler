@@ -175,18 +175,28 @@ public final class SelfTest {
             net.minecraft.core.BlockPos here = solo.blockPosition();
             store.set(server.overworld(), here, firstSteps);
             check("giver store answers", Givers.questAt(server.overworld(), here).map(firstSteps::equals).orElse(false));
+            Markers.EXTRA_VIEWERS.add(solo);
             Givers.tickMarkers(server);
-            check("a marker floats over the op-placed giver", Markers.count() == 1);
+            String giverKey = GiverStore.key(server.overworld(), here);
+            check("a mark is sent to the player near the op-placed giver", Markers.shownTo(solo.getUUID()) == 1);
+            check("the mark says 'available' before accepting", Markers.textShownTo(solo.getUUID(), giverKey)
+                    .equals(com.sablednah.chronicler.ChroniclerConfig.GIVER_MARKER_TEXT.get()));
             // The four oak logs are still in the pack, so accepting completes it on the spot.
             check("giver block: first click offers, does not accept", Givers.onUseBlock(solo, server.overworld(), here)
                     && !QuestEngine.journal(solo).isActive(firstSteps) && !QuestEngine.journal(solo).isComplete(firstSteps));
             check("giver block: second click accepts (and the logs finish it)", Givers.onUseBlock(solo, server.overworld(), here)
                     && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));
+            Givers.tickMarkers(server);
+            check("the mark changes with the player's state", Markers.textShownTo(solo.getUUID(), giverKey)
+                    .equals(QuestEngine.journal(solo).isComplete(firstSteps)
+                            ? com.sablednah.chronicler.ChroniclerConfig.GIVER_MARKER_COMPLETE.get()
+                            : com.sablednah.chronicler.ChroniclerConfig.GIVER_MARKER_ACTIVE.get()));
             check("giver block: again while active is not an error", Givers.onUseBlock(solo, server.overworld(), here));
             check("giver block: a plain block is not a giver", !Givers.onUseBlock(solo, server.overworld(), here.above(40)));
             check("giver store removes", store.remove(server.overworld(), here) && Givers.questAt(server.overworld(), here).isEmpty());
             Givers.tickMarkers(server);
-            check("the marker goes with the giver", Markers.count() == 0);
+            check("the mark goes with the giver", Markers.shownTo(solo.getUUID()) == 0);
+            Markers.EXTRA_VIEWERS.remove(solo);
             QuestEngine.journal(solo).clear();
             QuestEngine.journal(solo).complete(firstSteps);
             QuestEngine.journal(solo).complete(things);

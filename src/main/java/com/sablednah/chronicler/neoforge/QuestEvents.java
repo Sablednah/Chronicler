@@ -57,21 +57,21 @@ public final class QuestEvents {
         }
     }
 
-    /** A marker from before a restart, or one whose giver is gone: reaped on sight. */
-    @SubscribeEvent
-    static void onEntityJoin(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide()) return;
-        if (Markers.isOrphan(event.getEntity())) event.getEntity().discard();
-    }
-
     @SubscribeEvent
     static void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
-        Markers.clear();
+        Markers.clear(event.getServer());
     }
 
     @SubscribeEvent
     static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         Givers.forget(event.getEntity().getUUID());
+        Markers.forget(event.getEntity().getUUID());
+    }
+
+    /** The client dropped every entity it had; the marks must be re-sent, so forget what it was sent. */
+    @SubscribeEvent
+    static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        Markers.forget(event.getEntity().getUUID());
     }
 
     /**
