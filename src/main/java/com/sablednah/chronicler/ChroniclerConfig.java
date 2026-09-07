@@ -23,6 +23,8 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.IntValue GIVER_COOLDOWN_SECONDS;
     public static final ModConfigSpec.DoubleValue GIVER_RADIUS;
     public static final ModConfigSpec.IntValue GIVER_SECOND_CLICK_SECONDS;
+    public static final ModConfigSpec.BooleanValue GIVER_MARKERS;
+    public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_TEXT;
 
     static {
         BUILDER.comment("Announcements").push("announce");
@@ -70,6 +72,13 @@ public final class ChroniclerConfig {
                 .comment("A right-click on a giver makes the offer; a second click within this many",
                         "seconds accepts it (so does the Accept button). 0 accepts on the first click.")
                 .defineInRange("secondClickSeconds", 20, 0, 600);
+        GIVER_MARKERS = BUILDER
+                .comment("Float a marker over every giver (a block, an op-placed block, an NPC).",
+                        "A text_display, so vanilla clients see it. One per giver, for everyone.")
+                .define("markers", true);
+        GIVER_MARKER_TEXT = BUILDER
+                .comment("What the marker says. '&' colour codes work; {quest} is the quest's name.")
+                .define("markerText", "&e&l!");
         BUILDER.pop();
 
         BUILDER.comment("Party quests").push("party");

@@ -122,6 +122,37 @@ public final class Givers {
         return GiverStore.get(level.getServer()).at(level, pos);
     }
 
+    /** Once a second for the whole server: the floating markers over every giver. */
+    public static void tickMarkers(MinecraftServer server) {
+        Map<String, Identifier> all = new HashMap<>(DATA_BLOCKS);
+        all.putAll(GiverStore.get(server).view());
+        Markers.sync(server, all,
+                key -> markerPosition(server, key),
+                key -> {
+                    if (key.startsWith("npc|")) {
+                        return Npcs.provider().flatMap(c -> { try { return c.byId(server, UUID.fromString(key.substring(4))); } catch (IllegalArgumentException e) { return Optional.empty(); } })
+                                .map(p -> server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, p.dimension())))
+                                .orElse(null);
+                    }
+                    Identifier dim = Identifier.tryParse(key.substring(0, key.indexOf('|')));
+                    return dim == null ? null : server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, dim));
+                });
+    }
+
+    /** Above a block, or above an NPC's head; null when the NPC is not loaded. */
+    private static Vec3 markerPosition(MinecraftServer server, String key) {
+        if (key.startsWith("npc|")) {
+            try {
+                UUID id = UUID.fromString(key.substring(4));
+                return Npcs.provider().flatMap(c -> c.byId(server, id)).map(p -> p.pos().add(0, 2.35, 0)).orElse(null);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+        BlockPos pos = parse(key);
+        return pos == null ? null : new Vec3(pos.getX() + 0.5, pos.getY() + 1.6, pos.getZ() + 0.5);
+    }
+
     /** The tracker tick: offer whatever this player is standing near or in. */
     public static void tick(ServerPlayer player) {
         MinecraftServer server = player.level().getServer();

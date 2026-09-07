@@ -42,7 +42,10 @@ offers it to anyone standing near that block and accepts on right-click;
 `dimension`, `lot` for a CityWorld lot) offers it the moment a player is in
 that kind of place, with no coordinate written down. An admin can also make
 any block a giver by looking at it: `/quest giver set <quest>`. A hidden quest
-with a giver is *found* by walking up to it.
+with a giver is *found* by walking up to it. Every giver floats a marker (a
+`text_display`, so vanilla clients see it; `givers.markerText`, default a
+yellow `!`). A right-click makes the offer, with Accept and Info buttons; a
+second click within `givers.secondClickSeconds` accepts.
 
 With [Cast](https://github.com/Sablednah/Cast) installed, givers can be
 **people**: `giver: { type: npc, name: "Dr Okafor", skin: Sablednah, at: [x, y, z], greeting: "You look like you can hold a torch." }`

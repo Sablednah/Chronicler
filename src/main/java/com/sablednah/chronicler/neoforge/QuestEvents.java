@@ -30,6 +30,7 @@ public final class QuestEvents {
     static void onTick(ServerTickEvent.Post event) {
         if (++tickCounter < ChroniclerConfig.TRACKER_INTERVAL_TICKS.get()) return;
         tickCounter = 0;
+        Givers.tickMarkers(event.getServer());
         for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
             QuestEngine.poll(player);
             Givers.tick(player);
@@ -54,6 +55,18 @@ public final class QuestEvents {
             event.setCancellationResult(InteractionResult.SUCCESS);
             event.setCanceled(true);
         }
+    }
+
+    /** A marker from before a restart, or one whose giver is gone: reaped on sight. */
+    @SubscribeEvent
+    static void onEntityJoin(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent event) {
+        if (event.getLevel().isClientSide()) return;
+        if (Markers.isOrphan(event.getEntity())) event.getEntity().discard();
+    }
+
+    @SubscribeEvent
+    static void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        Markers.clear();
     }
 
     @SubscribeEvent

@@ -12,6 +12,8 @@
   "chronicler.configuration.offerCooldownSeconds": "Offer Cooldown (s)",
   "chronicler.configuration.radius": "Op-placed Giver Radius",
   "chronicler.configuration.secondClickSeconds": "Second Click Accepts Within (s)",
+  "chronicler.configuration.markers": "Floating Markers Over Givers",
+  "chronicler.configuration.markerText": "Marker Text",
   "chronicler.configuration.party": "Party Quests",
   "chronicler.configuration.groupKinds": "Party Group Kinds"
 }

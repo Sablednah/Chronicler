@@ -175,6 +175,8 @@ public final class SelfTest {
             net.minecraft.core.BlockPos here = solo.blockPosition();
             store.set(server.overworld(), here, firstSteps);
             check("giver store answers", Givers.questAt(server.overworld(), here).map(firstSteps::equals).orElse(false));
+            Givers.tickMarkers(server);
+            check("a marker floats over the op-placed giver", Markers.count() == 1);
             // The four oak logs are still in the pack, so accepting completes it on the spot.
             check("giver block: first click offers, does not accept", Givers.onUseBlock(solo, server.overworld(), here)
                     && !QuestEngine.journal(solo).isActive(firstSteps) && !QuestEngine.journal(solo).isComplete(firstSteps));
@@ -183,6 +185,8 @@ public final class SelfTest {
             check("giver block: again while active is not an error", Givers.onUseBlock(solo, server.overworld(), here));
             check("giver block: a plain block is not a giver", !Givers.onUseBlock(solo, server.overworld(), here.above(40)));
             check("giver store removes", store.remove(server.overworld(), here) && Givers.questAt(server.overworld(), here).isEmpty());
+            Givers.tickMarkers(server);
+            check("the marker goes with the giver", Markers.count() == 0);
             QuestEngine.journal(solo).clear();
             QuestEngine.journal(solo).complete(firstSteps);
             QuestEngine.journal(solo).complete(things);
@@ -354,9 +358,14 @@ public final class SelfTest {
         return n;
     }
 
+    /** Stood at the world spawn, in a chunk kept loaded: a FakePlayer defaults to 0,0,0 in an unloaded one. */
     private static FakePlayer fake(MinecraftServer server, String name) {
-        return new FakePlayer(server.overworld(),
+        FakePlayer p = new FakePlayer(server.overworld(),
                 new GameProfile(UUID.nameUUIDFromBytes(("chronicler:" + name).getBytes()), name));
+        var spawn = server.overworld().getRespawnData().globalPos().pos();
+        server.overworld().setChunkForced(spawn.getX() >> 4, spawn.getZ() >> 4, true);
+        p.snapTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, 0F, 0F);
+        return p;
     }
 
     /** Parse, verify the parse reached an executable node, then execute -- or prove it cannot. */

@@ -27,6 +27,8 @@
 - Stages: ordered beats with narration, per-beat objectives and
   `on_enter` / `on_complete` effects; `title`, `message` and `spawn` effects;
   `{x}` `{y}` `{z}` in commands. Night Watch, a two-beat built-in quest.
+- Givers make the offer on the first click and accept on the second (or the
+  button); a floating, configurable marker over every giver.
 - NPC givers through Cast: an `npc` giver kind placed from quest data, the
   `chronicler:giver` role on any Cast NPC, `/quest giver set` on the NPC you
   look at, a spoken greeting. Loads and lists without Cast; places nobody.
