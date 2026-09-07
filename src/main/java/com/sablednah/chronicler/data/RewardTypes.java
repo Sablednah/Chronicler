@@ -16,15 +16,17 @@ public final class RewardTypes {
     public static final Codec<RewardSpec> CODEC = TYPES.codec();
 
     /** {@code count} of {@code item}, into the inventory or dropped at the feet. */
-    public record Item(Identifier item, int count) implements RewardSpec {
+    public record Item(Identifier item, int count, Optional<Identifier> questItem) implements RewardSpec {
+        public Item(Identifier item, int count) { this(item, count, Optional.empty()); }
         public static final MapCodec<Item> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-                Identifier.CODEC.fieldOf("item").forGetter(Item::item),
-                Codec.INT.optionalFieldOf("count", 1).forGetter(Item::count))
+                Identifier.CODEC.optionalFieldOf("item", Identifier.withDefaultNamespace("air")).forGetter(Item::item),
+                Codec.INT.optionalFieldOf("count", 1).forGetter(Item::count),
+                ChroniclerIds.CODEC.optionalFieldOf("quest_item").forGetter(Item::questItem))
                 .apply(i, Item::new));
 
         @Override public MapCodec<Item> codec() { return MAP_CODEC; }
         @Override public String describe() {
-            return Lang.fmt("rew.item", "count", count, "item", Lang.pretty(item.getPath()));
+            return Lang.fmt("rew.item", "count", count, "item", questItem.map(QuestItem::displayName).orElseGet(() -> Lang.pretty(item.getPath())));
         }
     }
 
@@ -107,17 +109,62 @@ public final class RewardTypes {
      * ZombieMod genus (which goes through {@code /zombiemod spawn}, so it needs
      * no import and quietly does nothing without ZombieMod).
      */
-    public record Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius)
-            implements RewardSpec {
+    public record Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius,
+            Optional<String> name, Optional<String> tag, double health) implements RewardSpec {
+        public Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius) {
+            this(entity, genus, count, radius, Optional.empty(), Optional.empty(), 0D);
+        }
+        /**
+         * {@code genus} needs ZombieMod; when it is absent and {@code entity} is
+         * also named, the entity is the stand-in (so "Fortress Warden" is a
+         * genus on one server and a named wither skeleton on another). {@code name}
+         * is shown over the head, {@code tag} is what a {@code kill} objective's
+         * {@code tag} matches, {@code health} (>0) sets a stand-in's max health.
+         */
         public static final MapCodec<Spawn> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Identifier.CODEC.optionalFieldOf("entity").forGetter(Spawn::entity),
                 Codec.STRING.optionalFieldOf("genus").forGetter(Spawn::genus),
                 Codec.INT.optionalFieldOf("count", 1).forGetter(Spawn::count),
-                Codec.DOUBLE.optionalFieldOf("radius", 8.0D).forGetter(Spawn::radius))
+                Codec.DOUBLE.optionalFieldOf("radius", 8.0D).forGetter(Spawn::radius),
+                Codec.STRING.optionalFieldOf("name").forGetter(Spawn::name),
+                Codec.STRING.optionalFieldOf("tag").forGetter(Spawn::tag),
+                Codec.DOUBLE.optionalFieldOf("health", 0D).forGetter(Spawn::health))
                 .apply(i, Spawn::new));
 
         @Override public MapCodec<Spawn> codec() { return MAP_CODEC; }
         @Override public String describe() { return Lang.get("rew.spawn"); }
+    }
+
+    /**
+     * A placed NPC speaks -- the one that gives {@code quest} (its own quest, unless
+     * another is named). Chat to everyone within {@code radius}. Nothing without Cast.
+     */
+    public record NpcSay(Optional<Identifier> quest, String text, double radius) implements RewardSpec {
+        public static final MapCodec<NpcSay> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(NpcSay::quest),
+                Codec.STRING.fieldOf("text").forGetter(NpcSay::text),
+                Codec.DOUBLE.optionalFieldOf("radius", 16.0D).forGetter(NpcSay::radius))
+                .apply(i, NpcSay::new));
+        @Override public MapCodec<NpcSay> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.npc_say"); }
+    }
+
+    /** A placed NPC is gone -- dead, left, taken. The quest it gave stays; its giver is no longer there. */
+    public record NpcRemove(Optional<Identifier> quest, Optional<String> text) implements RewardSpec {
+        public static final MapCodec<NpcRemove> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(NpcRemove::quest),
+                Codec.STRING.optionalFieldOf("text").forGetter(NpcRemove::text))
+                .apply(i, NpcRemove::new));
+        @Override public MapCodec<NpcRemove> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.npc_remove"); }
+    }
+
+    /** Record that the player reached an ending of this quest's chapter, without finishing the quest here. */
+    public record Ending(String ending) implements RewardSpec {
+        public static final MapCodec<Ending> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.STRING.fieldOf("ending").forGetter(Ending::ending)).apply(i, Ending::new));
+        @Override public MapCodec<Ending> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.ending"); }
     }
 
     /** LegendQuest karma. */
@@ -179,6 +226,9 @@ public final class RewardTypes {
         TYPES.register("command", Command.MAP_CODEC);
         TYPES.register("xp", Xp.MAP_CODEC);
         TYPES.register("money", Money.MAP_CODEC);
+        TYPES.register("npc_say", NpcSay.MAP_CODEC);
+        TYPES.register("npc_remove", NpcRemove.MAP_CODEC);
+        TYPES.register("ending", Ending.MAP_CODEC);
     }
 
     public static void init() {}

@@ -28,7 +28,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  */
 public record Stage(Optional<String> text, List<ObjectiveSpec> objectives,
         List<RewardSpec> onEnter, List<RewardSpec> onComplete,
-        List<Choice> choices, Optional<Integer> deadline, List<RewardSpec> onFail, Optional<Integer> fail) {
+        List<Choice> choices, Optional<Integer> deadline, List<RewardSpec> onFail, Optional<Integer> fail,
+        Optional<String> ending, boolean end) {
 
     public static final Codec<Stage> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.optionalFieldOf("text").forGetter(Stage::text),
@@ -38,11 +39,13 @@ public record Stage(Optional<String> text, List<ObjectiveSpec> objectives,
             Choice.CODEC.listOf().optionalFieldOf("choices", List.of()).forGetter(Stage::choices),
             Codec.INT.optionalFieldOf("deadline").forGetter(Stage::deadline),
             RewardTypes.CODEC.listOf().optionalFieldOf("on_fail", List.of()).forGetter(Stage::onFail),
-            Codec.INT.optionalFieldOf("fail").forGetter(Stage::fail))
+            Codec.INT.optionalFieldOf("fail").forGetter(Stage::fail),
+            Codec.STRING.optionalFieldOf("ending").forGetter(Stage::ending),
+            Codec.BOOL.optionalFieldOf("end", false).forGetter(Stage::end))
             .apply(i, Stage::new));
 
     public static Stage of(List<ObjectiveSpec> objectives) {
-        return new Stage(Optional.empty(), objectives, List.of(), List.of(), List.of(), Optional.empty(), List.of(), Optional.empty());
+        return new Stage(Optional.empty(), objectives, List.of(), List.of(), List.of(), Optional.empty(), List.of(), Optional.empty(), Optional.empty(), false);
     }
 
     /** A beat that waits for a choice rather than an objective. */

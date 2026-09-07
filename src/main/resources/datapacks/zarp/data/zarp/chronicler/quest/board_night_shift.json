@@ -1,0 +1,37 @@
+{
+  "name": "Night Shift",
+  "description": "The ones that only come at dark. Four of them. Bring proof, or a limp.",
+  "chapter": "zarp:board",
+  "order": 4,
+  "requires": [
+    "zarp:the_signal"
+  ],
+  "repeatable": true,
+  "cooldown": 1200,
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:board_cull"
+  },
+  "objectives": [
+    {
+      "type": "kill",
+      "target": [
+        "zombiemod:nightstalker",
+        "zombiemod:stalker",
+        "minecraft:zombie"
+      ],
+      "count": 4
+    }
+  ],
+  "rewards": [
+    {
+      "type": "money",
+      "amount": 30
+    },
+    {
+      "type": "xp",
+      "amount": 30
+    }
+  ]
+}

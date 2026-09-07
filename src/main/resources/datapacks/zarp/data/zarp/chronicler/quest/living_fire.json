@@ -1,0 +1,208 @@
+{
+  "name": "Living Fire",
+  "description": "The culture will not take. It needs heat that does not die. Okafor says the word 'Nether' like it is a diagnosis.",
+  "chapter": "zarp:below",
+  "order": 1,
+  "requires": [
+    "zarp:house_calls"
+  ],
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_camp"
+  },
+  "stages": [
+    {
+      "text": "Go below. Build the frame, light it, step through.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "the Nether",
+          "dimension": "minecraft:the_nether"
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "flag",
+          "name": "zarp_below_begun",
+          "player": false,
+          "value": true
+        },
+        {
+          "type": "npc_say",
+          "text": "&7Fortress. There's always a fortress. Bring me something from its heart.",
+          "radius": 16.0,
+          "quest": "zarp:the_camp"
+        }
+      ]
+    },
+    {
+      "text": "Find a fortress. Something in there has been waiting for a visitor.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "a fortress",
+          "structure": "minecraft:fortress",
+          "dimension": "minecraft:the_nether"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 6,
+          "genus": "zarp:fortress_warden",
+          "entity": "minecraft:wither_skeleton",
+          "name": "&4Fortress Warden",
+          "tag": "warden",
+          "health": 120
+        },
+        {
+          "type": "title",
+          "title": "&4&lFortress Warden",
+          "subtitle": "&7It has been waiting."
+        }
+      ]
+    },
+    {
+      "text": "The Warden's heart, and four rods of the things that burn here.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zarp:fortress_warden",
+            "minecraft:wither_skeleton"
+          ],
+          "count": 1,
+          "tag": "warden",
+          "drop": {
+            "quest_item": "zarp:ember_heart",
+            "chance": 1.0
+          }
+        },
+        {
+          "type": "collect",
+          "item": "minecraft:blaze_rod",
+          "count": 4,
+          "consume": true
+        }
+      ]
+    },
+    {
+      "text": "Kindle it. Okafor drew the shape: a blast furnace ringed in soul sand, the heart in your hand. Right-click the furnace.",
+      "objectives": [
+        {
+          "type": "ritual",
+          "block": "minecraft:blast_furnace",
+          "label": "Kindle the Crucible",
+          "pattern": [
+            {
+              "offset": [
+                1,
+                0,
+                0
+              ],
+              "block": "minecraft:soul_sand"
+            },
+            {
+              "offset": [
+                -1,
+                0,
+                0
+              ],
+              "block": "minecraft:soul_sand"
+            },
+            {
+              "offset": [
+                0,
+                0,
+                1
+              ],
+              "block": "minecraft:soul_sand"
+            },
+            {
+              "offset": [
+                0,
+                0,
+                -1
+              ],
+              "block": "minecraft:soul_sand"
+            }
+          ],
+          "item": "zarp:ember_heart",
+          "consume": true
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "message",
+          "text": "&7Soul sand on all four sides of a blast furnace. The heart in your hand. Then use the furnace.",
+          "action_bar": false
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 4,
+          "genus": "zarp:cinder",
+          "entity": "minecraft:blaze",
+          "name": "&6The Cinder",
+          "tag": "cinder",
+          "health": 150
+        },
+        {
+          "type": "title",
+          "title": "&6&lThe Cinder",
+          "subtitle": "&7It burnt, and it kept walking."
+        }
+      ]
+    },
+    {
+      "text": "The Cinder. Put it out. Keep what is left.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zarp:cinder",
+            "minecraft:blaze"
+          ],
+          "count": 1,
+          "tag": "cinder",
+          "drop": {
+            "quest_item": "zarp:living_flame",
+            "chance": 1.0
+          }
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7Living fire. Don't put it near the tents.",
+          "radius": 16.0,
+          "quest": "zarp:the_camp"
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 200
+    },
+    {
+      "type": "money",
+      "amount": 60
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 15
+    },
+    {
+      "type": "title",
+      "title": "&6&lBelow",
+      "subtitle": "&7You brought fire back."
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "name": "The Camp",
+  "description": "Dr Okafor runs the camp because nobody else would. She wants to know if you can be trusted with anything at all.",
+  "chapter": "zarp:prologue",
+  "order": 2,
+  "requires": [
+    "zarp:wake_up"
+  ],
+  "giver": {
+    "type": "npc",
+    "name": "&fDr Amara Okafor",
+    "near_spawn": [
+      6,
+      0
+    ],
+    "yaw": 180.0,
+    "greeting": "&7You're upright. Good. We can use upright."
+  },
+  "stages": [
+    {
+      "text": "Wood for the fires. Eight logs. Any tree still standing.",
+      "objectives": [
+        {
+          "type": "collect",
+          "tag": "minecraft:logs",
+          "count": 8,
+          "consume": true
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7Fine. Now something harder.",
+          "radius": 16.0
+        }
+      ]
+    },
+    {
+      "text": "The dead by the fence. Clear them.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 5
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 4,
+          "radius": 10,
+          "entity": "minecraft:zombie"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7Not bad. Mags will have work for you. So will I.",
+          "radius": 16.0
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 5
+    },
+    {
+      "type": "xp",
+      "amount": 30
+    },
+    {
+      "type": "money",
+      "amount": 10
+    },
+    {
+      "type": "item",
+      "item": "minecraft:bread",
+      "count": 4
+    },
+    {
+      "type": "flag",
+      "name": "zarp_camp_trusted",
+      "player": true,
+      "value": true
+    }
+  ]
+}

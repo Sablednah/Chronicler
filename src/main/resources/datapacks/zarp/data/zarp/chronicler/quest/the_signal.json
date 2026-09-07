@@ -1,0 +1,126 @@
+{
+  "name": "The Signal",
+  "description": "Sarge says the radio has been dead since day three. There is a tower somewhere in the city. Somebody has to climb it.",
+  "chapter": "zarp:streets",
+  "order": 1,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "giver": {
+    "type": "npc",
+    "name": "&fSarge Kowalski",
+    "near_spawn": [
+      -3,
+      -6
+    ],
+    "yaw": 45.0,
+    "greeting": "&7Radio's been dead since day three. I don't like quiet."
+  },
+  "stages": [
+    {
+      "text": "Find the radio tower. Tall, rusted, probably not alone.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "the radio tower",
+          "any": [
+            {
+              "lot": "RadioTower"
+            },
+            {
+              "structure": "minecraft:pillager_outpost"
+            }
+          ]
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "message",
+          "text": "&7Sarge: 'North-east of the old vault line, last I knew. Knew is doing a lot of work in that sentence.'",
+          "action_bar": false
+        }
+      ]
+    },
+    {
+      "text": "Someone got here first. They are not the talking kind.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:runner",
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 6
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 4,
+          "radius": 8,
+          "genus": "zombiemod:runner",
+          "entity": "minecraft:zombie"
+        },
+        {
+          "type": "title",
+          "title": "&cRunners",
+          "subtitle": "&7Fast ones. Do not run."
+        }
+      ]
+    },
+    {
+      "text": "Splice the antenna. Copper and redstone, and steady hands.",
+      "objectives": [
+        {
+          "type": "collect",
+          "item": "minecraft:copper_ingot",
+          "count": 3,
+          "consume": true
+        },
+        {
+          "type": "collect",
+          "item": "minecraft:redstone",
+          "count": 1,
+          "consume": true
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "flag",
+          "name": "zarp_signal_up",
+          "player": false,
+          "value": true
+        },
+        {
+          "type": "npc_say",
+          "text": "&7Static. Then a voice. 'Anyone. Hospital. Come.' Then static.",
+          "radius": 16.0,
+          "quest": "zarp:the_signal"
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 60
+    },
+    {
+      "type": "money",
+      "amount": 25
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 5
+    },
+    {
+      "type": "item",
+      "item": "minecraft:compass",
+      "count": 1
+    }
+  ]
+}

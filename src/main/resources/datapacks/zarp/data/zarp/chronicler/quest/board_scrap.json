@@ -1,0 +1,40 @@
+{
+  "name": "Scrap Run",
+  "description": "Six iron, three copper. The fence eats it.",
+  "chapter": "zarp:board",
+  "order": 2,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "repeatable": true,
+  "cooldown": 900,
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:board_cull"
+  },
+  "objectives": [
+    {
+      "type": "collect",
+      "item": "minecraft:iron_ingot",
+      "count": 6,
+      "consume": true
+    },
+    {
+      "type": "collect",
+      "item": "minecraft:copper_ingot",
+      "count": 3,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "money",
+      "amount": 20
+    },
+    {
+      "type": "xp",
+      "amount": 15
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "name": "Grease Monkey",
+  "description": "Wrench looks at your hands and grins. 'You've held a spanner. Good. I've got a thing that won't turn over.'",
+  "chapter": "zarp:survivors",
+  "order": 2,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "availability": {
+    "race": [
+      "mechanic"
+    ],
+    "class": [
+      "builder",
+      "miner",
+      "labourer"
+    ]
+  },
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:wrench_generator"
+  },
+  "stages": [
+    {
+      "text": "Four copper ingots, two redstone, and your opinion.",
+      "objectives": [
+        {
+          "type": "collect",
+          "item": "minecraft:copper_ingot",
+          "count": 4,
+          "consume": true
+        },
+        {
+          "type": "collect",
+          "item": "minecraft:redstone",
+          "count": 2,
+          "consume": true
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7...Huh. That's actually right. Don't tell Mags I said that.",
+          "radius": 16.0
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "money",
+      "amount": 30
+    },
+    {
+      "type": "xp",
+      "amount": 50
+    },
+    {
+      "type": "class_xp",
+      "amount": 40
+    },
+    {
+      "type": "item",
+      "item": "minecraft:shears",
+      "count": 1
+    }
+  ]
+}

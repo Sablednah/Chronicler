@@ -1,0 +1,56 @@
+{
+  "name": "Fortress Warden",
+  "description": "The fortress had a garrison once. This is what a garrison becomes.",
+  "base": "minecraft:wither_skeleton",
+  "weight": 0,
+  "health": 120.0,
+  "damage": 9.0,
+  "speed": 1.05,
+  "follow_range": 32.0,
+  "scale": 1.3,
+  "attributes": {
+    "minecraft:knockback_resistance": 0.8,
+    "minecraft:armor": 8.0
+  },
+  "equipment": {
+    "mainhand": "minecraft:iron_sword",
+    "drop_chance": 0.0,
+    "head": "minecraft:iron_helmet"
+  },
+  "boss": {
+    "color": "red",
+    "overlay": "notched_6",
+    "range": 48.0,
+    "darken_sky": false,
+    "boss_music": true,
+    "title": "Fortress Warden"
+  },
+  "clear_goals": false,
+  "abilities": [
+    {
+      "type": "zombiemod:shockwave",
+      "interval": 100,
+      "chance": 0.5,
+      "radius": 5.0,
+      "damage": 4.0,
+      "knockup": 0.6
+    },
+    {
+      "type": "zombiemod:summon",
+      "interval": 200,
+      "chance": 0.6,
+      "entity": "minecraft:wither_skeleton",
+      "count": 2,
+      "max_nearby": 6,
+      "radius": 8.0
+    },
+    {
+      "type": "zombiemod:particles",
+      "interval": 10,
+      "particle": "minecraft:soul",
+      "count": 3
+    }
+  ],
+  "bounty": 40.0,
+  "xp": 60
+}

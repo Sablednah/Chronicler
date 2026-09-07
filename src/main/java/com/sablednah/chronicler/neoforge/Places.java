@@ -22,6 +22,11 @@ public final class Places {
     public static boolean isAt(ServerPlayer player, Place place) {
         ServerLevel level = player.level();
         BlockPos pos = player.blockPosition();
+        if (!place.any().isEmpty()) {
+            boolean one = false;
+            for (Place alt : place.any()) if (isAt(player, alt)) { one = true; break; }
+            if (!one) return false;
+        }
         if (place.dimension().isPresent() && !place.dimension().get().equals(level.dimension().identifier())) {
             return false;
         }

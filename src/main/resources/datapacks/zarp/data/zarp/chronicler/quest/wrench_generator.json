@@ -1,0 +1,191 @@
+{
+  "name": "Fence Power",
+  "description": "Wrench needs a redstone block and eight iron ingots for the generator, before dark. Or he needs somebody else.",
+  "chapter": "zarp:survivors",
+  "order": 1,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "giver": {
+    "type": "npc",
+    "name": "&fWrench",
+    "near_spawn": [
+      0,
+      8
+    ],
+    "yaw": 0.0,
+    "greeting": "&7Fence is electric. Was."
+  },
+  "stages": [
+    {
+      "text": "Wrench lays it out: one redstone block, eight iron ingots, and not much daylight.",
+      "choices": [
+        {
+          "label": "I'll get it",
+          "next": 2
+        },
+        {
+          "label": "Not my problem",
+          "text": "Wrench nods like he expected that. 'Yeah. Nobody's is.'",
+          "effects": [
+            {
+              "type": "flag",
+              "name": "zarp_refused_wrench",
+              "player": true,
+              "value": true
+            },
+            {
+              "type": "karma",
+              "delta": -5
+            }
+          ],
+          "next": 3
+        }
+      ]
+    },
+    {
+      "text": "A redstone block and eight iron ingots. Fifteen minutes before the light goes.",
+      "objectives": [
+        {
+          "type": "collect",
+          "item": "minecraft:redstone_block",
+          "count": 1,
+          "consume": true
+        },
+        {
+          "type": "collect",
+          "item": "minecraft:iron_ingot",
+          "count": 8,
+          "consume": true
+        }
+      ],
+      "deadline": 900,
+      "on_fail": [
+        {
+          "type": "flag",
+          "name": "zarp_refused_wrench",
+          "player": true,
+          "value": true
+        },
+        {
+          "type": "message",
+          "text": "&cThe fence stayed dead.",
+          "action_bar": false
+        }
+      ],
+      "fail": 3,
+      "on_complete": [
+        {
+          "type": "flag",
+          "name": "zarp_fence_live",
+          "player": false,
+          "value": true
+        },
+        {
+          "type": "npc_say",
+          "text": "&7Hear that hum? That's the sound of nobody dying tonight.",
+          "radius": 16.0
+        },
+        {
+          "type": "reputation",
+          "standing": "camp",
+          "delta": 10
+        },
+        {
+          "type": "xp",
+          "amount": 60
+        },
+        {
+          "type": "money",
+          "amount": 20
+        }
+      ],
+      "end": true,
+      "ending": "fence_up"
+    },
+    {
+      "text": "Get on with your day. Somebody else will sort the fence.",
+      "objectives": [
+        {
+          "type": "wait",
+          "seconds": 300,
+          "label": "Get on with your day"
+        }
+      ]
+    },
+    {
+      "text": "You pass the garage again. Wrench is not there. Something is nesting where his workbench was.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:breeder",
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 1,
+          "tag": "brood"
+        },
+        {
+          "type": "kill",
+          "target": [
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 6
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 6,
+          "genus": "zombiemod:breeder",
+          "entity": "minecraft:zombie",
+          "name": "&5Broodmother",
+          "tag": "brood",
+          "health": 90
+        },
+        {
+          "type": "spawn",
+          "count": 6,
+          "radius": 8,
+          "entity": "minecraft:zombie"
+        },
+        {
+          "type": "title",
+          "title": "&5&lThe Nest",
+          "subtitle": "&7Where the garage was."
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_remove",
+          "text": "&7There is nothing of Wrench to bury. The generator is still on the bench, half built."
+        },
+        {
+          "type": "flag",
+          "name": "zarp_garage_fell",
+          "player": false,
+          "value": true
+        },
+        {
+          "type": "reputation",
+          "standing": "camp",
+          "delta": -10
+        }
+      ],
+      "ending": "fence_down"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 20
+    }
+  ]
+}

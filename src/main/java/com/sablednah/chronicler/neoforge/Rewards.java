@@ -29,6 +29,8 @@ public final class Rewards {
     }
 
     private static final Map<Class<? extends RewardSpec>, Granter<?>> BY_CLASS = new LinkedHashMap<>();
+    // Declared before the static block that fills BY_CLASS: a static after the block that uses it is a forward reference.
+    private static int lastSpawned = 0;
 
     public static synchronized <R extends RewardSpec> void register(Class<R> type, Granter<R> granter) {
         BY_CLASS.put(type, granter);
@@ -53,6 +55,18 @@ public final class Rewards {
 
     static {
         register(RewardTypes.Item.class, (player, r, questId, quest) -> {
+            if (r.questItem().isPresent()) {
+                ItemStack stack = com.sablednah.chronicler.data.QuestItem.build(player.level().registryAccess(), r.questItem().get(), r.count());
+                if (stack.isEmpty()) {
+                    Chronicler.LOGGER.warn("Chronicler: quest {} rewards unknown quest item {}", questId, r.questItem().get());
+                    Feedback.chat(player, Lang.fmt("msg.reward.unknown_item", "item", r.questItem().get()));
+                    return;
+                }
+                player.getInventory().add(stack);
+                if (!stack.isEmpty()) player.drop(stack, false);
+                Feedback.chat(player, Lang.fmt("msg.reward.given", "line", r.describe()));
+                return;
+            }
             var holder = BuiltInRegistries.ITEM.get(r.item());
             if (holder.isEmpty()) {
                 Chronicler.LOGGER.warn("Chronicler: quest {} rewards unknown item {}", questId, r.item());
@@ -112,9 +126,24 @@ public final class Rewards {
         register(RewardTypes.SkillPoints.class, (player, r, questId, quest) -> character(player, r,
                 Sheet.grantSkillPoints(player, r.count())));
 
+        register(RewardTypes.NpcSay.class, (player, r, questId, quest) -> {
+            var npc = npcFor(player, r.quest().orElse(questId));
+            if (npc.isEmpty()) { Feedback.chat(player, r.text()); return; }
+            Npcs.provider().get().say(player.level().getServer(), npc.get(), r.text(), r.radius());
+        });
+        register(RewardTypes.NpcRemove.class, (player, r, questId, quest) -> {
+            var npc = npcFor(player, r.quest().orElse(questId));
+            r.text().ifPresent(t -> Feedback.chat(player, t));
+            if (npc.isEmpty()) return;
+            var server = player.level().getServer();
+            Npcs.provider().get().remove(server, npc.get());
+            GiverStore.get(server).removeNpc(npc.get());
+            Chronicler.LOGGER.info("Chronicler: quest {} removed the NPC of {} ({})", questId, r.quest().orElse(questId), npc.get());
+        });
+        register(RewardTypes.Ending.class, (player, r, questId, quest) -> QuestEngine.reachEnding(player, quest, r.ending()));
         register(RewardTypes.Flag.class, (player, r, questId, quest) -> {
             if (r.player()) {
-                QuestEngine.journal(player).setFlag(r.name(), r.value());
+                QuestEngine.journal(player).setFlag(r.name(), r.value(), quest.chapter());
             } else {
                 FlagStore.get(player.level().getServer()).set(r.name(), r.value());
                 Chronicler.LOGGER.info("Chronicler: world flag {} = {} (quest {} by {})",
@@ -154,6 +183,7 @@ public final class Rewards {
         register(RewardTypes.Spawn.class, (player, r, questId, quest) -> {
             var level = player.level();
             var rng = level.getRandom();
+            lastSpawned = 0;
             for (int n = 0; n < r.count(); n++) {
                 double angle = rng.nextDouble() * Math.PI * 2;
                 double dist = 2 + rng.nextDouble() * Math.max(0, r.radius() - 2);
@@ -161,16 +191,25 @@ public final class Rewards {
                 int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
                 var at = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                         new net.minecraft.core.BlockPos(x, 0, z));
-                if (r.genus().isPresent()) {
+                if (r.genus().isPresent() && net.neoforged.fml.ModList.get().isLoaded("zombiemod")) {
                     // ZombieMod's own command, so no import and a clean nothing without it.
-                    if (!net.neoforged.fml.ModList.get().isLoaded("zombiemod")) {
-                        Chronicler.LOGGER.warn("Chronicler: quest {} spawns genus {} but ZombieMod is not installed", questId, r.genus().get());
-                        return;
-                    }
                     level.getServer().getCommands().performPrefixedCommand(
                             level.getServer().createCommandSourceStack().withSuppressedOutput(),
                             "zombiemod spawn " + r.genus().get() + " " + at.getX() + " " + at.getY() + " " + at.getZ());
+                    lastSpawned++;
+                    // Tag and name whatever just appeared there, so a kill objective's tag still matches.
+                    if (r.tag().isPresent() || r.name().isPresent()) {
+                        var box = new net.minecraft.world.phys.AABB(at).inflate(1.5D);
+                        for (var mob : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box,
+                                m -> m.tickCount <= 1 && m.getPersistentData().getString("zombiemod:genus").isPresent())) {
+                            decorate(mob, r);
+                        }
+                    }
                     continue;
+                }
+                if (r.genus().isPresent() && r.entity().isEmpty()) {
+                    Chronicler.LOGGER.warn("Chronicler: quest {} spawns genus {} but ZombieMod is not installed and no entity stands in", questId, r.genus().get());
+                    return;
                 }
                 var type = r.entity().flatMap(id -> BuiltInRegistries.ENTITY_TYPE.get(id));
                 if (type.isEmpty()) {
@@ -183,8 +222,14 @@ public final class Rewards {
                 if (spawned instanceof net.minecraft.world.entity.Mob mob) {
                     mob.finalizeSpawn(level, level.getCurrentDifficultyAt(at),
                             net.minecraft.world.entity.EntitySpawnReason.EVENT, null);
+                    mob.setPersistenceRequired();
+                    if (r.health() > 0) {
+                        var attr = mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+                        if (attr != null) { attr.setBaseValue(r.health()); mob.setHealth((float) r.health()); }
+                    }
                 }
-                level.addFreshEntity(spawned);
+                decorate(spawned, r);
+                if (level.addFreshEntity(spawned)) lastSpawned++;
             }
         });
     }
@@ -197,6 +242,21 @@ public final class Rewards {
         } else {
             Feedback.chat(player, Lang.fmt("msg.reward.no_class", "line", r.describe()));
         }
+    }
+
+    /** How many entities the most recent spawn effect placed; the self-test's window onto a lookup that lags a tick. */
+    public static int lastSpawned() { return lastSpawned; }
+
+    private static void decorate(net.minecraft.world.entity.Entity entity, RewardTypes.Spawn r) {
+        r.name().ifPresent(n -> { entity.setCustomName(Feedback.colored(n)); entity.setCustomNameVisible(true); });
+        r.tag().ifPresent(t -> entity.addTag(Trackers.TAG_PREFIX + t));
+    }
+
+    /** The placed NPC that gives a quest, if Cast placed one. */
+    private static java.util.Optional<java.util.UUID> npcFor(ServerPlayer player, Identifier questId) {
+        if (!Npcs.available()) return java.util.Optional.empty();
+        var server = player.level().getServer();
+        return GiverStore.get(server).placedFor(questId).filter(id -> Npcs.provider().get().byId(server, id).isPresent());
     }
 
     public static void init() {}

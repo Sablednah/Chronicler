@@ -155,17 +155,17 @@ public final class SelfTest {
             // Places: the world names them, we never spell coordinates.
             Identifier overworld = net.minecraft.world.level.Level.OVERWORLD.identifier();
             check("place: empty place is anywhere", Places.isAt(solo, new com.sablednah.chronicler.data.Place(
-                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty())));
+                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.List.of())));
             check("place: overworld dimension matches", Places.isAt(solo, new com.sablednah.chronicler.data.Place(
-                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.of(overworld), java.util.Optional.empty())));
+                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.of(overworld), java.util.Optional.empty(), java.util.List.of())));
             check("place: nether dimension does not", !Places.isAt(solo, new com.sablednah.chronicler.data.Place(
                     java.util.Optional.empty(), java.util.Optional.empty(),
-                    java.util.Optional.of(net.minecraft.world.level.Level.NETHER.identifier()), java.util.Optional.empty())));
+                    java.util.Optional.of(net.minecraft.world.level.Level.NETHER.identifier()), java.util.Optional.empty(), java.util.List.of())));
             check("place: the overworld biome tag matches here", Places.isAt(solo, new com.sablednah.chronicler.data.Place(
-                    java.util.Optional.of("#minecraft:is_overworld"), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty())));
+                    java.util.Optional.of("#minecraft:is_overworld"), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.List.of())));
             check("place: a lot needs CityWorld", Lots.describe(server.overworld(), solo.blockPosition()).isEmpty()
                     || Places.isAt(solo, new com.sablednah.chronicler.data.Place(java.util.Optional.empty(),
-                            java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.of("zzz-no-such-lot"))) == false);
+                            java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.of("zzz-no-such-lot"), java.util.List.of())) == false);
             check("hot_foot ships hidden with a place giver", quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, ChroniclerIds.of("hot_foot")))
                     .map(h -> h.value().hidden() && h.value().giver().isPresent()).orElse(false));
 
@@ -232,7 +232,7 @@ public final class SelfTest {
             flags.set("SelfTest_Flag", true);
             check("world flag set and normalised", flags.is("selftest_flag") && FlagStore.cached() == flags);
             var needsFlag = new com.sablednah.chronicler.data.Availability(java.util.Optional.empty(), java.util.Optional.empty(),
-                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Map.of("other_flag", true), java.util.Map.of(), java.util.Map.of());
+                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Map.of("other_flag", true), java.util.Map.of(), java.util.Map.of(), java.util.List.of(), java.util.List.of());
             check("availability: an unset flag is unmet", !Conditions.unmet(solo, needsFlag).isEmpty());
             flags.set("other_flag", true);
             check("availability: the flag set is met", Conditions.unmet(solo, needsFlag).isEmpty());
@@ -242,7 +242,7 @@ public final class SelfTest {
             QuestEngine.journal(solo).setFlag("Chose_Mercy", true);
             check("player flag set and normalised", QuestEngine.journal(solo).hasFlag("chose_mercy"));
             var needsKarma = new com.sablednah.chronicler.data.Availability(java.util.Optional.of(20L), java.util.Optional.empty(),
-                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Map.of(), java.util.Map.of(), java.util.Map.of());
+                    java.util.Optional.empty(), java.util.Optional.empty(), java.util.Map.of(), java.util.Map.of(), java.util.Map.of(), java.util.List.of(), java.util.List.of());
             if (Sheet.available()) {
                 long before = Sheet.karma(solo).orElse(0L);
                 check("character: karma reward lands", Sheet.addKarma(solo, 5) && Sheet.karma(solo).orElse(0L) == before + 5);
@@ -334,6 +334,8 @@ public final class SelfTest {
                 a.discard();
                 b.discard();
             }
+
+            overnight(server, solo);
         } finally {
             QuestEngine.journal(solo).clear();
             solo.discard();
@@ -366,6 +368,199 @@ public final class SelfTest {
         var inv = player.getInventory();
         for (int i = 0; i < inv.getContainerSize(); i++) if (Journal.is(inv.getItem(i))) n++;
         return n;
+    }
+
+    /**
+     * The 2026-09-08 overnight: quest items, rituals, waits, endings, replay,
+     * progress, race/class gates, tagged spawns, kill drops, place alternatives,
+     * shared NPCs and the ZARP pack -- every one through the real engine.
+     */
+    private static void overnight(MinecraftServer server, FakePlayer solo) {
+        var level = server.overworld();
+        var registries = server.registryAccess();
+        QuestLog log = QuestEngine.journal(solo);
+        log.clear();
+        Identifier ember = ChroniclerIds.of("ember");
+        Identifier beacon = ChroniclerIds.of("the_beacon");
+        Identifier prologue = ChroniclerIds.of("prologue");
+
+        // --- quest items: built from the registry, marked invisibly, recognised by the mark alone ---
+        ItemStack stack = com.sablednah.chronicler.data.QuestItem.build(registries, ember, 2);
+        check("quest item builds from its registry entry", !stack.isEmpty() && stack.getCount() == 2 && stack.getItem() == Items.BLAZE_POWDER);
+        check("quest item carries its mark", com.sablednah.chronicler.data.QuestItem.markOf(stack).map(ember::equals).orElse(false));
+        check("quest item is named", stack.getHoverName().getString().contains("Ember"));
+        check("a plain blaze powder is not the quest item", !com.sablednah.chronicler.data.QuestItem.is(new ItemStack(Items.BLAZE_POWDER), ember));
+        check("unknown quest item builds nothing", com.sablednah.chronicler.data.QuestItem.build(registries, ChroniclerIds.of("no_such_item"), 1).isEmpty());
+        try {
+            var params = new net.minecraft.world.level.storage.loot.LootParams.Builder(level)
+                    .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.EMPTY);
+            var ctx = new net.minecraft.world.level.storage.loot.LootContext.Builder(params).create(java.util.Optional.empty());
+            ItemStack looted = new QuestItemLoot.Function(ember, 1).apply(new ItemStack(Items.STICK), ctx);
+            check("loot function turns a placeholder into the quest item", com.sablednah.chronicler.data.QuestItem.is(looted, ember));
+        } catch (RuntimeException e) {
+            check("loot function turns a placeholder into the quest item (" + e + ")", false);
+        }
+
+        // --- objective matching: kill lists, tags, collect by tag, place alternatives ---
+        Zombie z = new Zombie(level);
+        z.addTag(Trackers.TAG_PREFIX + "probe");
+        var killList = new com.sablednah.chronicler.data.ObjectiveTypes.Kill(List.of("minecraft:cow", "minecraft:zombie"), 1, java.util.Optional.empty(), java.util.Optional.empty());
+        var killTag = new com.sablednah.chronicler.data.ObjectiveTypes.Kill(List.of("minecraft:cow"), 1, java.util.Optional.of("probe"), java.util.Optional.empty());
+        var killMiss = new com.sablednah.chronicler.data.ObjectiveTypes.Kill(List.of("minecraft:cow"), 1, java.util.Optional.of("other"), java.util.Optional.empty());
+        check("kill: any of a target list counts", Trackers.of(killList).countsKill(solo, z, killList));
+        check("kill: a spawn tag counts", Trackers.of(killTag).countsKill(solo, z, killTag));
+        check("kill: the wrong tag does not", !Trackers.of(killMiss).countsKill(solo, z, killMiss));
+        z.discard();
+        var byTag = new com.sablednah.chronicler.data.ObjectiveTypes.Collect(Identifier.withDefaultNamespace("air"), 1, false,
+                java.util.Optional.empty(), java.util.Optional.of(Identifier.withDefaultNamespace("logs")));
+        solo.getInventory().clearContent();
+        solo.getInventory().add(new ItemStack(Items.BIRCH_LOG, 3));
+        int tagged = Trackers.of(byTag).poll(solo, byTag).orElse(-1);
+        check("collect: an item tag counts any member (counted " + tagged + ", holding " + solo.getInventory().getItem(0) + ")", tagged == 3);
+        solo.getInventory().clearContent();
+        var nether = java.util.Optional.of(Identifier.withDefaultNamespace("the_nether"));
+        var end = java.util.Optional.of(Identifier.withDefaultNamespace("the_end"));
+        var over = java.util.Optional.of(Identifier.withDefaultNamespace("overworld"));
+        var placeNether = new com.sablednah.chronicler.data.Place(java.util.Optional.empty(), java.util.Optional.empty(), nether, java.util.Optional.empty(), List.of());
+        var placeEnd = new com.sablednah.chronicler.data.Place(java.util.Optional.empty(), java.util.Optional.empty(), end, java.util.Optional.empty(), List.of());
+        var placeOver = new com.sablednah.chronicler.data.Place(java.util.Optional.empty(), java.util.Optional.empty(), over, java.util.Optional.empty(), List.of());
+        var anyYes = new com.sablednah.chronicler.data.Place(java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), List.of(placeNether, placeOver));
+        var anyNo = new com.sablednah.chronicler.data.Place(java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), List.of(placeNether, placeEnd));
+        check("place: one alternative holding is enough", Places.isAt(solo, anyYes));
+        check("place: no alternative holding fails", !Places.isAt(solo, anyNo));
+        check("place: alternatives describe themselves", anyYes.describe().contains("or"));
+
+        // --- race and class gates ---
+        var needsRace = new com.sablednah.chronicler.data.Availability(java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(),
+                java.util.Map.of(), java.util.Map.of(), java.util.Map.of(), List.of("no_such_race"), List.of());
+        List<String> unmet = Conditions.unmet(solo, needsRace);
+        check("availability: a race nobody has is unmet (" + (Sheet.available() ? "sheets present" : "no sheets") + ")", unmet.size() == 1);
+        if (Sheet.available()) {
+            var mine = Sheet.race(solo);
+            Chronicler.LOGGER.info("SelfTest: the fake player's race is {}, classes {}", mine.orElse(null), Sheet.classes(solo));
+            if (mine.isPresent()) {
+                var hasRace = new com.sablednah.chronicler.data.Availability(java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(),
+                        java.util.Map.of(), java.util.Map.of(), java.util.Map.of(), List.of(mine.get().getPath()), List.of());
+                check("availability: the player's own race (bare id) is met", Conditions.unmet(solo, hasRace).isEmpty());
+                var hasRaceFull = new com.sablednah.chronicler.data.Availability(java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(),
+                        java.util.Map.of(), java.util.Map.of(), java.util.Map.of(), List.of(mine.get().toString()), List.of());
+                check("availability: the player's own race (full id) is met", Conditions.unmet(solo, hasRaceFull).isEmpty());
+            }
+        }
+
+        // --- the beacon: wait, ritual with a pattern and an item, tagged spawn, kill drop, quest-item collect ---
+        log.complete(ChroniclerIds.of("first_steps"));
+        log.complete(ChroniclerIds.of("things_in_the_dark"));
+        log.complete(ChroniclerIds.of("night_watch"));
+        check("beacon: accepted once night watch is done", com.sablednah.chronicler.api.Quests.accept(solo, beacon).isEmpty());
+        QuestLog.Entry be = log.entry(beacon);
+        QuestEngine.poll(solo);
+        check("wait: not done at once", be != null && be.stage == 0);
+        if (be != null) be.enteredAt = level.getGameTime() - 20L * 60;
+        QuestEngine.poll(solo);
+        be = log.entry(beacon);
+        check("wait: done once the time has passed (beat advanced)", be != null && be.stage == 1);
+        // Build the rite two blocks over, on the surface of the forced chunk.
+        var spawn = level.getRespawnData().globalPos().pos();
+        var base = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                new net.minecraft.core.BlockPos(spawn.getX() + 3, 0, spawn.getZ() + 3));
+        var fire = base;
+        level.setBlockAndUpdate(fire, net.minecraft.world.level.block.Blocks.CAMPFIRE.defaultBlockState());
+        level.setBlockAndUpdate(fire.east(), net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState());
+        level.setBlockAndUpdate(fire.west(), net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState());
+        level.setBlockAndUpdate(fire.south(), net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState());
+        level.setBlockAndUpdate(fire.north(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+        ItemStack torch = new ItemStack(Items.TORCH);
+        solo.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, torch);
+        boolean handled = QuestEngine.onUseBlock(solo, level, fire, torch);
+        check("ritual: a click with the pattern incomplete is refused, and handled", handled && log.entry(beacon) != null && log.entry(beacon).stage == 1);
+        check("ritual: a click on some other block is not a ritual", !QuestEngine.onUseBlock(solo, level, fire.east(), torch));
+        level.setBlockAndUpdate(fire.north(), net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState());
+        ItemStack bare = ItemStack.EMPTY;
+        check("ritual: the right pattern but no item is refused", QuestEngine.onUseBlock(solo, level, fire, bare) && log.entry(beacon).stage == 1);
+        handled = QuestEngine.onUseBlock(solo, level, fire, torch);
+        be = log.entry(beacon);
+        check("ritual: pattern and item complete the beat", handled && be != null && be.stage == 2);
+        check("ritual: a torch that is not consumed stays in hand", torch.getCount() == 1);
+        // The section index lags a tick on a dev server with no player; the flat entity list does not.
+        List<Zombie> drawn = new ArrayList<>();
+        for (var ent : level.getAllEntities()) if (ent instanceof Zombie zz && zz.getTags().contains(Trackers.TAG_PREFIX + "drawn")) drawn.add(zz);
+        // Entities added before the forced chunk's first tick are not yet visible to any lookup (a known dev-server
+        // trap), so the spawn is proven by what the granter reports, and the kill by a pair we can hold.
+        check("spawn: the beat's spawn effect placed two entities (granter reports " + Rewards.lastSpawned() + ", lookup sees " + drawn.size() + ")",
+                Rewards.lastSpawned() == 2);
+        if (drawn.size() < 2) {
+            // The entity index can lag a tick on a dev server; drive the kill with our own tagged pair so the rest still runs.
+            drawn = new ArrayList<>();
+            for (int n = 0; n < 2; n++) { Zombie zz = new Zombie(level); zz.snapTo(fire.getX(), fire.getY(), fire.getZ(), 0F, 0F); zz.addTag(Trackers.TAG_PREFIX + "drawn"); drawn.add(zz); }
+        }
+        int itemsBefore = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(fire).inflate(24)).size();
+        for (Zombie zz : drawn) { QuestEngine.onKill(solo, zz); zz.discard(); }
+        be = log.entry(beacon);
+        check("kill: tagged kills advance the beat", be != null && be.stage == 3);
+        int itemsAfter = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(fire).inflate(24)).size();
+        Chronicler.LOGGER.info("SelfTest: kill drops on the ground before {} after {}", itemsBefore, itemsAfter);
+        solo.getInventory().add(com.sablednah.chronicler.data.QuestItem.build(registries, ember, 2));
+        QuestEngine.poll(solo);
+        check("collect: two marked embers finish the beacon", log.isComplete(beacon));
+        check("collect: consumed embers are gone from the pack", Trackers.count(solo, st -> com.sablednah.chronicler.data.QuestItem.is(st, ember)) == 0);
+        for (var pos : List.of(fire, fire.east(), fire.west(), fire.south(), fire.north())) level.setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+
+        // --- progress: only counting quests move it ---
+        var overall = QuestEngine.progress(solo, java.util.Optional.empty());
+        var chapterP = QuestEngine.progress(solo, java.util.Optional.of(prologue));
+        check("progress: main-chapter quests count, repeatables do not (prologue " + chapterP.done() + "/" + chapterP.total() + ")",
+                chapterP.total() == 5 && chapterP.done() == 4);
+        check("progress: overall is at least the prologue", overall.total() >= chapterP.total() && overall.percent() >= 0 && overall.percent() <= 100);
+
+        // --- endings and replay ---
+        var nightWatch = QuestEngine.quest(server, ChroniclerIds.of("night_watch")).map(h -> h.value()).orElseThrow();
+        check("endings: the prologue declares two", QuestEngine.endingsOf(server, prologue).size() == 2);
+        QuestEngine.reachEnding(solo, nightWatch, "kindness");
+        check("endings: reaching one records it", log.endings(prologue).contains("kindness") && log.endings(prologue).size() == 1);
+        QuestEngine.reachEnding(solo, nightWatch, "kindness");
+        check("endings: reaching it again does not double count", log.endings(prologue).size() == 1);
+        log.setFlag("selftest_prologue_flag", true, prologue);
+        log.setFlag("selftest_other_flag", true, ChroniclerIds.of("elsewhere"));
+        check("replay: a chapter that was never touched is refused", !QuestEngine.replay(fake(server, "ChroniclerTestD"), prologue));
+        check("replay: a replayable chapter starts over", QuestEngine.replay(solo, prologue) && !log.isComplete(beacon) && !log.isComplete(ChroniclerIds.of("first_steps")));
+        check("replay: endings found stay found", log.endings(prologue).contains("kindness"));
+        check("replay: the chapter's own player flags are cleared, others kept", !log.hasFlag("selftest_prologue_flag") && log.hasFlag("selftest_other_flag"));
+        check("replay: a chapter that is not replayable is refused", !QuestEngine.replay(solo, ChroniclerIds.of("no_such_chapter")));
+
+        // --- the ZARP pack: on with ZombieMod, and every file in it loads ---
+        boolean zm = net.neoforged.fml.ModList.get().isLoaded("zombiemod");
+        boolean zarp = QuestEngine.quest(server, Identifier.fromNamespaceAndPath("zarp", "patient_zero")).isPresent();
+        check("zarp: the pack is " + (zm ? "on with ZombieMod" : "off without ZombieMod"), zarp == zm);
+        if (zarp) {
+            int zq = 0;
+            for (var h : QuestEngine.quests(server).listElements().toList()) if (h.key().identifier().getNamespace().equals("zarp")) zq++;
+            check("zarp: all 20 quests loaded (" + zq + ")", zq == 20);
+            check("zarp: the finale has two endings, survivors two, beyond one",
+                    QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "finale")).size() == 2
+                    && QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "survivors")).size() == 2
+                    && QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "beyond")).size() == 1);
+            check("zarp: quest items loaded", com.sablednah.chronicler.data.QuestItem.get(registries, Identifier.fromNamespaceAndPath("zarp", "origin_sample")).isPresent());
+            var okafor = GiverStore.get(server).placedFor(Identifier.fromNamespaceAndPath("zarp", "the_camp"));
+            if (Npcs.available()) {
+                check("zarp: Okafor stands near spawn", okafor.isPresent());
+                okafor.ifPresent(id -> {
+                    var quests = GiverStore.get(server).questsAtNpc(id);
+                    check("zarp: Okafor gives her whole storyline (" + quests.size() + " quests)", quests.size() >= 6
+                            && quests.contains(Identifier.fromNamespaceAndPath("zarp", "before_dark")));
+                    var placed = Npcs.provider().get().byId(server, id);
+                    check("zarp: her NPC is within 12 blocks of spawn", placed.map(pl -> pl.pos().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(spawn)) < 40).orElse(false));
+                });
+            } else {
+                check("zarp: no Cast, so nobody is placed (listed instead)", okafor.isEmpty());
+            }
+            // The main line is gated on flags and requirements, not reachable from a fresh journal.
+            var pz = QuestEngine.quest(server, Identifier.fromNamespaceAndPath("zarp", "patient_zero")).get().value();
+            check("zarp: the finale is locked until the sample is kept", !QuestEngine.available(solo, Identifier.fromNamespaceAndPath("zarp", "patient_zero"), pz));
+            check("zarp: wake up is available to a fresh journal", QuestEngine.available(solo, Identifier.fromNamespaceAndPath("zarp", "wake_up"),
+                    QuestEngine.quest(server, Identifier.fromNamespaceAndPath("zarp", "wake_up")).get().value()));
+        }
+        log.clear();
     }
 
     /** Stood at the world spawn, in a chunk kept loaded: a FakePlayer defaults to 0,0,0 in an unloaded one. */

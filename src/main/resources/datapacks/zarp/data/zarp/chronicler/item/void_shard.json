@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:echo_shard",
+  "name": "&5&lVoid Shard",
+  "lore": [
+    "Left by the Hollow Knight.",
+    "It has never been alive. That is the point."
+  ],
+  "glint": true,
+  "max_stack": 1
+}

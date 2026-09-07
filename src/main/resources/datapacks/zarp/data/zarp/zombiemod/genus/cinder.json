@@ -1,0 +1,56 @@
+{
+  "name": "The Cinder",
+  "description": "An infected blaze. It burnt, and it kept walking, and then it stopped walking and started thinking.",
+  "base": "minecraft:blaze",
+  "weight": 0,
+  "health": 150.0,
+  "damage": 8.0,
+  "speed": 1.1,
+  "follow_range": 40.0,
+  "scale": 1.5,
+  "attributes": {
+    "minecraft:knockback_resistance": 1.0
+  },
+  "boss": {
+    "color": "yellow",
+    "overlay": "notched_10",
+    "range": 48.0,
+    "darken_sky": false,
+    "boss_music": true,
+    "title": "The Cinder"
+  },
+  "clear_goals": false,
+  "abilities": [
+    {
+      "type": "zombiemod:particles",
+      "interval": 6,
+      "particle": "minecraft:flame",
+      "count": 6
+    },
+    {
+      "type": "zombiemod:effect",
+      "interval": 80,
+      "chance": 0.6,
+      "target": "nearby_players",
+      "effect": "minecraft:weakness",
+      "duration": 120,
+      "radius": 8.0
+    },
+    {
+      "type": "zombiemod:summon",
+      "interval": 180,
+      "chance": 0.7,
+      "entity": "minecraft:blaze",
+      "count": 2,
+      "max_nearby": 4,
+      "radius": 6.0
+    },
+    {
+      "type": "zombiemod:heal",
+      "interval": 100,
+      "amount": 2.0
+    }
+  ],
+  "bounty": 60.0,
+  "xp": 90
+}

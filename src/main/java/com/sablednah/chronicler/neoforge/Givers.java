@@ -58,9 +58,27 @@ public final class Givers {
                 Identifier dim = p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
                 DATA_BLOCKS.put(dim + "|" + p.at().getX() + "," + p.at().getY() + "," + p.at().getZ(), h.key().identifier());
             }
-            if (g instanceof GiverTypes.NpcGiver n) placeNpc(server, h.key().identifier(), n);
+            if (g instanceof GiverTypes.NpcGiver n && n.of().isEmpty()) placeNpc(server, h.key().identifier(), n);
         }));
+        // Second pass: quests that share another quest's NPC, once every NPC stands.
+        for (Entry e : List.copyOf(DATA)) {
+            if (e.giver() instanceof GiverTypes.NpcGiver n && n.of().isPresent()) shareNpc(server, e.id(), n.of().get());
+        }
         OFFERED.clear();
+    }
+
+    /** This quest is given by the NPC of another quest. */
+    private static void shareNpc(MinecraftServer server, Identifier questId, Identifier of) {
+        if (!Npcs.available()) return;
+        GiverStore store = GiverStore.get(server);
+        Npcs.Provider cast = Npcs.provider().get();
+        Optional<UUID> npc = store.placedFor(of).filter(id -> cast.byId(server, id).isPresent());
+        if (npc.isEmpty()) {
+            Chronicler.LOGGER.warn("Chronicler: quest {} wants the NPC of {}, which is not placed", questId, of);
+            return;
+        }
+        store.setNpc(npc.get(), questId);
+        store.setPlacedFor(questId, npc.get());
     }
 
     /** Put a data-declared NPC giver in the world once, and remember which NPC it is. */
@@ -80,23 +98,39 @@ public final class Givers {
         Identifier dim = n.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
         ServerLevel level = server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, dim));
         if (level == null) return;
-        Vec3 pos = new Vec3(n.at().getX() + 0.5, n.at().getY(), n.at().getZ() + 0.5);
+        net.minecraft.core.BlockPos at = n.at().orElseGet(() -> {
+            // An offset from the world spawn, dropped onto the surface: a shipped camp stands on any seed.
+            var spawn = server.overworld().getRespawnData().globalPos().pos();
+            int x = spawn.getX() + n.nearSpawn().get().get(0), z = spawn.getZ() + n.nearSpawn().get().get(1);
+            level.getChunk(x >> 4, z >> 4); // generate it, or the heightmap answers for air
+            return level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                    new net.minecraft.core.BlockPos(x, 0, z));
+        });
+        Vec3 pos = new Vec3(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
         UUID id = n.entity().isPresent()
                 ? cast.spawnMob(level, pos, n.yaw(), n.entity().get(), n.name())
                 : cast.spawnHuman(level, pos, n.yaw(), n.name(), n.skin());
         store.setPlacedFor(questId, id);
         store.setNpc(id, questId);
-        Chronicler.LOGGER.info("Chronicler: placed NPC giver '{}' for {} at {}", n.name(), questId, n.at());
+        Chronicler.LOGGER.info("Chronicler: placed NPC giver '{}' for {} at {}", n.name(), questId, at);
     }
 
     /** A right-click on a Cast NPC carrying the giver role. */
     public static boolean onUseNpc(ServerPlayer player, UUID npcId) {
         MinecraftServer server = player.level().getServer();
-        Optional<Identifier> id = GiverStore.get(server).atNpc(npcId);
-        if (id.isEmpty()) {
+        List<Identifier> quests = GiverStore.get(server).questsAtNpc(npcId);
+        if (quests.isEmpty()) {
             Feedback.chat(player, Lang.get("msg.giver.npc_idle"));
             return true;
         }
+        // Several quests on one person: the first the player could take, else the first they are on, else the first.
+        Optional<Identifier> id = Optional.empty();
+        for (Identifier q : quests) {
+            var h = QuestEngine.quest(server, q);
+            if (h.isPresent() && QuestEngine.available(player, q, h.get().value())) { id = Optional.of(q); break; }
+        }
+        if (id.isEmpty()) for (Identifier q : quests) if (QuestEngine.journal(player).isActive(q)) { id = Optional.of(q); break; }
+        if (id.isEmpty()) id = Optional.of(quests.getFirst());
         Optional<Holder.Reference<Quest>> holder = QuestEngine.quest(server, id.get());
         if (holder.isEmpty()) {
             Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));
@@ -124,8 +158,10 @@ public final class Givers {
 
     /** Once a second for the whole server: the floating markers over every giver. */
     public static void tickMarkers(MinecraftServer server) {
-        Map<String, Identifier> all = new HashMap<>(DATA_BLOCKS);
-        all.putAll(GiverStore.get(server).view());
+        GiverStore store = GiverStore.get(server);
+        Map<String, List<Identifier>> all = new HashMap<>();
+        DATA_BLOCKS.forEach((k, v) -> all.put(k, List.of(v)));
+        store.view().keySet().forEach(k -> all.put(k, store.questsAt(k)));
         Markers.sync(server, all,
                 key -> markerPosition(server, key),
                 key -> {

@@ -7,6 +7,7 @@ import com.sablednah.chronicler.neoforge.ChroniclerPermissions;
 import com.sablednah.chronicler.neoforge.ChroniclerServerEvents;
 import com.sablednah.chronicler.yaml.YamlConfigPack;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -47,6 +48,7 @@ public class Chronicler {
         modEventBus.addListener(ChroniclerRegistries::register);
         ChroniclerAttachments.register(modEventBus);
         modEventBus.addListener(this::onAddPackFinders);
+        com.sablednah.chronicler.neoforge.QuestItemLoot.register(modEventBus);
 
         // Game bus: server lifecycle, commands, permissions.
         NeoForge.EVENT_BUS.register(ChroniclerServerEvents.class);
@@ -104,6 +106,26 @@ public class Chronicler {
     private void onAddPackFinders(AddPackFindersEvent event) {
         if (event.getPackType() == PackType.SERVER_DATA) {
             event.addRepositorySource(consumer -> consumer.accept(YamlConfigPack.makePack()));
+            // The ZARP questline rides in the jar as a datapack: on when ZombieMod is here (or told to be),
+            // otherwise listed and off, so /datapack enable can still turn it on by hand.
+            boolean on;
+            try {
+                on = switch (ChroniclerConfig.ZARP.get()) {
+                    case ON -> true;
+                    case OFF -> false;
+                    case AUTO -> net.neoforged.fml.ModList.get().isLoaded("zombiemod");
+                };
+            } catch (IllegalStateException e) {
+                on = net.neoforged.fml.ModList.get().isLoaded("zombiemod"); // config not loaded yet: the auto rule
+            }
+            // Registered only when on: a world remembers an enabled pack by name, so merely marking it
+            // optional would leave it running in any world that once had it. Absent, the world drops it.
+            if (on) {
+                event.addPackFinders(Identifier.fromNamespaceAndPath(MODID, "datapacks/zarp") /* the path is from the jar root, not data/ */,
+                        PackType.SERVER_DATA, net.minecraft.network.chat.Component.literal("Chronicler: ZARP"),
+                        net.minecraft.server.packs.repository.PackSource.BUILT_IN, true, net.minecraft.server.packs.repository.Pack.Position.TOP);
+            }
+            LOGGER.info("Chronicler: ZARP questline datapack is {}", on ? "on" : "off (content.zarp)");
         }
     }
 }

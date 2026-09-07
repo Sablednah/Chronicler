@@ -3,28 +3,54 @@
   "description": "Somebody has to keep the fire lit. Tonight that is you.",
   "chapter": "prologue",
   "order": 3,
-  "requires": [ "things_in_the_dark" ],
+  "requires": [
+    "things_in_the_dark"
+  ],
   "stages": [
     {
       "text": "Get a light. The dark is not empty.",
       "objectives": [
-        { "type": "collect", "item": "minecraft:torch", "count": 1, "consume": false }
+        {
+          "type": "collect",
+          "item": "minecraft:torch",
+          "count": 1,
+          "consume": false
+        }
       ],
       "on_enter": [
-        { "type": "message", "text": "&7You hear something shuffle, somewhere behind you." }
+        {
+          "type": "message",
+          "text": "&7You hear something shuffle, somewhere behind you."
+        }
       ]
     },
     {
       "text": "They found you. Hold until it is quiet.",
       "objectives": [
-        { "type": "kill", "target": "minecraft:zombie", "count": 2 }
+        {
+          "type": "kill",
+          "target": "minecraft:zombie",
+          "count": 2
+        }
       ],
       "on_enter": [
-        { "type": "title", "title": "&cThey are here", "subtitle": "&7Hold the line" },
-        { "type": "spawn", "entity": "minecraft:zombie", "count": 2, "radius": 6 }
+        {
+          "type": "title",
+          "title": "&cThey are here",
+          "subtitle": "&7Hold the line"
+        },
+        {
+          "type": "spawn",
+          "entity": "minecraft:zombie",
+          "count": 2,
+          "radius": 6
+        }
       ],
       "on_complete": [
-        { "type": "message", "text": "&7Quiet again. For now." }
+        {
+          "type": "message",
+          "text": "&7Quiet again. For now."
+        }
       ]
     },
     {
@@ -34,24 +60,42 @@
           "label": "Give it",
           "text": "They nod once and are gone into the dark.",
           "effects": [
-            { "type": "karma", "delta": 5 },
-            { "type": "flag", "name": "gave_the_torch", "player": true }
+            {
+              "type": "karma",
+              "delta": 5
+            },
+            {
+              "type": "flag",
+              "name": "gave_the_torch",
+              "player": true
+            }
           ],
-          "end": true
+          "end": true,
+          "ending": "kindness"
         },
         {
           "label": "Keep it",
           "text": "They do not argue. You do not see them again.",
           "effects": [
-            { "type": "karma", "delta": -5 }
+            {
+              "type": "karma",
+              "delta": -5
+            }
           ],
-          "end": true
+          "end": true,
+          "ending": "cold"
         }
       ]
     }
   ],
   "rewards": [
-    { "type": "item", "item": "minecraft:shield" },
-    { "type": "xp", "amount": 40 }
+    {
+      "type": "item",
+      "item": "minecraft:shield"
+    },
+    {
+      "type": "xp",
+      "amount": 40
+    }
   ]
 }

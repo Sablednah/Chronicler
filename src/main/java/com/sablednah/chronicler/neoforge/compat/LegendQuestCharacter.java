@@ -45,6 +45,16 @@ public final class LegendQuestCharacter {
             @Override public boolean addLevels(ServerPlayer player, int delta) {
                 return CharacterService.addLevels(player, delta);
             }
+            @Override public java.util.Optional<net.minecraft.resources.Identifier> race(ServerPlayer player) {
+                return CharacterService.data(player).raceId();
+            }
+            @Override public java.util.List<net.minecraft.resources.Identifier> classes(ServerPlayer player) {
+                PlayerCharacter pc = CharacterService.data(player);
+                java.util.List<net.minecraft.resources.Identifier> out = new java.util.ArrayList<>();
+                pc.mainClassId().ifPresent(out::add);
+                pc.subClassId().ifPresent(out::add);
+                return out;
+            }
             @Override public boolean grantSkillPoints(ServerPlayer player, int delta) {
                 CharacterService.ensureInitialised(player);
                 CharacterService.data(player).grantSkillPoints(delta);

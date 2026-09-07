@@ -1,5 +1,8 @@
 package com.sablednah.chronicler.neoforge;
 
+import java.util.List;
+import java.util.Optional;
+import net.minecraft.resources.Identifier;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
@@ -20,12 +23,25 @@ public final class Sheet {
         boolean addClassXp(ServerPlayer player, long amount);
         boolean addLevels(ServerPlayer player, int delta);
         boolean grantSkillPoints(ServerPlayer player, int delta);
+        /** The character's race id, if the sheet has one. */
+        default Optional<Identifier> race(ServerPlayer player) { return Optional.empty(); }
+        /** Main and sub class ids, in that order; empty when unchosen. */
+        default List<Identifier> classes(ServerPlayer player) { return List.of(); }
     }
 
     private static volatile Provider provider = null;
     private static volatile String providerName = "none";
 
     public static boolean available() { return provider != null; }
+
+    public static Optional<Identifier> race(ServerPlayer player) {
+        return provider == null ? Optional.empty() : provider.race(player);
+    }
+
+    public static List<Identifier> classes(ServerPlayer player) {
+        return provider == null ? List.of() : provider.classes(player);
+    }
+
 
     public static String providerName() { return providerName; }
 

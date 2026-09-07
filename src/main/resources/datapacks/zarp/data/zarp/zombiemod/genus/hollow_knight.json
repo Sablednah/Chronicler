@@ -1,0 +1,48 @@
+{
+  "name": "The Hollow Knight",
+  "description": "Empty armour, walking. Whatever wore it left, or was never there.",
+  "base": "minecraft:enderman",
+  "weight": 0,
+  "health": 140.0,
+  "damage": 10.0,
+  "speed": 1.1,
+  "follow_range": 40.0,
+  "scale": 1.4,
+  "attributes": {
+    "minecraft:knockback_resistance": 0.9,
+    "minecraft:armor": 10.0
+  },
+  "boss": {
+    "color": "purple",
+    "overlay": "notched_6",
+    "range": 48.0,
+    "darken_sky": true,
+    "boss_music": true,
+    "title": "The Hollow Knight"
+  },
+  "clear_goals": false,
+  "abilities": [
+    {
+      "type": "zombiemod:effect",
+      "interval": 90,
+      "chance": 0.5,
+      "target": "nearby_players",
+      "effect": "minecraft:blindness",
+      "duration": 60,
+      "radius": 8.0
+    },
+    {
+      "type": "zombiemod:particles",
+      "interval": 6,
+      "particle": "minecraft:portal",
+      "count": 8
+    },
+    {
+      "type": "zombiemod:heal",
+      "interval": 120,
+      "amount": 3.0
+    }
+  ],
+  "bounty": 60.0,
+  "xp": 90
+}

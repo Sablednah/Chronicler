@@ -35,23 +35,27 @@ public final class QuestLog {
         public int stage;
         /** Game time by which this beat must be done, or -1 for no clock. */
         public long deadlineAt = -1;
+        /** Game time this beat was entered, for {@code wait} objectives. */
+        public long enteredAt = 0;
 
         Entry(List<Integer> progress, List<Integer> targets) {
-            this(progress, targets, 0, -1L);
+            this(progress, targets, 0, -1L, 0L);
         }
 
-        Entry(List<Integer> progress, List<Integer> targets, int stage, long deadlineAt) {
+        Entry(List<Integer> progress, List<Integer> targets, int stage, long deadlineAt, long enteredAt) {
             this.progress = new ArrayList<>(progress);
             this.targets = new ArrayList<>(targets);
             this.stage = stage;
             this.deadlineAt = deadlineAt;
+            this.enteredAt = enteredAt;
         }
 
         static final Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.listOf().fieldOf("progress").forGetter(e -> e.progress),
                 Codec.INT.listOf().fieldOf("targets").forGetter(e -> e.targets),
                 Codec.INT.optionalFieldOf("stage", 0).forGetter(e -> e.stage),
-                Codec.LONG.optionalFieldOf("deadline_at", -1L).forGetter(e -> e.deadlineAt))
+                Codec.LONG.optionalFieldOf("deadline_at", -1L).forGetter(e -> e.deadlineAt),
+                Codec.LONG.optionalFieldOf("entered_at", 0L).forGetter(e -> e.enteredAt))
                 .apply(i, Entry::new));
 
         /** Move to the next beat: fresh counters against its targets. */
@@ -89,8 +93,16 @@ public final class QuestLog {
             Identifier.CODEC.optionalFieldOf("tracked").forGetter(l -> Optional.ofNullable(l.tracked)),
             Codec.BOOL.optionalFieldOf("journal_given", false).forGetter(l -> l.journalGiven),
             Codec.STRING.listOf().optionalFieldOf("flags", List.of()).forGetter(l -> List.copyOf(l.flags)),
-            Codec.unboundedMap(Identifier.CODEC, Codec.LONG).optionalFieldOf("completed_at", Map.of()).forGetter(l -> l.completedAt))
+            Codec.unboundedMap(Identifier.CODEC, Codec.LONG).optionalFieldOf("completed_at", Map.of()).forGetter(l -> l.completedAt),
+            Codec.unboundedMap(Identifier.CODEC, Codec.STRING.listOf()).optionalFieldOf("endings", Map.of())
+                    .forGetter(l -> { Map<Identifier, List<String>> m = new LinkedHashMap<>(); l.endings.forEach((k, v) -> m.put(k, List.copyOf(v))); return m; }),
+            Codec.unboundedMap(Codec.STRING, Identifier.CODEC).optionalFieldOf("flag_owners", Map.of()).forGetter(l -> l.flagOwners))
             .apply(i, QuestLog::new));
+
+    /** Endings reached, per chapter, in the order they were reached. */
+    private final Map<Identifier, java.util.LinkedHashSet<String>> endings = new LinkedHashMap<>();
+    /** Which chapter set each player flag, so a replay can take its own flags back and nobody else's. */
+    private final Map<String, Identifier> flagOwners = new LinkedHashMap<>();
 
     private final Map<Identifier, Entry> active;
     private final Map<Identifier, Integer> completed;
@@ -104,16 +116,19 @@ public final class QuestLog {
     private final Map<Identifier, Long> completedAt;
 
     public QuestLog() {
-        this(Map.of(), Map.of(), Optional.empty(), false, List.of(), Map.of());
+        this(Map.of(), Map.of(), Optional.empty(), false, List.of(), Map.of(), Map.of(), Map.of());
     }
 
     private QuestLog(Map<Identifier, Entry> active, Map<Identifier, Integer> completed, Optional<Identifier> tracked,
-            boolean journalGiven, List<String> flags, Map<Identifier, Long> completedAt) {
+            boolean journalGiven, List<String> flags, Map<Identifier, Long> completedAt,
+            Map<Identifier, List<String>> endings, Map<String, Identifier> flagOwners) {
         this.journalGiven = journalGiven;
+        endings.forEach((k, v) -> this.endings.put(k, new java.util.LinkedHashSet<>(v)));
+        this.flagOwners.putAll(flagOwners);
         this.flags.addAll(flags);
         this.completedAt = new LinkedHashMap<>(completedAt);
         this.active = new LinkedHashMap<>();
-        active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets, v.stage, v.deadlineAt)));
+        active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets, v.stage, v.deadlineAt, v.enteredAt)));
         this.completed = new LinkedHashMap<>(completed);
         this.tracked = tracked.orElse(null);
     }
@@ -136,7 +151,7 @@ public final class QuestLog {
 
     /** Start a quest at somebody else's progress -- a party member joining a quest already under way. */
     public void startFrom(Identifier quest, Entry other) {
-        active.put(quest, new Entry(other.progress, other.targets, other.stage, other.deadlineAt));
+        active.put(quest, new Entry(other.progress, other.targets, other.stage, other.deadlineAt, other.enteredAt));
         if (tracked == null) tracked = quest;
     }
 
@@ -168,6 +183,40 @@ public final class QuestLog {
     public void setCompletedAt(Identifier quest, long millis) { completedAt.put(quest, millis); }
 
     public boolean hasFlag(String name) { return flags.contains(name.trim().toLowerCase(java.util.Locale.ROOT)); }
+
+    /** An ending reached; true if it is new to this player. */
+    public boolean addEnding(Identifier chapter, String ending) {
+        return endings.computeIfAbsent(chapter, k -> new java.util.LinkedHashSet<>()).add(ending.trim().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    public java.util.Set<String> endings(Identifier chapter) {
+        return Collections.unmodifiableSet(endings.getOrDefault(chapter, new java.util.LinkedHashSet<>()));
+    }
+
+    /** Set a flag on behalf of a chapter, so a replay of that chapter can clear it. */
+    public void setFlag(String name, boolean value, Identifier owner) {
+        setFlag(name, value);
+        String key = name.trim().toLowerCase(java.util.Locale.ROOT);
+        if (value && owner != null) flagOwners.put(key, owner);
+        if (!value) flagOwners.remove(key);
+    }
+
+    /**
+     * Start a chapter over: its quests are no longer active or complete, their
+     * cooldowns are gone, and every player flag it set is cleared. Endings stay --
+     * they are the point of playing again.
+     */
+    public void replay(Identifier chapter, java.util.Collection<Identifier> questsInChapter) {
+        for (Identifier q : questsInChapter) {
+            active.remove(q);
+            completed.remove(q);
+            completedAt.remove(q);
+            if (q.equals(tracked)) tracked = null;
+        }
+        List<String> mine = new ArrayList<>();
+        flagOwners.forEach((f, owner) -> { if (chapter.equals(owner)) mine.add(f); });
+        for (String f : mine) { flags.remove(f); flagOwners.remove(f); }
+    }
 
     public void setFlag(String name, boolean value) {
         String key = name.trim().toLowerCase(java.util.Locale.ROOT);

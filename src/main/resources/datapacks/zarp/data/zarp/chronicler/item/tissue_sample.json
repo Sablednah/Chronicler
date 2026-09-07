@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:glass_bottle",
+  "name": "&fTissue Sample",
+  "lore": [
+    "Taken from a Harvester.",
+    "Okafor wants every one of these."
+  ],
+  "glint": true,
+  "max_stack": 16
+}

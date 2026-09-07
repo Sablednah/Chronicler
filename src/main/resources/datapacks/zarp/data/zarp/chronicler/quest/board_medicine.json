@@ -1,0 +1,51 @@
+{
+  "name": "Medicine Run",
+  "description": "Bottles, and something to put in them. Okafor is down to guesswork.",
+  "chapter": "zarp:board",
+  "order": 3,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "repeatable": true,
+  "cooldown": 900,
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:board_cull"
+  },
+  "objectives": [
+    {
+      "type": "collect",
+      "item": "minecraft:glass_bottle",
+      "count": 3,
+      "consume": true
+    },
+    {
+      "type": "collect",
+      "item": "minecraft:spider_eye",
+      "count": 1,
+      "consume": true
+    },
+    {
+      "type": "collect",
+      "item": "minecraft:sugar",
+      "count": 2,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "money",
+      "amount": 25
+    },
+    {
+      "type": "xp",
+      "amount": 15
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 2
+    }
+  ]
+}

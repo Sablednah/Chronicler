@@ -1,0 +1,225 @@
+{
+  "name": "Patient Zero",
+  "description": "Living fire, a thing that never lived, and the sample it all came from. Okafor can make a cure. It needs one more thing. She does not say what.",
+  "chapter": "zarp:finale",
+  "order": 1,
+  "requires": [
+    "zarp:never_lived"
+  ],
+  "availability": {
+    "player_flags": {
+      "zarp_kept_sample": true
+    }
+  },
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_camp"
+  },
+  "stages": [
+    {
+      "text": "Bring her the flame and the shard.",
+      "objectives": [
+        {
+          "type": "collect",
+          "quest_item": "zarp:living_flame",
+          "count": 1,
+          "consume": true
+        },
+        {
+          "type": "collect",
+          "quest_item": "zarp:void_shard",
+          "count": 1,
+          "consume": true
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7Now the rite. It has to come to us. It will, for that sample.",
+          "radius": 16.0,
+          "quest": "zarp:the_camp"
+        }
+      ]
+    },
+    {
+      "text": "Soul sand in a cross, a wither skull on the centre, the Origin Sample in your hand. Use the skull.",
+      "objectives": [
+        {
+          "type": "ritual",
+          "block": "minecraft:wither_skeleton_skull",
+          "label": "Call Patient Zero",
+          "pattern": [
+            {
+              "offset": [
+                0,
+                -1,
+                0
+              ],
+              "block": "minecraft:soul_sand"
+            },
+            {
+              "offset": [
+                1,
+                -1,
+                0
+              ],
+              "block": "minecraft:soul_sand"
+            },
+            {
+              "offset": [
+                -1,
+                -1,
+                0
+              ],
+              "block": "minecraft:soul_sand"
+            },
+            {
+              "offset": [
+                0,
+                -1,
+                1
+              ],
+              "block": "minecraft:soul_sand"
+            },
+            {
+              "offset": [
+                0,
+                -1,
+                -1
+              ],
+              "block": "minecraft:soul_sand"
+            }
+          ],
+          "item": "zarp:origin_sample",
+          "consume": true
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 5,
+          "genus": "zombiemod:patient_zero",
+          "entity": "minecraft:wither",
+          "name": "&4Patient Zero",
+          "tag": "patient_zero"
+        },
+        {
+          "type": "title",
+          "title": "&4&lPatient Zero",
+          "subtitle": "&7The first one."
+        }
+      ]
+    },
+    {
+      "text": "The first one. End it.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:patient_zero",
+            "minecraft:wither"
+          ],
+          "count": 1,
+          "tag": "patient_zero"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "flag",
+          "name": "zarp_zero_dead",
+          "player": false,
+          "value": true
+        },
+        {
+          "type": "message",
+          "text": "&7It goes down slowly, like it is thinking about it. Then it is just a body. The city is very quiet.",
+          "action_bar": false
+        }
+      ]
+    },
+    {
+      "text": "It is done, and it isn't. The cure needs a living host who has already beaten it. There is one in the camp. Kit is fourteen. Okafor will not look at you.",
+      "choices": [
+        {
+          "label": "Make the cure",
+          "text": "Kit does not argue. Okafor works through the night. By morning there is a cure, and one fewer person to give it to.",
+          "effects": [
+            {
+              "type": "npc_remove",
+              "quest": "zarp:blood_ties",
+              "text": "&7Kit's scarf is on the fence in the morning. Nobody moves it."
+            },
+            {
+              "type": "flag",
+              "name": "zarp_cured",
+              "player": false,
+              "value": true
+            },
+            {
+              "type": "karma",
+              "delta": -20
+            },
+            {
+              "type": "reputation",
+              "standing": "camp",
+              "delta": 25
+            }
+          ],
+          "ending": "cure",
+          "end": true
+        },
+        {
+          "label": "Not her. Not like this.",
+          "text": "Okafor lets out a breath she has been holding since the hospital. The city stays dangerous. Kit stays fourteen.",
+          "effects": [
+            {
+              "type": "flag",
+              "name": "zarp_mercy",
+              "player": false,
+              "value": true
+            },
+            {
+              "type": "karma",
+              "delta": 20
+            },
+            {
+              "type": "reputation",
+              "standing": "camp",
+              "delta": 5
+            },
+            {
+              "type": "npc_say",
+              "text": "&7You didn't have to do that. ...Thanks.",
+              "radius": 16.0,
+              "quest": "zarp:blood_ties"
+            }
+          ],
+          "ending": "mercy",
+          "end": true
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 500
+    },
+    {
+      "type": "money",
+      "amount": 200
+    },
+    {
+      "type": "item",
+      "item": "minecraft:diamond",
+      "count": 5
+    },
+    {
+      "type": "title",
+      "title": "&4&lPatient Zero",
+      "subtitle": "&7Everything since was a copy of this."
+    }
+  ]
+}

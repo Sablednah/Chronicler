@@ -2,6 +2,28 @@
 
 ## Unreleased — 0.1.0
 
+- **ZARP**: the Zombie Apocalypse Roleplay questline, built in as a datapack
+  (`content.zarp`, auto with ZombieMod): a camp of five near spawn, four acts
+  through the city, the hospital, the Nether and the End, a finale with three
+  endings, a side chapter whose refusals have consequences, a bounty board,
+  nine quest items and five ZombieMod genera (Ashwalker, Fortress Warden, the
+  Cinder, Voidling, the Hollow Knight). `docs/ZARP.md`.
+- Objectives: `ritual` (a multiblock and an item, click to perform), `wait`,
+  `kill` with target lists, spawn tags and quest-item drops, `collect` by tag
+  or quest item, `place` with `any` alternatives.
+- Effects: `spawn` with `name` / `tag` / `health` and a vanilla stand-in for a
+  genus, `npc_say`, `npc_remove`, `ending`.
+- Quest items: the `chronicler:item` registry, marked in `custom_data`, an
+  `item` reward by `quest_item`, the `chronicler:quest_item` loot function,
+  `/chronicler item give|list`.
+- Endings and replay: `ending` on stages and choices, `end: true` on a stage,
+  `replayable` chapters, `/quest replay <chapter>`; a progress percentage in
+  `/quests` and the journal, moved only by quests that `counts`.
+- Availability by LegendQuest `race` and `class`.
+- NPC givers `near_spawn` on any seed, one NPC giving several quests (`of`),
+  per-player marks that show the player's own state.
+- `mc26.2` branch: NeoForge 26.2.0.72, Java 25.
+
 - Skeleton: `chronicler:chapter` and `chronicler:quest` datapack registries,
   YAML front door under `config/chronicler/`, `/quest list|info|log`,
   `/chronicler reload|status`, per-player journal attachment, `messages.yml`

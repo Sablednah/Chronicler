@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:blaze_powder",
+  "name": "&6&lLiving Flame",
+  "lore": [
+    "What the Cinder was.",
+    "It does not go out."
+  ],
+  "glint": true,
+  "max_stack": 1
+}

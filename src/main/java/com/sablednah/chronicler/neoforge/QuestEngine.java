@@ -12,6 +12,14 @@ import com.sablednah.chronicler.core.QuestLog;
 import com.sablednah.chronicler.core.QuestScope;
 import com.sablednah.chronicler.data.Chapter;
 import com.sablednah.chronicler.data.ObjectiveSpec;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.tags.TagKey;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.BlockPos;
+import com.sablednah.chronicler.data.QuestItem;
+import com.sablednah.chronicler.data.ObjectiveTypes;
 import com.sablednah.chronicler.data.Quest;
 import com.sablednah.chronicler.data.RewardSpec;
 import com.sablednah.chronicler.data.Stage;
@@ -193,10 +201,11 @@ public final class QuestEngine {
                 if (e != null) e.jump(index, targets);
             }
         }
-        long deadlineAt = stage.deadline().map(secs -> members.getFirst().level().getGameTime() + secs * 20L).orElse(-1L);
+        long now = members.getFirst().level().getGameTime();
+        long deadlineAt = stage.deadline().map(secs -> now + secs * 20L).orElse(-1L);
         for (ServerPlayer m : members) {
             QuestLog.Entry e = journal(m).entry(id);
-            if (e != null) e.deadlineAt = deadlineAt;
+            if (e != null) { e.deadlineAt = deadlineAt; e.enteredAt = now; }
             narrate(m, quest, stage, index);
             if (deadlineAt >= 0) Feedback.chat(m, Lang.fmt("msg.deadline.set", "time", clock(stage.deadline().get() * 20L)));
             effects(m, stage.onEnter(), id, quest);
@@ -243,6 +252,7 @@ public final class QuestEngine {
             Feedback.chat(m, Lang.fmt("msg.choice.made", "label", choice.label()));
             choice.text().ifPresent(t -> Feedback.chat(m, Lang.fmt("msg.choice.text", "text", t)));
             effects(m, choice.effects(), id, quest);
+            choice.ending().ifPresent(end -> reachEnding(m, quest, end));
             choice.start().ifPresent(other -> accept(m, other));
         }
         if (choice.end()) {
@@ -339,11 +349,165 @@ public final class QuestEngine {
             for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
                 ObjectiveSpec spec = objectives.get(n);
                 if (Trackers.of(spec).countsKill(killer, victim, spec)) {
+                    if (spec instanceof ObjectiveTypes.Kill k && k.drop().isPresent() && e.progress.get(n) < e.targets.get(n)) {
+                        dropQuestItem(victim, k.drop().get());
+                    }
                     set(killer, id, quest, n, e.progress.get(n) + 1, false);
                     if (journal(killer).entry(id) == null || journal(killer).entry(id).stage != e.stage) break;
                 }
             }
         }
+    }
+
+    private static void dropQuestItem(LivingEntity victim, ObjectiveTypes.Kill.Drop drop) {
+        if (victim.getRandom().nextDouble() > drop.chance()) return;
+        ItemStack stack = QuestItem.build(victim.level().registryAccess(), drop.questItem(), drop.count());
+        if (stack.isEmpty()) {
+            Chronicler.LOGGER.warn("Chronicler: kill drop names unknown quest item {}", drop.questItem());
+            return;
+        }
+        var item = new net.minecraft.world.entity.item.ItemEntity(victim.level(), victim.getX(), victim.getY() + 0.5, victim.getZ(), stack);
+        item.setDefaultPickUpDelay();
+        victim.level().addFreshEntity(item);
+    }
+
+    /** The active entry whose current beat holds exactly this objective instance, or null. */
+    public static QuestLog.Entry entryHolding(ServerPlayer player, ObjectiveSpec spec) {
+        QuestLog log = journal(player);
+        MinecraftServer server = player.level().getServer();
+        for (var e : log.activeView().entrySet()) {
+            var holder = quest(server, e.getKey());
+            if (holder.isEmpty()) continue;
+            for (ObjectiveSpec o : currentObjectives(holder.get().value(), e.getValue())) {
+                if (o == spec) return e.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * A right-click on a block, offered to every active ritual objective. True when
+     * the click was a ritual (done, or refused with a reason), so the caller
+     * cancels the vanilla use of the block.
+     */
+    public static boolean onUseBlock(ServerPlayer player, ServerLevel level, BlockPos pos, ItemStack held) {
+        QuestLog log = journal(player);
+        if (log.activeCount() == 0) return false;
+        MinecraftServer server = level.getServer();
+        Identifier clicked = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock());
+        for (Identifier id : List.copyOf(log.activeView().keySet())) {
+            var holder = quest(server, id);
+            QuestLog.Entry e = log.entry(id);
+            if (holder.isEmpty() || e == null) continue;
+            Quest quest = holder.get().value();
+            List<ObjectiveSpec> objectives = currentObjectives(quest, e);
+            for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
+                if (!(objectives.get(n) instanceof ObjectiveTypes.Ritual r)) continue;
+                if (e.objectiveDone(n)) continue;
+                if (!blockMatches(level, pos, r.block())) continue;
+                // The anchor is right. Now the pattern, then the item.
+                for (ObjectiveTypes.Ritual.PatternBlock p : r.pattern()) {
+                    BlockPos at = pos.offset(p.offset().get(0), p.offset().get(1), p.offset().get(2));
+                    if (!blockMatches(level, at, p.block())) {
+                        Feedback.actionBar(player, Lang.fmt("msg.ritual.missing", "block", Lang.pretty(p.block()),
+                                "x", p.offset().get(0), "y", p.offset().get(1), "z", p.offset().get(2)));
+                        return true;
+                    }
+                }
+                if (r.item().isPresent()) {
+                    boolean holding = !held.isEmpty() && r.item().get().equals(BuiltInRegistries.ITEM.getKey(held.getItem()));
+                    if (!holding) holding = QuestItem.is(held, r.item().get());
+                    if (!holding) {
+                        Feedback.actionBar(player, Lang.fmt("msg.ritual.need_item", "item", QuestItem.displayName(r.item().get())));
+                        return true;
+                    }
+                    if (r.consume()) held.shrink(1);
+                }
+                Feedback.fanfare(player, Lang.fmt("msg.ritual.done", "what", r.describe()), Lang.get("msg.ritual.title"), Lang.fmt("msg.ritual.subtitle", "what", r.describe()));
+                set(player, id, quest, n, 1, true);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean blockMatches(ServerLevel level, BlockPos pos, String want) {
+        var state = level.getBlockState(pos);
+        if (want.startsWith("#")) {
+            Identifier tag = Identifier.tryParse(want.substring(1));
+            return tag != null && state.is(TagKey.create(Registries.BLOCK, tag));
+        }
+        Identifier id = Identifier.tryParse(want.contains(":") ? want : "minecraft:" + want);
+        return id != null && id.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
+    }
+
+    // --- endings, progress, replay ---
+
+    /** Every distinct ending declared by the quests of a chapter, in registry order. */
+    public static List<String> endingsOf(MinecraftServer server, Identifier chapter) {
+        List<String> out = new ArrayList<>();
+        quests(server).listElements().forEach(h -> {
+            if (!h.value().chapter().equals(chapter)) return;
+            for (String e : h.value().endings()) if (!out.contains(e)) out.add(e);
+        });
+        return out;
+    }
+
+    /** The player reached an ending of this quest's chapter. */
+    public static void reachEnding(ServerPlayer player, Quest quest, String ending) {
+        MinecraftServer server = player.level().getServer();
+        QuestLog log = journal(player);
+        Identifier chapter = quest.chapter();
+        boolean fresh = log.addEnding(chapter, ending);
+        int total = endingsOf(server, chapter).size();
+        int found = log.endings(chapter).size();
+        String name = chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, chapter)).map(h -> h.value().name()).orElse(chapter.toString());
+        Feedback.fanfare(player, Lang.fmt(fresh ? "msg.ending.reached" : "msg.ending.again", "ending", Lang.pretty(ending), "chapter", name, "found", found, "total", total),
+                Lang.fmt("msg.ending.title", "ending", Lang.pretty(ending)), Lang.fmt("msg.ending.subtitle", "found", found, "total", total));
+        boolean replayable = chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, chapter)).map(h -> h.value().replayable()).orElse(false);
+        if (replayable && found < total) {
+            Feedback.chatWithButtons(player, Lang.fmt("msg.ending.more", "left", total - found),
+                    Feedback.button(Lang.get("button.replay"), "/quest replay " + chapter, Lang.get("button.replay.tip")));
+        }
+        Chronicler.LOGGER.info("Chronicler: {} reached ending '{}' of {} ({}/{})", player.getName().getString(), ending, chapter, found, total);
+    }
+
+    /** Start a replayable chapter over for this player. */
+    public static boolean replay(ServerPlayer player, Identifier chapter) {
+        MinecraftServer server = player.level().getServer();
+        var holder = chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, chapter));
+        if (holder.isEmpty()) { Feedback.chat(player, Lang.get("cmd.replay.unknown")); return false; }
+        if (!holder.get().value().replayable()) { Feedback.chat(player, Lang.fmt("cmd.replay.not_replayable", "name", holder.get().value().name())); return false; }
+        List<Identifier> mine = new ArrayList<>();
+        quests(server).listElements().forEach(h -> { if (h.value().chapter().equals(chapter)) mine.add(h.key().identifier()); });
+        QuestLog log = journal(player);
+        boolean touched = mine.stream().anyMatch(q -> log.isActive(q) || log.isComplete(q));
+        if (!touched) { Feedback.chat(player, Lang.fmt("cmd.replay.untouched", "name", holder.get().value().name())); return false; }
+        log.replay(chapter, mine);
+        Feedback.fanfare(player, Lang.fmt("cmd.replay.done", "name", holder.get().value().name(), "found", log.endings(chapter).size(), "total", endingsOf(server, chapter).size()),
+                Lang.fmt("cmd.replay.title", "name", holder.get().value().name()), Lang.get("cmd.replay.subtitle"));
+        Chronicler.LOGGER.info("Chronicler: {} replays chapter {}", player.getName().getString(), chapter);
+        return true;
+    }
+
+    /** Counting quests done over counting quests, per chapter and overall. */
+    public record Progress(int done, int total) {
+        public int percent() { return total == 0 ? 0 : (int) Math.floor(done * 100.0 / total); }
+    }
+
+    public static Progress progress(ServerPlayer player, Optional<Identifier> chapter) {
+        MinecraftServer server = player.level().getServer();
+        QuestLog log = journal(player);
+        int[] done = {0}, total = {0};
+        quests(server).listElements().forEach(h -> {
+            Quest q = h.value();
+            if (chapter.isPresent() && !q.chapter().equals(chapter.get())) return;
+            var ch = chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, q.chapter()));
+            if (ch.isEmpty() || !q.countsToward(ch.get().value())) return;
+            total[0]++;
+            if (log.isComplete(h.key().identifier())) done[0]++;
+        });
+        return new Progress(done[0], total[0]);
     }
 
     public static void poll(ServerPlayer player) {
@@ -436,8 +600,9 @@ public final class QuestEngine {
             }
         }
         for (ServerPlayer m : members) effects(m, stage.onComplete(), id, quest);
+        stage.ending().ifPresent(end -> { for (ServerPlayer m : members) reachEnding(m, quest, end); });
 
-        if (index + 1 < beats.size()) {
+        if (!stage.end() && index + 1 < beats.size()) {
             for (ServerPlayer m : members) {
                 Feedback.chat(m, Lang.fmt("msg.stage.done", "stage", index + 1, "stages", beats.size()));
             }

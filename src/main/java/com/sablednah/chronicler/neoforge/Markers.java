@@ -54,7 +54,7 @@ public final class Markers {
     /** Viewers not in the player list (the self-test's FakePlayers). */
     static final Set<ServerPlayer> EXTRA_VIEWERS = new HashSet<>();
 
-    public static void sync(MinecraftServer server, Map<String, Identifier> givers,
+    public static void sync(MinecraftServer server, Map<String, List<Identifier>> givers,
             Function<String, Vec3> positionOf, Function<String, ServerLevel> levelOf) {
         if (!ChroniclerConfig.GIVER_MARKERS.get()) {
             clear(server);
@@ -65,15 +65,16 @@ public final class Markers {
             String key = e.getKey();
             ServerLevel level = levelOf.apply(key);
             Vec3 at = positionOf.apply(key);
-            var quest = QuestEngine.quest(server, e.getValue());
-            if (level == null || at == null || quest.isEmpty() || !level.isLoaded(BlockPos.containing(at))) continue;
+            List<Quest> quests = new java.util.ArrayList<>();
+            for (Identifier q : e.getValue()) QuestEngine.quest(server, q).ifPresent(h -> quests.add(h.value()));
+            if (level == null || at == null || quests.isEmpty() || !level.isLoaded(BlockPos.containing(at))) continue;
             live.add(key);
             Map<UUID, Shown> viewers = SHOWN.computeIfAbsent(key, k -> new HashMap<>());
             Set<UUID> seen = new HashSet<>();
             for (ServerPlayer player : viewersOf(server)) {
                 seen.add(player.getUUID());
                 boolean near = player.level() == level && player.distanceToSqr(at) <= RANGE * RANGE;
-                String text = near ? textFor(player, e.getValue(), quest.get().value()) : "";
+                String text = near ? textFor(player, e.getValue(), quests) : "";
                 Shown shown = viewers.get(player.getUUID());
                 if (text.isEmpty()) {
                     if (shown != null) { hide(player, shown); viewers.remove(player.getUUID()); }
@@ -104,15 +105,29 @@ public final class Markers {
         return all;
     }
 
-    /** What this player's mark says: their state, their text. Empty means no mark. */
-    private static String textFor(ServerPlayer player, Identifier id, Quest quest) {
+    /**
+     * What this player's mark says: their state, their text. Empty means no mark.
+     * Several quests on one giver: on one of them wins, then one on offer, then all
+     * finished, else locked -- so a person with a whole storyline shows what matters now.
+     */
+    private static String textFor(ServerPlayer player, List<Identifier> ids, List<Quest> quests) {
         var log = QuestEngine.journal(player);
-        String text;
-        if (log.isActive(id)) text = ChroniclerConfig.GIVER_MARKER_ACTIVE.get();
-        else if (log.isComplete(id) && !quest.repeatable()) text = ChroniclerConfig.GIVER_MARKER_COMPLETE.get();
-        else if (QuestEngine.available(player, id, quest)) text = ChroniclerConfig.GIVER_MARKER_TEXT.get();
-        else text = ChroniclerConfig.GIVER_MARKER_LOCKED.get();
-        return text.replace("{quest}", quest.name());
+        Quest named = quests.getFirst();
+        String text = null;
+        for (int n = 0; n < ids.size() && n < quests.size(); n++) {
+            if (log.isActive(ids.get(n))) { text = ChroniclerConfig.GIVER_MARKER_ACTIVE.get(); named = quests.get(n); break; }
+        }
+        if (text == null) for (int n = 0; n < ids.size() && n < quests.size(); n++) {
+            if (QuestEngine.available(player, ids.get(n), quests.get(n))) { text = ChroniclerConfig.GIVER_MARKER_TEXT.get(); named = quests.get(n); break; }
+        }
+        if (text == null) {
+            boolean allDone = true;
+            for (int n = 0; n < ids.size() && n < quests.size(); n++) {
+                if (!(log.isComplete(ids.get(n)) && !quests.get(n).repeatable())) { allDone = false; break; }
+            }
+            text = allDone ? ChroniclerConfig.GIVER_MARKER_COMPLETE.get() : ChroniclerConfig.GIVER_MARKER_LOCKED.get();
+        }
+        return text.replace("{quest}", named.name());
     }
 
     private static Shown show(ServerPlayer player, ServerLevel level, Vec3 at, String text) {

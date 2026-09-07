@@ -27,7 +27,8 @@ public final class GiverStore extends SavedData {
 
     private static final Codec<GiverStore> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.unboundedMap(Codec.STRING, Identifier.CODEC).fieldOf("givers").forGetter(s -> s.byKey),
-            Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("placed", Map.of()).forGetter(s -> s.placed))
+            Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("placed", Map.of()).forGetter(s -> s.placed),
+            Codec.unboundedMap(Codec.STRING, Identifier.CODEC.listOf()).optionalFieldOf("npc_quests", Map.of()).forGetter(s -> s.npcQuests))
             .apply(i, GiverStore::new));
 
     public static final SavedDataType<GiverStore> TYPE =
@@ -36,14 +37,18 @@ public final class GiverStore extends SavedData {
     private final Map<String, Identifier> byKey;
     /** quest id -> the Cast npcId its data giver placed. */
     private final Map<String, String> placed;
+    /** Every quest an NPC gives, in order; {@code byKey} keeps the first so blocks and NPCs list alike. */
+    private final Map<String, java.util.List<Identifier>> npcQuests;
 
     public GiverStore() {
-        this(Map.of(), Map.of());
+        this(Map.of(), Map.of(), Map.of());
     }
 
-    private GiverStore(Map<String, Identifier> byKey, Map<String, String> placed) {
+    private GiverStore(Map<String, Identifier> byKey, Map<String, String> placed, Map<String, java.util.List<Identifier>> npcQuests) {
         this.byKey = new LinkedHashMap<>(byKey);
         this.placed = new LinkedHashMap<>(placed);
+        this.npcQuests = new LinkedHashMap<>();
+        npcQuests.forEach((k, v) -> this.npcQuests.put(k, new java.util.ArrayList<>(v)));
     }
 
     public static GiverStore get(MinecraftServer server) {
@@ -63,13 +68,37 @@ public final class GiverStore extends SavedData {
         return Optional.ofNullable(byKey.get(npcKey(npcId)));
     }
 
+    /** Add a quest to what this NPC gives (first one wins the primary slot). */
     public void setNpc(java.util.UUID npcId, Identifier quest) {
-        byKey.put(npcKey(npcId), quest);
+        String k = npcKey(npcId);
+        byKey.putIfAbsent(k, quest);
+        java.util.List<Identifier> list = npcQuests.computeIfAbsent(k, x -> new java.util.ArrayList<>());
+        if (!list.contains(quest)) list.add(quest);
         setDirty();
+    }
+
+    /** All the quests an NPC gives, primary first. */
+    public java.util.List<Identifier> questsAtNpc(java.util.UUID npcId) {
+        String k = npcKey(npcId);
+        java.util.List<Identifier> out = new java.util.ArrayList<>();
+        Identifier primary = byKey.get(k);
+        if (primary != null) out.add(primary);
+        for (Identifier q : npcQuests.getOrDefault(k, java.util.List.of())) if (!out.contains(q)) out.add(q);
+        return out;
+    }
+
+    /** All the quests a giver key carries: one for a block, several for an NPC. */
+    public java.util.List<Identifier> questsAt(String key) {
+        if (key.startsWith("npc|")) {
+            try { return questsAtNpc(java.util.UUID.fromString(key.substring(4))); } catch (IllegalArgumentException e) { return java.util.List.of(); }
+        }
+        Identifier q = byKey.get(key);
+        return q == null ? java.util.List.of() : java.util.List.of(q);
     }
 
     public boolean removeNpc(java.util.UUID npcId) {
         boolean had = byKey.remove(npcKey(npcId)) != null;
+        had |= npcQuests.remove(npcKey(npcId)) != null;
         if (had) setDirty();
         return had;
     }

@@ -1,5 +1,6 @@
 package com.sablednah.chronicler.data;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -23,7 +24,8 @@ public record Availability(
         Optional<Long> karmaMin, Optional<Long> karmaMax,
         Optional<Integer> levelMin, Optional<Integer> levelMax,
         Map<String, Boolean> flags, Map<String, Boolean> playerFlags,
-        Map<String, Integer> reputation) {
+        Map<String, Integer> reputation,
+        List<String> race, List<String> clazz) {
 
     public static final Codec<Availability> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.LONG.optionalFieldOf("karma_min").forGetter(Availability::karmaMin),
@@ -32,10 +34,13 @@ public record Availability(
             Codec.INT.optionalFieldOf("level_max").forGetter(Availability::levelMax),
             Codec.unboundedMap(Codec.STRING, Codec.BOOL).optionalFieldOf("flags", Map.of()).forGetter(Availability::flags),
             Codec.unboundedMap(Codec.STRING, Codec.BOOL).optionalFieldOf("player_flags", Map.of()).forGetter(Availability::playerFlags),
-            Codec.unboundedMap(Codec.STRING, Codec.INT).optionalFieldOf("reputation", Map.of()).forGetter(Availability::reputation))
+            Codec.unboundedMap(Codec.STRING, Codec.INT).optionalFieldOf("reputation", Map.of()).forGetter(Availability::reputation),
+            Codec.STRING.listOf().optionalFieldOf("race", List.of()).forGetter(Availability::race),
+            Codec.STRING.listOf().optionalFieldOf("class", List.of()).forGetter(Availability::clazz))
             .apply(i, Availability::new));
 
     public boolean needsCharacter() {
-        return karmaMin.isPresent() || karmaMax.isPresent() || levelMin.isPresent() || levelMax.isPresent();
+        return karmaMin.isPresent() || karmaMax.isPresent() || levelMin.isPresent() || levelMax.isPresent()
+                || !race.isEmpty() || !clazz.isEmpty();
     }
 }

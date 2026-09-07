@@ -80,7 +80,16 @@ public final class ChroniclerCommands {
                 .then(Commands.literal("reset")
                         .requires(ChroniclerPermissions::isAdmin)
                         .then(Commands.argument("player", EntityArgument.player())
-                                .executes(ChroniclerCommands::reset))));
+                                .executes(ChroniclerCommands::reset)))
+                .then(Commands.literal("item")
+                        .requires(ChroniclerPermissions::isAdmin)
+                        .then(Commands.literal("list").executes(ChroniclerCommands::itemList))
+                        .then(Commands.literal("give")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("item", ResourceKeyArgument.key(ChroniclerRegistries.ITEM))
+                                                .executes(ctx -> itemGive(ctx, 1))
+                                                .then(Commands.argument("count", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 64))
+                                                        .executes(ctx -> itemGive(ctx, com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "count")))))))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> questTree(String root) {
@@ -97,11 +106,45 @@ public final class ChroniclerCommands {
                 .then(Commands.literal("journal")
                         .executes(ChroniclerCommands::journalOpen)
                         .then(Commands.literal("give").executes(ChroniclerCommands::journalGive)))
+                .then(Commands.literal("replay")
+                        .then(Commands.argument("chapter", ResourceKeyArgument.key(ChroniclerRegistries.CHAPTER))
+                                .executes(ChroniclerCommands::replay)))
                 .then(Commands.literal("giver")
                         .requires(ChroniclerPermissions::isAdmin)
                         .then(Commands.literal("set").then(questArg().executes(ChroniclerCommands::giverSet)))
                         .then(Commands.literal("remove").executes(ChroniclerCommands::giverRemove))
                         .then(Commands.literal("list").executes(ChroniclerCommands::giverList)));
+    }
+
+    private static int replay(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        var key = ResourceKeyArgument.getRegistryKey(ctx, "chapter", ChroniclerRegistries.CHAPTER,
+                new com.mojang.brigadier.exceptions.DynamicCommandExceptionType(o -> Feedback.colored(Lang.get("cmd.replay.unknown"))));
+        return QuestEngine.replay(player, key.identifier()) ? 1 : 0;
+    }
+
+    private static int itemList(CommandContext<CommandSourceStack> ctx) {
+        var items = ctx.getSource().registryAccess().lookupOrThrow(ChroniclerRegistries.ITEM);
+        java.util.List<String> names = new ArrayList<>();
+        items.listElements().forEach(h -> names.add(h.key().identifier().toString()));
+        ctx.getSource().sendSuccess(() -> Feedback.colored(names.isEmpty() ? Lang.get("cmd.item.none") : Lang.fmt("cmd.item.list", "items", String.join(", ", names))), false);
+        return names.size();
+    }
+
+    private static int itemGive(CommandContext<CommandSourceStack> ctx, int count) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        var key = ResourceKeyArgument.getRegistryKey(ctx, "item", ChroniclerRegistries.ITEM,
+                new com.mojang.brigadier.exceptions.DynamicCommandExceptionType(o -> Feedback.colored(Lang.fmt("cmd.item.unknown", "id", o))));
+        var stack = com.sablednah.chronicler.data.QuestItem.build(ctx.getSource().registryAccess(), key.identifier(), count);
+        if (stack.isEmpty()) {
+            ctx.getSource().sendFailure(Feedback.colored(Lang.fmt("cmd.item.unknown", "id", key.identifier())));
+            return 0;
+        }
+        target.getInventory().add(stack);
+        if (!stack.isEmpty()) target.drop(stack, false);
+        ctx.getSource().sendSuccess(() -> Feedback.colored(Lang.fmt("cmd.item.given", "count", count,
+                "item", com.sablednah.chronicler.data.QuestItem.displayName(key.identifier()), "player", target.getName().getString())), true);
+        return 1;
     }
 
     private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, ?> questArg() {
@@ -174,6 +217,10 @@ public final class ChroniclerCommands {
                 .computeIfAbsent(h.value().chapter(), k -> new ArrayList<>()).add(h));
 
         MutableComponent out = Feedback.colored(Lang.get("cmd.list.header")).copy();
+        if (player != null) {
+            var p = QuestEngine.progress(player, java.util.Optional.empty());
+            if (p.total() > 0) out.append("\n").append(Feedback.colored(Lang.fmt("cmd.list.progress", "percent", p.percent(), "done", p.done(), "total", p.total())));
+        }
         int shown = 0;
         for (var entry : byChapter.entrySet()) {
             var chapter = chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, entry.getKey()));
@@ -181,6 +228,12 @@ public final class ChroniclerCommands {
                             "name", h.value().name(),
                             "description", h.value().description().orElse("")))
                     .orElseGet(() -> Lang.fmt("cmd.list.orphan_chapter", "id", entry.getKey()))));
+            if (player != null && chapter.isPresent()) {
+                var p = QuestEngine.progress(player, java.util.Optional.of(entry.getKey()));
+                if (p.total() > 0) out.append(Feedback.colored(Lang.fmt("cmd.list.chapter_progress", "done", p.done(), "total", p.total())));
+                int endings = QuestEngine.endingsOf(source.getServer(), entry.getKey()).size();
+                if (endings > 0) out.append(Feedback.colored(Lang.fmt("cmd.list.endings", "found", log.endings(entry.getKey()).size(), "total", endings)));
+            }
             entry.getValue().sort(Comparator.comparingInt((Holder.Reference<Quest> h) -> h.value().order())
                     .thenComparing(h -> h.key().identifier().toString()));
             for (var h : entry.getValue()) {

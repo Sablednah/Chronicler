@@ -1,0 +1,43 @@
+{
+  "name": "Cull",
+  "description": "Ten of them. Any ten. Mags is not picky.",
+  "chapter": "zarp:board",
+  "order": 1,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "repeatable": true,
+  "cooldown": 600,
+  "giver": {
+    "type": "npc",
+    "name": "&fMags",
+    "near_spawn": [
+      -6,
+      0
+    ],
+    "yaw": 90.0,
+    "greeting": "&7Board's behind me. Pays on delivery. Nothing else is guaranteed."
+  },
+  "objectives": [
+    {
+      "type": "kill",
+      "target": [
+        "minecraft:zombie",
+        "minecraft:husk",
+        "minecraft:drowned",
+        "minecraft:zombie_villager"
+      ],
+      "count": 10
+    }
+  ],
+  "rewards": [
+    {
+      "type": "money",
+      "amount": 15
+    },
+    {
+      "type": "xp",
+      "amount": 20
+    }
+  ]
+}

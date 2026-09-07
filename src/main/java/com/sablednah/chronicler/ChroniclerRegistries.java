@@ -28,6 +28,8 @@ public final class ChroniclerRegistries {
     public static final ResourceKey<Registry<Chapter>> CHAPTER =
             ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath(Chronicler.MODID, "chapter"));
 
+    public static final ResourceKey<Registry<com.sablednah.chronicler.data.QuestItem>> ITEM =
+            ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath(Chronicler.MODID, "item"));
     public static final ResourceKey<Registry<Quest>> QUEST =
             ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath(Chronicler.MODID, "quest"));
 
@@ -35,6 +37,7 @@ public final class ChroniclerRegistries {
     static void register(DataPackRegistryEvent.NewRegistry event) {
         event.dataPackRegistry(CHAPTER, Chapter.CODEC, Chapter.CODEC);
         event.dataPackRegistry(QUEST, Quest.CODEC, Quest.CODEC);
+        event.dataPackRegistry(ITEM, com.sablednah.chronicler.data.QuestItem.CODEC, com.sablednah.chronicler.data.QuestItem.CODEC);
     }
 
     private ChroniclerRegistries() {}

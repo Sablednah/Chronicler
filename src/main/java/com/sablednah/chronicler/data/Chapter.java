@@ -23,7 +23,8 @@ public record Chapter(
         List<Identifier> requires,
         Optional<Identifier> icon,
         boolean main,
-        QuestScope scope) {
+        QuestScope scope,
+        boolean replayable) {
 
     public static final Codec<Chapter> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.fieldOf("name").forGetter(Chapter::name),
@@ -32,6 +33,7 @@ public record Chapter(
             ChroniclerIds.CODEC.listOf().optionalFieldOf("requires", List.of()).forGetter(Chapter::requires),
             Identifier.CODEC.optionalFieldOf("icon").forGetter(Chapter::icon),
             Codec.BOOL.optionalFieldOf("main", false).forGetter(Chapter::main),
-            QuestScope.CODEC.optionalFieldOf("scope", QuestScope.SOLO).forGetter(Chapter::scope))
+            QuestScope.CODEC.optionalFieldOf("scope", QuestScope.SOLO).forGetter(Chapter::scope),
+            Codec.BOOL.optionalFieldOf("replayable", false).forGetter(Chapter::replayable))
             .apply(i, Chapter::new));
 }

@@ -1,0 +1,9 @@
+{
+  "item": "minecraft:blaze_powder",
+  "name": "&6Ember",
+  "lore": [
+    "Still warm. It should not be."
+  ],
+  "glint": true,
+  "max_stack": 16
+}
