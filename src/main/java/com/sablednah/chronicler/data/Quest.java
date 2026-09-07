@@ -50,9 +50,26 @@ public record Quest(
         Optional<GiverSpec> giver,
         List<Stage> stages,
         Optional<Availability> availability,
-        int cooldown) {
+        int cooldown,
+        Optional<Boolean> counts) {
+
+    /** Does finishing this move the progress figure? Unsaid: main-chapter quests that are not repeatable. */
+    public boolean countsToward(Chapter chapter) {
+        return counts.orElse(chapter.main() && !repeatable);
+    }
+
 
     /** The quest as beats: its stages, or one stage made of its objectives. Never empty. */
+    /** Every ending this quest can reach, in file order. */
+    public List<String> endings() {
+        List<String> out = new java.util.ArrayList<>();
+        for (Stage s : beats()) {
+            s.ending().filter(e -> !out.contains(e)).ifPresent(out::add);
+            for (Choice c : s.choices()) c.ending().filter(e -> !out.contains(e)).ifPresent(out::add);
+        }
+        return out;
+    }
+
     public List<Stage> beats() {
         return stages.isEmpty() ? List.of(Stage.of(objectives)) : stages;
     }
@@ -78,6 +95,7 @@ public record Quest(
             GiverTypes.CODEC.optionalFieldOf("giver").forGetter(Quest::giver),
             Stage.CODEC.listOf().optionalFieldOf("stages", List.of()).forGetter(Quest::stages),
             Availability.CODEC.optionalFieldOf("availability").forGetter(Quest::availability),
-            Codec.INT.optionalFieldOf("cooldown", 0).forGetter(Quest::cooldown))
+            Codec.INT.optionalFieldOf("cooldown", 0).forGetter(Quest::cooldown),
+            Codec.BOOL.optionalFieldOf("counts").forGetter(Quest::counts))
             .apply(i, Quest::new));
 }

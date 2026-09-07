@@ -1,0 +1,9 @@
+{
+  "item": "minecraft:iron_nugget",
+  "name": "&7Dog Tags",
+  "lore": [
+    "Sarge's old unit. Names he stopped saying."
+  ],
+  "glint": false,
+  "max_stack": 8
+}

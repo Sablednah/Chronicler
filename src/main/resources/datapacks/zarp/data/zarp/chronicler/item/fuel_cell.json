@@ -1,0 +1,9 @@
+{
+  "item": "minecraft:bucket",
+  "name": "&eFuel Cell",
+  "lore": [
+    "Sealed. Sloshing. Worth a week of light."
+  ],
+  "glint": true,
+  "max_stack": 4
+}

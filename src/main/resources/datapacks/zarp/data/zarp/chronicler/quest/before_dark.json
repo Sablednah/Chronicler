@@ -1,0 +1,169 @@
+{
+  "name": "Before Dark",
+  "description": "Priya went out for insulin and did not come back. Okafor gives you ten minutes, because that is what Priya has.",
+  "chapter": "zarp:streets",
+  "order": 2,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_camp"
+  },
+  "stages": [
+    {
+      "text": "Get to the pharmacy. Ten minutes. She is counting.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "the pharmacy",
+          "any": [
+            {
+              "lot": "Store"
+            },
+            {
+              "lot": "Hospital"
+            },
+            {
+              "structure": "#minecraft:village"
+            }
+          ]
+        }
+      ],
+      "deadline": 600,
+      "on_fail": [
+        {
+          "type": "flag",
+          "name": "zarp_runner_lost",
+          "player": true,
+          "value": true
+        },
+        {
+          "type": "message",
+          "text": "&cToo late. The radio stopped answering.",
+          "action_bar": false
+        }
+      ],
+      "fail": 4
+    },
+    {
+      "text": "Priya is alive, barricaded in the back. The things at the door are not.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 3
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 3,
+          "radius": 6,
+          "entity": "minecraft:zombie"
+        },
+        {
+          "type": "title",
+          "title": "&aShe's alive",
+          "subtitle": "&7For now. Clear the door."
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "item",
+          "quest_item": "zarp:insulin",
+          "count": 2
+        },
+        {
+          "type": "message",
+          "text": "&7Priya hands you the case. 'Don't drop it. I mean it.'",
+          "action_bar": false
+        }
+      ]
+    },
+    {
+      "text": "Back to Okafor with the insulin.",
+      "objectives": [
+        {
+          "type": "collect",
+          "quest_item": "zarp:insulin",
+          "count": 2,
+          "consume": true
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7Two vials. That's three weeks. Thank you.",
+          "radius": 16.0,
+          "quest": "zarp:the_camp"
+        },
+        {
+          "type": "karma",
+          "delta": 5
+        },
+        {
+          "type": "reputation",
+          "standing": "camp",
+          "delta": 10
+        }
+      ],
+      "end": true
+    },
+    {
+      "text": "You found what was left of Priya. It is still moving.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 1,
+          "tag": "priya"
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 4,
+          "entity": "minecraft:zombie",
+          "name": "&7What Was Left of Priya",
+          "tag": "priya",
+          "health": 30
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7...I see. Bring the case back anyway. Somebody else will need it.",
+          "radius": 16.0,
+          "quest": "zarp:the_camp"
+        },
+        {
+          "type": "karma",
+          "delta": -5
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 50
+    },
+    {
+      "type": "money",
+      "amount": 15
+    }
+  ]
+}

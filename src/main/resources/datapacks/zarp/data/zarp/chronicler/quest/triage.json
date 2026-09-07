@@ -1,0 +1,83 @@
+{
+  "name": "Triage",
+  "description": "Okafor hands you the bag without looking up. 'You know what to do with this.' You do.",
+  "chapter": "zarp:survivors",
+  "order": 3,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "availability": {
+    "race": [
+      "paramedic"
+    ],
+    "class": [
+      "doc",
+      "combat_medic",
+      "chemist"
+    ]
+  },
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_camp"
+  },
+  "stages": [
+    {
+      "text": "Two potions, brewed. Then keep the ward clear while she works.",
+      "objectives": [
+        {
+          "type": "collect",
+          "item": "minecraft:potion",
+          "count": 2,
+          "consume": true
+        },
+        {
+          "type": "kill",
+          "target": [
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 4
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 3,
+          "radius": 10,
+          "entity": "minecraft:zombie"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7Good hands. Keep them.",
+          "radius": 16.0,
+          "quest": "zarp:the_camp"
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "class_xp",
+      "amount": 60
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 10
+    },
+    {
+      "type": "money",
+      "amount": 25
+    },
+    {
+      "type": "item",
+      "item": "minecraft:golden_apple",
+      "count": 1
+    }
+  ]
+}

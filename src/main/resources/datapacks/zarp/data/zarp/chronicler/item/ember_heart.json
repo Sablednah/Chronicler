@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:magma_cream",
+  "name": "&6Ember Heart",
+  "lore": [
+    "Cut from the Fortress Warden.",
+    "Warm through the bag."
+  ],
+  "glint": true,
+  "max_stack": 1
+}

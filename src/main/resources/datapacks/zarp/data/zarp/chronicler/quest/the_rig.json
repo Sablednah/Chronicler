@@ -1,0 +1,114 @@
+{
+  "name": "The Rig",
+  "description": "There is a platform out past the shoreline with a generator the size of a house and nobody left to run it. Sarge wants the fuel. So does everything that drowned getting there.",
+  "chapter": "zarp:survivors",
+  "order": 6,
+  "requires": [
+    "zarp:the_signal"
+  ],
+  "availability": {
+    "level_min": 6
+  },
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_signal"
+  },
+  "stages": [
+    {
+      "text": "Get out to the rig. Swim, boat, or think of something.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "the rig",
+          "any": [
+            {
+              "lot": "OilPlatform"
+            },
+            {
+              "structure": "minecraft:shipwreck"
+            },
+            {
+              "structure": "minecraft:ocean_monument"
+            }
+          ]
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 6,
+          "genus": "zombiemod:undertow",
+          "entity": "minecraft:drowned",
+          "name": "&3The Diver",
+          "tag": "diver",
+          "health": 80
+        },
+        {
+          "type": "title",
+          "title": "&3&lThe Diver",
+          "subtitle": "&7It came up with you."
+        }
+      ]
+    },
+    {
+      "text": "The Diver has the fuel cell. Had.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:undertow",
+            "minecraft:drowned"
+          ],
+          "count": 1,
+          "tag": "diver",
+          "drop": {
+            "quest_item": "zarp:fuel_cell",
+            "chance": 1.0
+          }
+        },
+        {
+          "type": "collect",
+          "quest_item": "zarp:fuel_cell",
+          "count": 1,
+          "consume": true
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "flag",
+          "name": "zarp_rig_fuel",
+          "player": false,
+          "value": true
+        },
+        {
+          "type": "npc_say",
+          "text": "&7A week of light. Maybe two if Wrench doesn't 'improve' anything.",
+          "radius": 16.0,
+          "quest": "zarp:the_signal"
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "money",
+      "amount": 80
+    },
+    {
+      "type": "xp",
+      "amount": 120
+    },
+    {
+      "type": "item",
+      "item": "minecraft:diamond",
+      "count": 3
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 10
+    }
+  ]
+}

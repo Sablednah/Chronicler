@@ -95,6 +95,13 @@ public final class ChroniclerConfig {
                 .define("markerLocked", "");
         BUILDER.pop();
 
+        BUILDER.comment("Shipped content").push("content");
+        ZARP = BUILDER
+                .comment("The Zombie Apocalypse Roleplay questline, built in as a datapack.",
+                        "auto = on when ZombieMod is installed; on / off force it. Applies on restart.")
+                .defineEnum("zarp", ContentMode.AUTO);
+        BUILDER.pop();
+
         BUILDER.comment("Party quests").push("party");
         PARTY_GROUP_KINDS = BUILDER
                 .comment("Which Standards group kind is 'the party', first registered kind wins.",
@@ -105,6 +112,10 @@ public final class ChroniclerConfig {
                         () -> "", o -> o instanceof String);
         BUILDER.pop();
     }
+
+    public static final ModConfigSpec.EnumValue<ContentMode> ZARP;
+
+    public enum ContentMode { AUTO, ON, OFF }
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 

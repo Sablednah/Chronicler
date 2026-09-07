@@ -194,6 +194,10 @@ neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEc
                      StandardsReputation, LegendQuestCharacter, CityWorldLots, ZombieModConditions
 api/Quests           the door for other mods (StoryTeller): offer / accept / flags / registries
 yaml/                YAML -> JSON pack
+data/QuestItem       chronicler:item registry; marked stacks built at use time; QuestItemLoot function
+datapacks/zarp/      the ZARP questline, a built-in pack (AddPackFindersEvent; path is from the JAR ROOT,
+                     not data/); registered only when content.zarp says so, because a world remembers
+                     an enabled pack by name and would keep running it
 ```
 
 - **Content is a frozen registry.** `/reload` rebuilds tags and functions,
@@ -299,7 +303,17 @@ tokens.
   FakePlayers are not in the player list; the self-test adds them to `Markers.EXTRA_VIEWERS`.
 
 - A `static final` collection declared after the fields that fill it is null
-  when they initialise. Declare collections first.
+  when they initialise. Declare collections first. (Same trap, other spelling:
+  a static counter declared after the static block that bumps it is an
+  "illegal forward reference". `Rewards.lastSpawned` paid for it.)
+- **Entities added before a forced chunk's first tick are invisible to every
+  lookup** -- `getEntitiesOfClass`, `getAllEntities`, all of them -- so a
+  self-test cannot see what a `spawn` effect just placed. `Rewards.lastSpawned()`
+  reports what the granter did; the kill path is driven with entities the
+  test holds itself.
+- **The fantasy prologue and ZARP both have a chapter whose path is `prologue`**
+  (`chronicler:prologue`, `zarp:prologue`); the boot log lists paths, so
+  "prologue, prologue" is not a duplicate.
 - **Do not name a class `Character`** (or `Process`, `Thread`, ...): it shadows
   `java.lang` inside its own package and the error lands in an unrelated file.
   The sheet bridge is `Sheet` for that reason.

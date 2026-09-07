@@ -1,0 +1,183 @@
+{
+  "name": "Never Lived",
+  "description": "Fire that does not die, and now something that never lived. The End. She says it without irony.",
+  "chapter": "zarp:beyond",
+  "order": 1,
+  "requires": [
+    "zarp:living_fire"
+  ],
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_camp"
+  },
+  "stages": [
+    {
+      "text": "Find the portal under the stronghold. Go through. Do not look down.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "the End",
+          "dimension": "minecraft:the_end"
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "flag",
+          "name": "zarp_beyond_begun",
+          "player": false,
+          "value": true
+        }
+      ]
+    },
+    {
+      "text": "Four end rods and a bottle of the dragon's breath. She was specific.",
+      "objectives": [
+        {
+          "type": "collect",
+          "item": "minecraft:end_rod",
+          "count": 4,
+          "consume": true
+        },
+        {
+          "type": "collect",
+          "item": "minecraft:dragon_breath",
+          "count": 1,
+          "consume": true
+        }
+      ]
+    },
+    {
+      "text": "Beyond the islands there are cities. Something in one of them was never alive to begin with.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "an End city",
+          "structure": "minecraft:end_city",
+          "dimension": "minecraft:the_end"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 6,
+          "genus": "zarp:hollow_knight",
+          "entity": "minecraft:enderman",
+          "name": "&5The Hollow Knight",
+          "tag": "knight",
+          "health": 140
+        },
+        {
+          "type": "title",
+          "title": "&5&lThe Hollow Knight",
+          "subtitle": "&7Empty armour. It moves anyway."
+        }
+      ]
+    },
+    {
+      "text": "The Hollow Knight. Take what it leaves.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zarp:hollow_knight",
+            "minecraft:enderman"
+          ],
+          "count": 1,
+          "tag": "knight",
+          "drop": {
+            "quest_item": "zarp:void_shard",
+            "chance": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "text": "Home. The horde is at the fence -- and it is not attacking. It stands. Every head turned to your pack, to the sample from the first bed. Patient Zero wants it back.",
+      "on_enter": [
+        {
+          "type": "title",
+          "title": "&5&lThey are waiting",
+          "subtitle": "&7Not attacking. Waiting."
+        },
+        {
+          "type": "spawn",
+          "count": 8,
+          "radius": 14,
+          "entity": "minecraft:zombie"
+        }
+      ],
+      "choices": [
+        {
+          "label": "Give it back",
+          "text": "You walk to the fence. Nothing moves. You set the sample down.",
+          "next": 6
+        },
+        {
+          "label": "Keep it. Let them come.",
+          "text": "You close the pack. Somewhere past the fence, something very old draws breath.",
+          "effects": [
+            {
+              "type": "flag",
+              "name": "zarp_kept_sample",
+              "player": true,
+              "value": true
+            },
+            {
+              "type": "karma",
+              "delta": -5
+            }
+          ],
+          "end": true
+        }
+      ]
+    },
+    {
+      "text": "Leave the Origin Sample at the fence and step back.",
+      "objectives": [
+        {
+          "type": "collect",
+          "quest_item": "zarp:origin_sample",
+          "count": 1,
+          "consume": true
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "flag",
+          "name": "zarp_truce",
+          "player": false,
+          "value": true
+        },
+        {
+          "type": "message",
+          "text": "&7The horde turns. One by one, then all at once, they walk away into the dark. They do not come back. Not tonight. Maybe not ever.",
+          "action_bar": false
+        },
+        {
+          "type": "npc_say",
+          "text": "&7...Well. That's one kind of cure.",
+          "radius": 16.0,
+          "quest": "zarp:the_camp"
+        }
+      ],
+      "ending": "truce"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 250
+    },
+    {
+      "type": "money",
+      "amount": 80
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 15
+    }
+  ]
+}

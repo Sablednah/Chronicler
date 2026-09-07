@@ -1,0 +1,107 @@
+{
+  "name": "Blood Ties",
+  "description": "Kit says the dead do not look at her. She looks at you like she knows something, and says they will not look at you either.",
+  "chapter": "zarp:survivors",
+  "order": 4,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "availability": {
+    "race": [
+      "immune"
+    ]
+  },
+  "giver": {
+    "type": "npc",
+    "name": "&cKit",
+    "near_spawn": [
+      3,
+      -6
+    ],
+    "yaw": 200.0,
+    "greeting": "&7You're new. Everybody's new. You smell like me."
+  },
+  "stages": [
+    {
+      "text": "Take her scarf. Walk into the ward wearing it. Walk out.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "the hospital",
+          "any": [
+            {
+              "lot": "Hospital"
+            },
+            {
+              "structure": "#minecraft:village"
+            }
+          ]
+        },
+        {
+          "type": "collect",
+          "quest_item": "zarp:kits_scarf",
+          "count": 1,
+          "consume": false
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "item",
+          "quest_item": "zarp:kits_scarf",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "text": "They looked. They always look. Prove her wrong the other way.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 3
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 3,
+          "radius": 6,
+          "entity": "minecraft:zombie"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7...Fine. Maybe they look. Keep the scarf.",
+          "radius": 16.0
+        },
+        {
+          "type": "flag",
+          "name": "zarp_kit_trusts_you",
+          "player": true,
+          "value": true
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "karma",
+      "delta": 5
+    },
+    {
+      "type": "xp",
+      "amount": 40
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 5
+    }
+  ]
+}

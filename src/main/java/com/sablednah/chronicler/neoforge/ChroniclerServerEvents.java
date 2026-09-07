@@ -30,6 +30,7 @@ public final class ChroniclerServerEvents {
      */
     @SubscribeEvent
     static void onStarted(ServerStartedEvent event) {
+        com.sablednah.chronicler.data.QuestItem.CURRENT = event.getServer().registryAccess();
         MinecraftServer server = event.getServer();
         Registry<Chapter> chapters = server.registryAccess().lookupOrThrow(ChroniclerRegistries.CHAPTER);
         Registry<Quest> quests = server.registryAccess().lookupOrThrow(ChroniclerRegistries.QUEST);

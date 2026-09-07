@@ -1,5 +1,7 @@
 {
   "name": "Prologue",
   "description": "Where every story starts: on your feet, with nothing.",
-  "order": 0
+  "order": 0,
+  "replayable": true,
+  "main": true
 }

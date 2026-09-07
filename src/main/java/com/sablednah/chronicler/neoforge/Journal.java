@@ -154,7 +154,10 @@ public final class Journal {
         MutableComponent contents = Component.empty();
         contents.append(Feedback.colored(Lang.get("journal.heading"))).append("\n");
         contents.append(Feedback.colored(Lang.fmt("journal.counts",
-                "active", log.activeCount(), "completed", log.completedCount()))).append("\n\n");
+                "active", log.activeCount(), "completed", log.completedCount()))).append("\n");
+        var progress = QuestEngine.progress(player, java.util.Optional.empty());
+        if (progress.total() > 0) contents.append(Feedback.colored(Lang.fmt("journal.progress", "percent", progress.percent()))).append("\n");
+        contents.append("\n");
         if (active.isEmpty()) {
             contents.append(Feedback.colored(Lang.get("journal.none_active"))).append("\n");
         }

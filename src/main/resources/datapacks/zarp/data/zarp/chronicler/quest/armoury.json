@@ -1,0 +1,116 @@
+{
+  "name": "The Armoury",
+  "description": "There is a bunker south of the old vault line. Sarge's old unit. He will not go himself, and he will not say why.",
+  "chapter": "zarp:survivors",
+  "order": 5,
+  "requires": [
+    "zarp:the_signal"
+  ],
+  "availability": {
+    "level_min": 3,
+    "race": [
+      "ex_military",
+      "prepper"
+    ],
+    "class": [
+      "enforcer",
+      "sharpshooter",
+      "veteran",
+      "mercenary"
+    ]
+  },
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_signal"
+  },
+  "stages": [
+    {
+      "text": "Find the bunker. Door will be shut. Doors always are.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "the bunker",
+          "any": [
+            {
+              "lot": "Bunker"
+            },
+            {
+              "lot": "Vault"
+            },
+            {
+              "structure": "minecraft:ancient_city"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "The unit is still in there. Most of it.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:vault_dweller",
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 5,
+          "drop": {
+            "quest_item": "zarp:dog_tags",
+            "chance": 0.5
+          }
+        },
+        {
+          "type": "collect",
+          "quest_item": "zarp:dog_tags",
+          "count": 2,
+          "consume": true
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 5,
+          "radius": 8,
+          "genus": "zombiemod:vault_dweller",
+          "entity": "minecraft:zombie"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7...Yeah. Those are theirs. Thanks for bringing them out.",
+          "radius": 16.0,
+          "quest": "zarp:the_signal"
+        },
+        {
+          "type": "karma",
+          "delta": 5
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "item",
+      "item": "minecraft:crossbow",
+      "count": 1
+    },
+    {
+      "type": "item",
+      "item": "minecraft:arrow",
+      "count": 32
+    },
+    {
+      "type": "xp",
+      "amount": 80
+    },
+    {
+      "type": "class_xp",
+      "amount": 50
+    }
+  ]
+}

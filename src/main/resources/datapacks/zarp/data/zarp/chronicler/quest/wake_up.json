@@ -1,0 +1,95 @@
+{
+  "name": "Wake Up",
+  "description": "You are awake. That is the first surprise. Get to the surface and find out who else is.",
+  "chapter": "zarp:prologue",
+  "order": 1,
+  "stages": [
+    {
+      "text": "Get your bearings. The air is wrong and the silence is worse.",
+      "objectives": [
+        {
+          "type": "wait",
+          "seconds": 15,
+          "label": "Get your bearings"
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "title",
+          "title": "&c&lWake Up",
+          "subtitle": "&7The vault is open. Nobody opened it."
+        }
+      ]
+    },
+    {
+      "text": "Light. Get some. The dark is not empty.",
+      "objectives": [
+        {
+          "type": "collect",
+          "item": "minecraft:torch",
+          "count": 1,
+          "consume": false
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "message",
+          "text": "&7Better. Now you can see what is coming.",
+          "action_bar": false
+        }
+      ]
+    },
+    {
+      "text": "They know you are up.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 3
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 3,
+          "radius": 8,
+          "entity": "minecraft:zombie"
+        },
+        {
+          "type": "title",
+          "title": "&cThey heard you",
+          "subtitle": "&7Three of them. For now."
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "message",
+          "text": "&7Quiet again. Somewhere nearby there is a fire, and people around it. Find the camp.",
+          "action_bar": false
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "item",
+      "item": "minecraft:bread",
+      "count": 4
+    },
+    {
+      "type": "xp",
+      "amount": 20
+    },
+    {
+      "type": "flag",
+      "name": "zarp_awake",
+      "player": true,
+      "value": true
+    }
+  ]
+}

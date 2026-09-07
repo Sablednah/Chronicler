@@ -42,9 +42,10 @@ offers it to anyone standing near that block and accepts on right-click;
 `dimension`, `lot` for a CityWorld lot) offers it the moment a player is in
 that kind of place, with no coordinate written down. An admin can also make
 any block a giver by looking at it: `/quest giver set <quest>`. A hidden quest
-with a giver is *found* by walking up to it. Every giver floats a marker (a
-`text_display`, so vanilla clients see it; `givers.markerText`, default a
-yellow `!`). A right-click makes the offer, with Accept and Info buttons; a
+with a giver is *found* by walking up to it. Every giver floats a mark over it, sent to
+each player privately so it shows *their* state: `!` on offer, `?` while on
+it, a tick once done, nothing while locked (`givers.markerText` /
+`markerActive` / `markerComplete` / `markerLocked`, `&` colours). A right-click makes the offer, with Accept and Info buttons; a
 second click within `givers.secondClickSeconds` accepts.
 
 With [Cast](https://github.com/Sablednah/Cast) installed, givers can be
@@ -121,6 +122,52 @@ for the bar) and `spawn`. Commands substitute
 (`standing` + `at_least`) waits on a standing. A chapter carries `scope: solo | party` and `main: true`; a quest may
 override `scope`. Every word a player sees lives in
 `config/chronicler/messages.yml`.
+
+### The rest of the vocabulary (2026-09-08)
+
+- **`kill`** takes a list: `target: [zombiemod:harvester, minecraft:zombie_villager]`
+  counts any of them, so a file names the genus first and the vanilla stand-in
+  second. `tag: warden` also counts anything a `spawn` effect tagged. `drop:
+  { quest_item: zarp:ember_heart, chance: 1.0 }` makes counted kills drop a
+  quest item, no loot table needed.
+- **`spawn`** takes `name`, `tag` and `health`; with a `genus` *and* an
+  `entity`, the entity stands in when ZombieMod is absent -- one file, two servers.
+- **`ritual`** is a multiblock: right-click `block` while every `pattern`
+  entry (`offset: [x, y, z]`, `block`) is in place, holding `item` if named
+  (`consume: true` takes it). A click with the pattern wrong says which block
+  is missing where. The beat's `on_complete` is where the boss comes out.
+- **`wait`** (`seconds`) lets time pass from entering the beat -- "come back later".
+- **`collect`** takes `tag: minecraft:logs` or `quest_item: zarp:insulin`.
+- **`place`** takes `any: [ { lot: Hospital }, { structure: "#minecraft:village" } ]`
+  -- alternatives, so a CityWorld lot has a vanilla fallback.
+- **Quest items** live in `chronicler:item` (`data/<pack>/chronicler/item/<name>.json`
+  or `config/chronicler/items/`): `{ item: minecraft:nether_star, name: "&5The Origin
+  Sample", lore: [...], glint: true, max_stack: 1 }`. They are marked invisibly
+  in `custom_data`, so renaming one in an anvil changes nothing. `{ type: item,
+  quest_item: zarp:insulin }` rewards one; loot tables use `{ "function":
+  "chronicler:quest_item", "id": "zarp:ember_heart" }`; `/chronicler item give|list`.
+- **NPC givers** can stand `near_spawn: [dx, dz]` instead of `at`, dropped onto
+  the surface on any seed, and `of: zarp:the_camp` makes one person give
+  several quests (their mark shows whichever matters now). `npc_say` and
+  `npc_remove` effects make them speak or leave (`quest:` picks whose NPC).
+- **Availability** takes `race: [immune]` and `class: [doc, combat_medic]`
+  (LegendQuest ids, bare or namespaced; any of the list), beside `level_min`.
+- **Endings.** A stage or a choice with `ending: cure` records an ending for
+  the chapter; `end: true` on a stage finishes the quest there. A chapter with
+  `replayable: true` can be started over with `/quest replay <chapter>` --
+  completions, cooldowns and the chapter's own player flags go, endings stay.
+- **Progress.** `/quests` and the journal show a percentage. Only quests that
+  count move it: `counts: true|false`, unsaid means "main chapter and not
+  repeatable", so bounties and side lines never hold anyone short of 100%.
+
+### ZARP
+
+The Zombie Apocalypse Roleplay questline ships in the jar as a datapack and is
+on whenever ZombieMod is installed (`content.zarp = auto | on | off`). Five
+people at a camp near spawn, four acts, a finale with three endings, a side
+chapter that remembers what you refused, and a bounty board. It plays without
+CityWorld or LegendQuest (lots have vanilla fallbacks; class and race quests
+simply do not offer). `docs/ZARP.md` is the walkthrough.
 
 ## Commands
 

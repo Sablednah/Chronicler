@@ -7,6 +7,7 @@ import java.util.function.Predicate;
 
 import com.sablednah.chronicler.data.ObjectiveSpec;
 import com.sablednah.chronicler.data.ObjectiveTypes;
+import com.sablednah.chronicler.data.QuestItem;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -67,22 +68,46 @@ public final class Trackers {
         register(ObjectiveTypes.Kill.class, new Tracker<ObjectiveTypes.Kill>() {
             @Override
             public boolean countsKill(ServerPlayer killer, LivingEntity victim, ObjectiveTypes.Kill spec) {
-                return matchesTarget(victim, spec.target());
+                if (spec.tag().isPresent() && victim.getTags().contains(TAG_PREFIX + spec.tag().get())) return true;
+                for (String t : spec.targets()) if (matchesTarget(victim, t)) return true;
+                return false;
             }
         });
 
         register(ObjectiveTypes.Collect.class, new Tracker<ObjectiveTypes.Collect>() {
+            private Predicate<ItemStack> matcher(ObjectiveTypes.Collect spec) {
+                if (spec.questItem().isPresent()) return s -> QuestItem.is(s, spec.questItem().get());
+                if (spec.tag().isPresent()) {
+                    var key = TagKey.create(Registries.ITEM, spec.tag().get());
+                    return s -> !s.isEmpty() && s.is(key);
+                }
+                return s -> !s.isEmpty() && spec.item().equals(BuiltInRegistries.ITEM.getKey(s.getItem()));
+            }
+
             @Override
             public OptionalInt poll(ServerPlayer player, ObjectiveTypes.Collect spec) {
-                return OptionalInt.of(count(player, spec.item()));
+                return OptionalInt.of(count(player, matcher(spec)));
             }
 
             @Override
             public int settle(ServerPlayer player, ObjectiveTypes.Collect spec, int amount) {
                 if (!spec.consume() || amount <= 0) return 0;
-                Predicate<ItemStack> match = s -> !s.isEmpty() && spec.item().equals(BuiltInRegistries.ITEM.getKey(s.getItem()));
-                return player.getInventory().clearOrCountMatchingItems(match, amount, player.inventoryMenu.getCraftSlots());
+                return player.getInventory().clearOrCountMatchingItems(matcher(spec), amount, player.inventoryMenu.getCraftSlots());
             }
+        });
+
+        // A ritual is an event (the click), counted by the engine; nothing to poll.
+        register(ObjectiveTypes.Ritual.class, new Tracker<ObjectiveTypes.Ritual>() {});
+
+        register(ObjectiveTypes.Wait.class, new Tracker<ObjectiveTypes.Wait>() {
+            @Override
+            public OptionalInt poll(ServerPlayer player, ObjectiveTypes.Wait spec) {
+                long now = player.level().getGameTime();
+                var e = QuestEngine.entryHolding(player, spec);
+                if (e == null) return OptionalInt.of(0);
+                return OptionalInt.of(now - e.enteredAt >= spec.seconds() * 20L ? 1 : 0);
+            }
+            @Override public boolean latching(ObjectiveTypes.Wait spec) { return true; }
         });
 
         register(ObjectiveTypes.Visit.class, new Tracker<ObjectiveTypes.Visit>() {
@@ -162,6 +187,19 @@ public final class Trackers {
         if (id == null) return false;
         if (id.equals(BuiltInRegistries.ENTITY_TYPE.getKey(victim.getType()))) return true;
         return victim.getPersistentData().getString("zombiemod:genus").map(target::equals).orElse(false);
+    }
+
+    /** Entity tags a {@code spawn} effect writes and a {@code kill} objective's {@code tag} reads. */
+    public static final String TAG_PREFIX = "chronicler:";
+
+    public static int count(ServerPlayer player, Predicate<ItemStack> match) {
+        int total = 0;
+        var inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack s = inv.getItem(i);
+            if (match.test(s)) total += s.getCount();
+        }
+        return total;
     }
 
     /** Touch the class so the built-ins are registered before anything asks. */

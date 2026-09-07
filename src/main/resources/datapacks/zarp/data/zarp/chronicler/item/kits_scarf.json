@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:leather",
+  "name": "&cKit's Scarf",
+  "lore": [
+    "She says the dead will not look at it.",
+    "She says it like a dare."
+  ],
+  "glint": false,
+  "max_stack": 1
+}

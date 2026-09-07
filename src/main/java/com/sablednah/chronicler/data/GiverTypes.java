@@ -1,5 +1,6 @@
 package com.sablednah.chronicler.data;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.mojang.serialization.Codec;
@@ -59,16 +60,28 @@ public final class GiverTypes {
      * offer line says so.
      */
     public record NpcGiver(String name, Optional<String> skin, Optional<Identifier> entity,
-            BlockPos at, Optional<Identifier> dimension, float yaw, Optional<String> greeting) implements GiverSpec {
-        public static final MapCodec<NpcGiver> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Optional<BlockPos> at, Optional<List<Integer>> nearSpawn, Optional<Identifier> dimension, float yaw,
+            Optional<String> greeting, Optional<Identifier> of) implements GiverSpec {
+        /**
+         * {@code at} is a fixed block; {@code near_spawn: [dx, dz]} is an offset
+         * from the world spawn, dropped onto the surface the first time the
+         * server places it -- so a shipped questline can stand its camp on any
+         * seed. {@code of} names another quest whose NPC also gives this one,
+         * so one person can hand out a whole storyline. One of the three is required.
+         */
+        public static final MapCodec<NpcGiver> MAP_CODEC = RecordCodecBuilder.<NpcGiver>mapCodec(i -> i.group(
                 Codec.STRING.fieldOf("name").forGetter(NpcGiver::name),
                 Codec.STRING.optionalFieldOf("skin").forGetter(NpcGiver::skin),
                 Identifier.CODEC.optionalFieldOf("entity").forGetter(NpcGiver::entity),
-                BlockPos.CODEC.fieldOf("at").forGetter(NpcGiver::at),
+                BlockPos.CODEC.optionalFieldOf("at").forGetter(NpcGiver::at),
+                Codec.INT.listOf(2, 2).optionalFieldOf("near_spawn").forGetter(NpcGiver::nearSpawn),
                 Identifier.CODEC.optionalFieldOf("dimension").forGetter(NpcGiver::dimension),
                 Codec.FLOAT.optionalFieldOf("yaw", 0F).forGetter(NpcGiver::yaw),
-                Codec.STRING.optionalFieldOf("greeting").forGetter(NpcGiver::greeting))
-                .apply(i, NpcGiver::new));
+                Codec.STRING.optionalFieldOf("greeting").forGetter(NpcGiver::greeting),
+                ChroniclerIds.CODEC.optionalFieldOf("of").forGetter(NpcGiver::of))
+                .apply(i, NpcGiver::new)).validate(n -> n.at().isEmpty() && n.nearSpawn().isEmpty() && n.of().isEmpty()
+                        ? com.mojang.serialization.DataResult.error(() -> "an npc giver needs 'at' or 'near_spawn'")
+                        : com.mojang.serialization.DataResult.success(n));
 
         @Override public MapCodec<NpcGiver> codec() { return MAP_CODEC; }
         @Override public String describe() { return Lang.fmt("giver.npc", "name", name); }

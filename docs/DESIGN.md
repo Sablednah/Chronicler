@@ -361,9 +361,9 @@ spike comes first because that is how this family works
 | 5 | **Standards + LegendQuest seams** — `money`, `class_xp`, `karma` rewards; karma/level availability; party-shared progress. *Built 2026-09-07 (overnight); reputation too.* | RPG consequences |
 | 6 | **CityWorld + ZombieMod seams** — `lot` objectives, ambient givers, `genus_kill`, horde/boss triggers, our spawn condition into their registry. *Mostly built 2026-09-07: `lot` places, genus kill targets, `chronicler:flag` spawn condition. Not yet: horde/boss triggers (ZombieMod fires no events; needs a hook there).* | the city and the zombies are quest-aware |
 | 7 | **Choices, flags, reputation, deadlines** — *all built 2026-09-07 (overnight).* | branching and the world pushing back |
-| 8 | **ZARP questline** as a shipped datapack; fantasy prologue built in | the reason for all of it |
+| 8 | **ZARP questline** as a shipped datapack; fantasy prologue built in. *Built 2026-09-08 (overnight): 20 quests in 8 chapters, 5 NPCs near spawn, 9 quest items, 5 genera, 3 finale endings; needed rituals, waits, kill drops, tagged spawns, quest items, endings/replay, progress, race/class gates, multi-quest NPCs. Self-tested 161/161 with siblings, 147/147 alone; not yet played.* | the reason for all of it |
 | 9 | **Modded-client sugar** — HUD tracker, journal screen | prettier, never required |
-| 10 | **Version branches** `mc26.1` / `mc26.2`, CI matrix, store copy | the treadmill |
+| 10 | **Version branches** `mc26.1` / `mc26.2`, CI matrix, store copy. *`mc26.2` built 2026-09-07 for Cast and Chronicler; `mc26.1` and CI open.* | the treadmill |
 
 Steps 1–4 are the mod. Steps 5–7 are what make it *this* mod. Step 8 is what
 it is for.

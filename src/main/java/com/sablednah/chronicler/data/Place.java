@@ -23,17 +23,22 @@ import net.minecraft.resources.Identifier;
  * @param lot       a CityWorld lot word ("hospital", "industrial"); needs CityWorld
  */
 public record Place(Optional<String> biome, Optional<String> structure,
-        Optional<Identifier> dimension, Optional<String> lot) {
+        Optional<Identifier> dimension, Optional<String> lot, List<Place> any) {
+
+    /** The four conditions AND together; {@code any} is a list of alternatives, one of which must hold (each with its own four). */
 
     public static final MapCodec<Place> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.optionalFieldOf("biome").forGetter(Place::biome),
             Codec.STRING.optionalFieldOf("structure").forGetter(Place::structure),
             Identifier.CODEC.optionalFieldOf("dimension").forGetter(Place::dimension),
-            Codec.STRING.optionalFieldOf("lot").forGetter(Place::lot))
+            Codec.STRING.optionalFieldOf("lot").forGetter(Place::lot),
+            Codec.lazyInitialized(() -> Place.CODEC).listOf().optionalFieldOf("any", List.of()).forGetter(Place::any))
             .apply(i, Place::new));
 
+    public static final Codec<Place> CODEC = MAP_CODEC.codec();
+
     public boolean isEmpty() {
-        return biome.isEmpty() && structure.isEmpty() && dimension.isEmpty() && lot.isEmpty();
+        return biome.isEmpty() && structure.isEmpty() && dimension.isEmpty() && lot.isEmpty() && any.isEmpty();
     }
 
     /** "the Nether", "a village", "a hospital" -- from the fields, for prose. */
@@ -43,6 +48,11 @@ public record Place(Optional<String> biome, Optional<String> structure,
         structure.ifPresent(s -> parts.add(Lang.fmt("place.structure", "structure", Lang.pretty(s))));
         biome.ifPresent(b -> parts.add(Lang.fmt("place.biome", "biome", Lang.pretty(b))));
         dimension.ifPresent(d -> parts.add(Lang.fmt("place.dimension", "dimension", Lang.pretty(d.getPath()))));
+        if (parts.isEmpty() && !any.isEmpty()) {
+            List<String> alts = new ArrayList<>();
+            for (Place p : any) alts.add(p.describe());
+            return String.join(Lang.get("place.or"), alts);
+        }
         return parts.isEmpty() ? Lang.get("place.anywhere") : String.join(Lang.get("place.join"), parts);
     }
 }

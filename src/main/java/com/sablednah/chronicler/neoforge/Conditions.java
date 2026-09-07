@@ -21,6 +21,18 @@ public final class Conditions {
             a.karmaMax().ifPresent(v -> { if (karma > v) out.add(Lang.fmt("cond.karma_max", "value", v)); });
             a.levelMin().ifPresent(v -> { if (level < v) out.add(Lang.fmt("cond.level_min", "value", v)); });
             a.levelMax().ifPresent(v -> { if (level > v) out.add(Lang.fmt("cond.level_max", "value", v)); });
+            if (!a.race().isEmpty()) {
+                var race = Sheet.race(player);
+                if (race.isEmpty() || a.race().stream().noneMatch(want -> idMatches(race.get(), want))) {
+                    out.add(Lang.fmt("cond.race", "race", prettyAny(a.race())));
+                }
+            }
+            if (!a.clazz().isEmpty()) {
+                var classes = Sheet.classes(player);
+                if (classes.stream().noneMatch(c -> a.clazz().stream().anyMatch(want -> idMatches(c, want)))) {
+                    out.add(Lang.fmt("cond.class", "class", prettyAny(a.clazz())));
+                }
+            }
         }
         FlagStore world = FlagStore.get(player.level().getServer());
         a.flags().forEach((name, want) -> {
@@ -38,6 +50,18 @@ public final class Conditions {
             });
         }
         return out;
+    }
+
+    /** {@code lq_apoc:mechanic} must match whole; a bare {@code mechanic} matches any namespace. */
+    static boolean idMatches(net.minecraft.resources.Identifier id, String want) {
+        String w = want.trim().toLowerCase(java.util.Locale.ROOT);
+        return w.contains(":") ? id.toString().equals(w) : id.getPath().equals(w);
+    }
+
+    private static String prettyAny(List<String> ids) {
+        List<String> names = new ArrayList<>();
+        for (String id : ids) names.add(Lang.pretty(id.contains(":") ? id.substring(id.indexOf(':') + 1) : id));
+        return String.join(Lang.get("cond.or"), names);
     }
 
     private Conditions() {}

@@ -51,6 +51,11 @@ public final class QuestEvents {
     static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (event.getLevel().isClientSide() || event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) return;
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (QuestEngine.onUseBlock(player, player.level(), event.getPos(), event.getItemStack())) {
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            event.setCanceled(true);
+            return;
+        }
         if (Givers.onUseBlock(player, player.level(), event.getPos())) {
             event.setCancellationResult(InteractionResult.SUCCESS);
             event.setCanceled(true);

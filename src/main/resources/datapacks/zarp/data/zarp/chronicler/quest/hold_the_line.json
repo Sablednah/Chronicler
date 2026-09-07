@@ -1,0 +1,132 @@
+{
+  "name": "Hold the Line",
+  "description": "The signal brought survivors. It brought other things too. Tonight the camp finds out which it brought more of.",
+  "chapter": "zarp:streets",
+  "order": 3,
+  "requires": [
+    "zarp:the_signal"
+  ],
+  "scope": "party",
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_signal"
+  },
+  "stages": [
+    {
+      "text": "Dusk. Take positions at the fence.",
+      "objectives": [
+        {
+          "type": "wait",
+          "seconds": 30,
+          "label": "Take positions"
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "title",
+          "title": "&c&lDusk",
+          "subtitle": "&7They come at dark. They always come at dark."
+        }
+      ]
+    },
+    {
+      "text": "Hold.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:walker",
+            "zombiemod:runner",
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 12
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 6,
+          "radius": 12,
+          "genus": "zombiemod:walker",
+          "entity": "minecraft:zombie"
+        },
+        {
+          "type": "spawn",
+          "count": 3,
+          "radius": 12,
+          "genus": "zombiemod:runner",
+          "entity": "minecraft:zombie"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "message",
+          "text": "&7The fence held. Something bigger did not get the message.",
+          "action_bar": false
+        }
+      ]
+    },
+    {
+      "text": "The Brute. It walks through the fence like the fence is a suggestion.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:tank"
+          ],
+          "count": 1,
+          "tag": "brute"
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 6,
+          "genus": "zombiemod:tank",
+          "entity": "minecraft:zombie",
+          "name": "&4The Brute",
+          "tag": "brute",
+          "health": 80
+        },
+        {
+          "type": "title",
+          "title": "&4&lThe Brute",
+          "subtitle": "&7Kill it before it finds the fire."
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "text": "&7That's the line held. Get some sleep. That's an order, and I'm not your sergeant.",
+          "radius": 16.0,
+          "quest": "zarp:the_signal"
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 100
+    },
+    {
+      "type": "money",
+      "amount": 40
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 10
+    },
+    {
+      "type": "item",
+      "item": "minecraft:iron_chestplate",
+      "count": 1
+    }
+  ]
+}

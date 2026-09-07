@@ -1,0 +1,214 @@
+{
+  "name": "House Calls",
+  "description": "The voice on the radio came from the hospital. So, Okafor is fairly sure, did the first case.",
+  "chapter": "zarp:hospital",
+  "order": 1,
+  "requires": [
+    "zarp:the_signal"
+  ],
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_camp"
+  },
+  "stages": [
+    {
+      "text": "Get to the hospital. Front doors, if there are still doors.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "the hospital",
+          "any": [
+            {
+              "lot": "Hospital"
+            },
+            {
+              "structure": "#minecraft:village"
+            }
+          ]
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "npc_say",
+          "text": "&7Ward C. Look for Ward C. And do not touch anything wet.",
+          "radius": 16.0,
+          "quest": "zarp:the_camp"
+        }
+      ]
+    },
+    {
+      "text": "Harvesters. They take pieces. Take them first, and take samples.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:harvester",
+            "minecraft:zombie_villager",
+            "minecraft:zombie"
+          ],
+          "count": 5,
+          "drop": {
+            "quest_item": "zarp:tissue_sample",
+            "chance": 0.7
+          }
+        },
+        {
+          "type": "collect",
+          "quest_item": "zarp:tissue_sample",
+          "count": 3,
+          "consume": false
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 5,
+          "radius": 10,
+          "genus": "zombiemod:harvester",
+          "entity": "minecraft:zombie_villager"
+        },
+        {
+          "type": "title",
+          "title": "&cHarvesters",
+          "subtitle": "&7They take pieces."
+        }
+      ]
+    },
+    {
+      "text": "Ward C. The first bed. The chart is still clipped to the rail.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:bloater",
+            "minecraft:zombie",
+            "minecraft:husk",
+            "minecraft:drowned",
+            "minecraft:zombie_villager"
+          ],
+          "count": 1,
+          "tag": "first_bed",
+          "drop": {
+            "quest_item": "zarp:origin_sample",
+            "chance": 1.0
+          }
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 5,
+          "genus": "zombiemod:bloater",
+          "entity": "minecraft:zombie",
+          "name": "&5The First Bed",
+          "tag": "first_bed",
+          "health": 60
+        },
+        {
+          "type": "title",
+          "title": "&5&lThe First Bed",
+          "subtitle": "&7Patient one. Still here."
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "message",
+          "text": "&dThe sample from the first bed hums in your pack. Every dead thing in the building turns its head.",
+          "action_bar": false
+        }
+      ]
+    },
+    {
+      "text": "The samples. Okafor wants all of them. The Enforcers on the east side would pay real money for even one.",
+      "choices": [
+        {
+          "label": "Give Okafor everything",
+          "text": "She takes them without a word, then says thank you to the samples, not to you.",
+          "effects": [
+            {
+              "type": "reputation",
+              "standing": "camp",
+              "delta": 15
+            },
+            {
+              "type": "karma",
+              "delta": 5
+            },
+            {
+              "type": "flag",
+              "name": "zarp_samples_shared",
+              "player": true,
+              "value": true
+            },
+            {
+              "type": "npc_say",
+              "text": "&7This is it. This is where it started. I can work with this.",
+              "radius": 16.0,
+              "quest": "zarp:the_camp"
+            }
+          ]
+        },
+        {
+          "label": "Sell one to the Enforcers",
+          "text": "The money is real. So is the look Okafor gives the empty slot in the tray.",
+          "effects": [
+            {
+              "type": "money",
+              "amount": 150
+            },
+            {
+              "type": "reputation",
+              "standing": "camp",
+              "delta": -10
+            },
+            {
+              "type": "karma",
+              "delta": -10
+            },
+            {
+              "type": "flag",
+              "name": "zarp_sold_sample",
+              "player": true,
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "Hand over the tissue samples.",
+      "objectives": [
+        {
+          "type": "collect",
+          "quest_item": "zarp:tissue_sample",
+          "count": 3,
+          "consume": true
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 120
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 5
+    },
+    {
+      "type": "flag",
+      "name": "zarp_hospital_done",
+      "player": false,
+      "value": true
+    },
+    {
+      "type": "title",
+      "title": "&d&lThe Origin",
+      "subtitle": "&7You know where it started now."
+    }
+  ]
+}

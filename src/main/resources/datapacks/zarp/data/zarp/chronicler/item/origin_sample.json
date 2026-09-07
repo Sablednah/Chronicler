@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:nether_star",
+  "name": "&5The Origin Sample",
+  "lore": [
+    "From the first bed in Ward C.",
+    "It hums. The dead turn their heads",
+    "when you carry it."
+  ],
+  "glint": true,
+  "max_stack": 1
+}

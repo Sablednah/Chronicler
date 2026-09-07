@@ -1,0 +1,48 @@
+{
+  "name": "Ashwalker",
+  "description": "It went below to get away from the fire. The fire came with it.",
+  "base": "minecraft:husk",
+  "weight": 6,
+  "health": 26.0,
+  "damage": 5.0,
+  "speed": 1.0,
+  "follow_range": 24.0,
+  "armor_color": 5197647,
+  "attributes": {
+    "minecraft:burning_time": 0.0
+  },
+  "burning": true,
+  "spawn": {
+    "conditions": [
+      {
+        "type": "zombiemod:dimension",
+        "dimensions": [
+          "minecraft:the_nether"
+        ]
+      },
+      {
+        "type": "chronicler:flag",
+        "flag": "zarp_below_begun"
+      }
+    ]
+  },
+  "clear_goals": false,
+  "abilities": [
+    {
+      "type": "zombiemod:particles",
+      "interval": 10,
+      "particle": "minecraft:ash",
+      "count": 4
+    },
+    {
+      "type": "zombiemod:effect",
+      "interval": 60,
+      "chance": 0.5,
+      "target": "self",
+      "effect": "minecraft:fire_resistance",
+      "duration": 200
+    }
+  ],
+  "bounty": 5.0,
+  "xp": 12
+}

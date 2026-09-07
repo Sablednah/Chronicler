@@ -1,0 +1,119 @@
+{
+  "name": "The Beacon",
+  "description": "Something is drawn to a fire built the old way. Build one, and see what comes.",
+  "chapter": "prologue",
+  "order": 4,
+  "requires": [
+    "night_watch"
+  ],
+  "stages": [
+    {
+      "text": "Let the dark come.",
+      "objectives": [
+        {
+          "type": "wait",
+          "seconds": 20,
+          "label": "Let the dark come"
+        }
+      ]
+    },
+    {
+      "text": "A campfire ringed with cobblestone on four sides. Use it with a torch in hand.",
+      "objectives": [
+        {
+          "type": "ritual",
+          "block": "minecraft:campfire",
+          "label": "Light the beacon",
+          "pattern": [
+            {
+              "offset": [
+                1,
+                0,
+                0
+              ],
+              "block": "minecraft:cobblestone"
+            },
+            {
+              "offset": [
+                -1,
+                0,
+                0
+              ],
+              "block": "minecraft:cobblestone"
+            },
+            {
+              "offset": [
+                0,
+                0,
+                1
+              ],
+              "block": "minecraft:cobblestone"
+            },
+            {
+              "offset": [
+                0,
+                0,
+                -1
+              ],
+              "block": "minecraft:cobblestone"
+            }
+          ],
+          "item": "minecraft:torch",
+          "consume": false
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "spawn",
+          "entity": "minecraft:zombie",
+          "count": 2,
+          "radius": 6,
+          "name": "&7Drawn to the Light",
+          "tag": "drawn"
+        },
+        {
+          "type": "title",
+          "title": "&6&lThe Beacon",
+          "subtitle": "&7Something is coming to the light."
+        }
+      ]
+    },
+    {
+      "text": "They came. Put them out.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": "minecraft:zombie",
+          "count": 2,
+          "tag": "drawn",
+          "drop": {
+            "quest_item": "ember",
+            "chance": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "text": "Bring what they left to the fire.",
+      "objectives": [
+        {
+          "type": "collect",
+          "quest_item": "ember",
+          "count": 2,
+          "consume": true
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 60
+    },
+    {
+      "type": "item",
+      "item": "minecraft:lantern",
+      "count": 1
+    }
+  ]
+}

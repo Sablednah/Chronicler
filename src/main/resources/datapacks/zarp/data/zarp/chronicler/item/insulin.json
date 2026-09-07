@@ -1,0 +1,9 @@
+{
+  "item": "minecraft:honey_bottle",
+  "name": "&bInsulin",
+  "lore": [
+    "Cold, still. Just."
+  ],
+  "glint": true,
+  "max_stack": 16
+}

@@ -1,0 +1,64 @@
+{
+  "name": "Deep Cold",
+  "description": "Something under the city has been listening since before the outbreak. Sarge says leave it. Sarge is saying it to you, so.",
+  "chapter": "zarp:survivors",
+  "order": 7,
+  "requires": [
+    "zarp:house_calls"
+  ],
+  "availability": {
+    "level_min": 8
+  },
+  "giver": {
+    "type": "npc",
+    "name": "-",
+    "of": "zarp:the_signal"
+  },
+  "stages": [
+    {
+      "text": "Down. Past the deepslate. Where the lanterns are blue.",
+      "objectives": [
+        {
+          "type": "place",
+          "label": "an ancient city",
+          "structure": "minecraft:ancient_city"
+        }
+      ]
+    },
+    {
+      "text": "Do not make a sound. Then make one, on purpose.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "minecraft:warden"
+          ],
+          "count": 1
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "message",
+          "text": "&7It is very quiet down here now. You made it that way.",
+          "action_bar": false
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 300
+    },
+    {
+      "type": "item",
+      "item": "minecraft:netherite_scrap",
+      "count": 4
+    },
+    {
+      "type": "title",
+      "title": "&3&lDeep Cold",
+      "subtitle": "&7You woke it. You put it back."
+    }
+  ]
+}

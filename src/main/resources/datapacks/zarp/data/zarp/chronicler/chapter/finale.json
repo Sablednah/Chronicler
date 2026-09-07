@@ -1,0 +1,7 @@
+{
+  "name": "Finale: Patient Zero",
+  "description": "The first one. Everything since has been a copy of a copy.",
+  "order": 60,
+  "main": true,
+  "replayable": true
+}
