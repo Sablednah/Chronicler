@@ -476,3 +476,21 @@ walk away. Four config strings under `givers`: `markerText` (available, `&e&l!`)
 `markerActive` (`&7&l?`), `markerComplete` (`&a&l✔`; repeatables show
 `markerText` again), `markerLocked` (empty = nothing). Nothing to reap after
 a restart, because nothing was ever in the world.
+
+### Endings and replay (2026-09-07, Sable)
+
+"A few different endings make it replayable too." The ZARP line is written as a
+choose-your-own-adventure: a main line with two or three real forks, each ending
+reached being a thing the player keeps. What that needs beyond what exists
+(choices, flags, gated availability):
+
+- **Endings are remembered.** A chapter records which ending each player
+  reached (`endings` on the journal's chapter record, set by a terminal stage's
+  `ending: "<id>"`). The journal shows "endings found: 2 of 3" and never says
+  which are missing.
+- **Chapters can be replayed.** `replayable: true` on a chapter clears its
+  quests' completions and its chapter-scoped flags on the last completion (or
+  on `/quest replay <chapter>`), keeping the endings tally. Flags a chapter's
+  quests set are namespaced to it so a reset knows what to clear; world flags
+  (ZombieMod spawn conditions) stay.
+- Per-player marks already fit: a replayed chapter's givers show `!` again.
