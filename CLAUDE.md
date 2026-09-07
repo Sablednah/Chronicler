@@ -285,6 +285,11 @@ tokens.
 
 ## Known traps (paid for next door, not yet here)
 
+- Giver marks are per-player packets (`Markers`), not entities: a `TextDisplay` built with
+  `EntityType.TEXT_DISPLAY.create(level, COMMAND)`, configured by NBT `load`, then
+  `ClientboundAddEntityPacket` + `ClientboundSetEntityDataPacket(getNonDefaultValues())`.
+  FakePlayers are not in the player list; the self-test adds them to `Markers.EXTRA_VIEWERS`.
+
 - A `static final` collection declared after the fields that fill it is null
   when they initialise. Declare collections first.
 - **Do not name a class `Character`** (or `Process`, `Thread`, ...): it shadows
