@@ -22,6 +22,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.BooleanValue JOURNAL_GIVE_NEW;
     public static final ModConfigSpec.IntValue GIVER_COOLDOWN_SECONDS;
     public static final ModConfigSpec.DoubleValue GIVER_RADIUS;
+    public static final ModConfigSpec.IntValue GIVER_SECOND_CLICK_SECONDS;
 
     static {
         BUILDER.comment("Announcements").push("announce");
@@ -65,6 +66,10 @@ public final class ChroniclerConfig {
                 .comment("How close (blocks) to an op-placed giver a player must be to hear the",
                         "offer. Data-declared givers carry their own radius.")
                 .defineInRange("radius", 4.0D, 1.0D, 64.0D);
+        GIVER_SECOND_CLICK_SECONDS = BUILDER
+                .comment("A right-click on a giver makes the offer; a second click within this many",
+                        "seconds accepts it (so does the Accept button). 0 accepts on the first click.")
+                .defineInRange("secondClickSeconds", 20, 0, 600);
         BUILDER.pop();
 
         BUILDER.comment("Party quests").push("party");

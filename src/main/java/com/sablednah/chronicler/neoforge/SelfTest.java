@@ -176,7 +176,9 @@ public final class SelfTest {
             store.set(server.overworld(), here, firstSteps);
             check("giver store answers", Givers.questAt(server.overworld(), here).map(firstSteps::equals).orElse(false));
             // The four oak logs are still in the pack, so accepting completes it on the spot.
-            check("giver block: right-click accepts (and the logs finish it)", Givers.onUseBlock(solo, server.overworld(), here)
+            check("giver block: first click offers, does not accept", Givers.onUseBlock(solo, server.overworld(), here)
+                    && !QuestEngine.journal(solo).isActive(firstSteps) && !QuestEngine.journal(solo).isComplete(firstSteps));
+            check("giver block: second click accepts (and the logs finish it)", Givers.onUseBlock(solo, server.overworld(), here)
                     && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));
             check("giver block: again while active is not an error", Givers.onUseBlock(solo, server.overworld(), here));
             check("giver block: a plain block is not a giver", !Givers.onUseBlock(solo, server.overworld(), here.above(40)));
@@ -258,7 +260,8 @@ public final class SelfTest {
                 UUID npc = cast.spawnHuman(server.overworld(), solo.position().add(2, 0, 0), 0F, "Test Giver", java.util.Optional.empty());
                 try {
                     GiverStore.get(server).setNpc(npc, firstSteps);
-                    check("npc giver: right-click accepts (logs still in the pack finish it)", Givers.onUseNpc(solo, npc)
+                    check("npc giver: first click offers", Givers.onUseNpc(solo, npc) && !QuestEngine.journal(solo).isActive(firstSteps));
+                    check("npc giver: second click accepts (logs still in the pack finish it)", Givers.onUseNpc(solo, npc)
                             && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));
                     GiverStore.get(server).removeNpc(npc);
                     check("npc giver: an NPC with no quest is idle, not an error", Givers.onUseNpc(solo, npc));

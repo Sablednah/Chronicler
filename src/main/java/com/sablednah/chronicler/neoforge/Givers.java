@@ -186,7 +186,16 @@ public final class Givers {
         return useGiver(player, id.get(), holder.get().value());
     }
 
-    /** What any giver does when used: track if on it, accept if available, else say why not. */
+    /** Per player: quest -> game time the giver last made its offer, so a second click accepts. */
+    private static final Map<UUID, Map<Identifier, Long>> CLICKED = new HashMap<>();
+
+    /**
+     * What any giver does when used. On it already: track it. Not available:
+     * say why. Available: MAKE THE OFFER -- the name, the hook, what it asks
+     * and what it pays, with Accept and Info buttons -- and only a second
+     * click within the window (or the button) accepts. Straight to accepted
+     * gave nobody a chance to choose, which Sable noticed on the first try.
+     */
     private static boolean useGiver(ServerPlayer player, Identifier id, Quest quest) {
         var log = QuestEngine.journal(player);
         if (log.isActive(id)) {
@@ -194,19 +203,41 @@ public final class Givers {
             QuestEngine.track(player, id);
             return true;
         }
-        var refusal = QuestEngine.accept(player, id);
-        if (refusal.isPresent()) {
-            Feedback.chat(player, Lang.get(switch (refusal.get()) {
+        var why = QuestEngine.refusal(player, id, quest);
+        if (why.isPresent()) {
+            Feedback.chat(player, Lang.get(switch (why.get()) {
                 case ALREADY_COMPLETE -> "msg.giver.done";
-                case LOCKED, CONDITIONS, COOLDOWN -> "msg.giver.locked";
-                default -> "msg.refuse.unknown";
+                default -> "msg.giver.locked";
             }));
+            if (why.get() == QuestEngine.Refusal.CONDITIONS) {
+                QuestEngine.unmet(player, quest).forEach(line -> Feedback.chat(player, Lang.fmt("msg.refuse.condition_line", "line", line)));
+            }
+            return true;
         }
+        long now = player.level().getGameTime();
+        Map<Identifier, Long> mine = CLICKED.computeIfAbsent(player.getUUID(), k -> new HashMap<>());
+        Long last = mine.get(id);
+        long window = ChroniclerConfig.GIVER_SECOND_CLICK_SECONDS.get() * 20L;
+        if (last != null && now - last <= window) {
+            mine.remove(id);
+            QuestEngine.accept(player, id);
+            return true;
+        }
+        mine.put(id, now);
+        Feedback.chat(player, Lang.fmt("msg.giver.offer.header", "name", quest.name()));
+        quest.description().ifPresent(d -> Feedback.chat(player, Lang.fmt("msg.giver.offer.description", "description", d)));
+        for (var o : quest.objectivesAt(0)) Feedback.chat(player, Lang.fmt("msg.giver.offer.objective", "line", o.describe()));
+        for (var r : quest.rewards()) Feedback.chat(player, Lang.fmt("msg.giver.offer.reward", "line", r.describe()));
+        Feedback.chatWithButtons(player, Lang.get("msg.giver.offer.prompt"),
+                Feedback.button(Lang.get("button.accept"), "/quest accept " + id, Lang.get("button.accept.tip")),
+                Feedback.button(Lang.get("button.info"), "/quest info " + id, Lang.get("button.info.tip")));
+        Feedback.actionBar(player, Lang.fmt("msg.offer.bar", "name", quest.name()));
         return true;
     }
 
     public static void forget(UUID player) {
         OFFERED.remove(player);
+        CLICKED.remove(player);
     }
 
     private static BlockPos parse(String key) {
