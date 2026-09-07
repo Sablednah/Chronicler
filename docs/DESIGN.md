@@ -494,3 +494,11 @@ reached being a thing the player keeps. What that needs beyond what exists
   quests set are namespaced to it so a reset knows what to clear; world flags
   (ZombieMod spawn conditions) stay.
 - Per-player marks already fit: a replayed chapter's givers show `!` again.
+
+### Progress percentage (2026-09-07, Sable)
+
+A `%` figure for the player: journal cover, `/quests`, maybe the marks. Only
+quests that *say* they count contribute -- a repeatable bounty or a side
+errand must not stop anyone reaching 100%. Quest field `counts` (default:
+true for quests in a `main` chapter, false for repeatables; side chapters
+false unless set). Per chapter and overall: "Prologue 3/4 -- 75%".
