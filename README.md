@@ -44,6 +44,13 @@ that kind of place, with no coordinate written down. An admin can also make
 any block a giver by looking at it: `/quest giver set <quest>`. A hidden quest
 with a giver is *found* by walking up to it.
 
+With [Cast](https://github.com/Sablednah/Cast) installed, givers can be
+**people**: `giver: { type: npc, name: "Dr Okafor", skin: Sablednah, at: [x, y, z], greeting: "You look like you can hold a torch." }`
+places a human NPC (or `entity: minecraft:villager` for a creature) the first
+time the server starts with the quest, and right-clicking them offers it.
+`/quest giver set <quest>` while looking at any Cast NPC does the same by
+hand. Without Cast the quest still loads and lists; nobody is placed.
+
 A quest can be told in **stages**: ordered beats, each with its own `text`
 (narrated as you reach it), `objectives`, and `on_enter` / `on_complete`
 effects. Effects use the reward vocabulary plus `title`, `message` and `spawn`

@@ -83,6 +83,9 @@ public class Chronicler {
             // What we OFFER: a spawn condition on a world flag, into their public registry.
             optionalIntegration("spawn conditions", com.sablednah.chronicler.neoforge.compat.ZombieModConditions::register);
         }
+        if (ModList.get().isLoaded("cast")) {
+            optionalIntegration("npc givers", com.sablednah.chronicler.neoforge.compat.CastGivers::register);
+        }
         if (ModList.get().isLoaded("cityworld")) {
             optionalIntegration("lots", com.sablednah.chronicler.neoforge.compat.CityWorldLots::register);
         }

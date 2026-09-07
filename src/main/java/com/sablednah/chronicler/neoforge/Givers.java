@@ -7,6 +7,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import net.minecraft.world.phys.Vec3;
+
+import com.sablednah.chronicler.Chronicler;
 import com.sablednah.chronicler.ChroniclerConfig;
 import com.sablednah.chronicler.data.GiverSpec;
 import com.sablednah.chronicler.data.GiverTypes;
@@ -55,8 +58,57 @@ public final class Givers {
                 Identifier dim = p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
                 DATA_BLOCKS.put(dim + "|" + p.at().getX() + "," + p.at().getY() + "," + p.at().getZ(), h.key().identifier());
             }
+            if (g instanceof GiverTypes.NpcGiver n) placeNpc(server, h.key().identifier(), n);
         }));
         OFFERED.clear();
+    }
+
+    /** Put a data-declared NPC giver in the world once, and remember which NPC it is. */
+    private static void placeNpc(MinecraftServer server, Identifier questId, GiverTypes.NpcGiver n) {
+        if (!Npcs.available()) {
+            Chronicler.LOGGER.info("Chronicler: quest {} has an NPC giver ({}) but Cast is not installed -- listed, not placed", questId, n.name());
+            return;
+        }
+        GiverStore store = GiverStore.get(server);
+        Npcs.Provider cast = Npcs.provider().get();
+        Optional<UUID> existing = store.placedFor(questId).filter(id -> cast.byId(server, id).isPresent());
+        if (existing.isPresent()) {
+            cast.ensureGiverRole(server, existing.get());
+            store.setNpc(existing.get(), questId);
+            return;
+        }
+        Identifier dim = n.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
+        ServerLevel level = server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, dim));
+        if (level == null) return;
+        Vec3 pos = new Vec3(n.at().getX() + 0.5, n.at().getY(), n.at().getZ() + 0.5);
+        UUID id = n.entity().isPresent()
+                ? cast.spawnMob(level, pos, n.yaw(), n.entity().get(), n.name())
+                : cast.spawnHuman(level, pos, n.yaw(), n.name(), n.skin());
+        store.setPlacedFor(questId, id);
+        store.setNpc(id, questId);
+        Chronicler.LOGGER.info("Chronicler: placed NPC giver '{}' for {} at {}", n.name(), questId, n.at());
+    }
+
+    /** A right-click on a Cast NPC carrying the giver role. */
+    public static boolean onUseNpc(ServerPlayer player, UUID npcId) {
+        MinecraftServer server = player.level().getServer();
+        Optional<Identifier> id = GiverStore.get(server).atNpc(npcId);
+        if (id.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.giver.npc_idle"));
+            return true;
+        }
+        Optional<Holder.Reference<Quest>> holder = QuestEngine.quest(server, id.get());
+        if (holder.isEmpty()) {
+            Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));
+            return true;
+        }
+        Quest quest = holder.get().value();
+        // A greeting from the data, spoken as the NPC, before the offer.
+        if (quest.giver().orElse(null) instanceof GiverTypes.NpcGiver n && n.greeting().isPresent()
+                && QuestEngine.available(player, id.get(), quest)) {
+            Npcs.provider().ifPresent(c -> c.say(server, npcId, n.greeting().get(), 12.0));
+        }
+        return useGiver(player, id.get(), quest);
     }
 
     public static int dataCount() {
@@ -95,6 +147,7 @@ public final class Givers {
     }
 
     private static boolean present(ServerPlayer player, GiverSpec giver) {
+        if (giver instanceof GiverTypes.NpcGiver) return false; // the person is the presence; they offer on right-click
         if (giver instanceof GiverTypes.Position p) {
             if (p.dimension().isPresent() && !p.dimension().get().equals(player.level().dimension().identifier())) return false;
             if (p.dimension().isEmpty() && !player.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD)) return false;
@@ -130,18 +183,22 @@ public final class Givers {
             Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));
             return true;
         }
-        Quest quest = holder.get().value();
+        return useGiver(player, id.get(), holder.get().value());
+    }
+
+    /** What any giver does when used: track if on it, accept if available, else say why not. */
+    private static boolean useGiver(ServerPlayer player, Identifier id, Quest quest) {
         var log = QuestEngine.journal(player);
-        if (log.isActive(id.get())) {
+        if (log.isActive(id)) {
             Feedback.chat(player, Lang.fmt("msg.giver.active", "name", quest.name()));
-            QuestEngine.track(player, id.get());
+            QuestEngine.track(player, id);
             return true;
         }
-        var refusal = QuestEngine.accept(player, id.get());
+        var refusal = QuestEngine.accept(player, id);
         if (refusal.isPresent()) {
             Feedback.chat(player, Lang.get(switch (refusal.get()) {
                 case ALREADY_COMPLETE -> "msg.giver.done";
-                case LOCKED -> "msg.giver.locked";
+                case LOCKED, CONDITIONS, COOLDOWN -> "msg.giver.locked";
                 default -> "msg.refuse.unknown";
             }));
         }

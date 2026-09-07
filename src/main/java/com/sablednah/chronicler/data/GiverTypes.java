@@ -51,8 +51,32 @@ public final class GiverTypes {
         }
     }
 
+    /**
+     * A person: a Cast NPC placed from this data the first time the server
+     * starts with the quest loaded, standing at {@code at}. {@code skin} names
+     * a real account (human only); {@code entity} makes it a creature instead.
+     * Without Cast the quest still loads and lists; nobody is placed, and the
+     * offer line says so.
+     */
+    public record NpcGiver(String name, Optional<String> skin, Optional<Identifier> entity,
+            BlockPos at, Optional<Identifier> dimension, float yaw, Optional<String> greeting) implements GiverSpec {
+        public static final MapCodec<NpcGiver> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.STRING.fieldOf("name").forGetter(NpcGiver::name),
+                Codec.STRING.optionalFieldOf("skin").forGetter(NpcGiver::skin),
+                Identifier.CODEC.optionalFieldOf("entity").forGetter(NpcGiver::entity),
+                BlockPos.CODEC.fieldOf("at").forGetter(NpcGiver::at),
+                Identifier.CODEC.optionalFieldOf("dimension").forGetter(NpcGiver::dimension),
+                Codec.FLOAT.optionalFieldOf("yaw", 0F).forGetter(NpcGiver::yaw),
+                Codec.STRING.optionalFieldOf("greeting").forGetter(NpcGiver::greeting))
+                .apply(i, NpcGiver::new));
+
+        @Override public MapCodec<NpcGiver> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.fmt("giver.npc", "name", name); }
+    }
+
     static {
         TYPES.register("position", Position.MAP_CODEC);
+        TYPES.register("npc", NpcGiver.MAP_CODEC);
         TYPES.register("place", InPlace.MAP_CODEC);
     }
 

@@ -79,3 +79,10 @@ displayURL="https://sablecraft.co.uk/chronicler/"
     versionRange="[1,)"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="cast"
+    type="optional"
+    versionRange="[0.1,)"
+    ordering="AFTER"
+    side="BOTH"

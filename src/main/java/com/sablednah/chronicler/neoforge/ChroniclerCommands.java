@@ -387,6 +387,14 @@ public final class ChroniclerCommands {
     private static int giverSet(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         Holder.Reference<Quest> holder = resolveQuest(ctx);
+        // An NPC in the way wins over the block behind it.
+        var npc = Npcs.provider().flatMap(c -> c.lookedAt(player, 6.0D));
+        if (npc.isPresent()) {
+            GiverStore.get(player.level().getServer()).setNpc(npc.get(), holder.key().identifier());
+            Npcs.provider().get().ensureGiverRole(player.level().getServer(), npc.get());
+            Feedback.chat(player, Lang.fmt("msg.giver.set_npc", "name", holder.value().name()));
+            return 1;
+        }
         var pos = lookedAt(player);
         if (pos.isEmpty()) {
             Feedback.chat(player, Lang.get("msg.giver.look"));
@@ -399,6 +407,12 @@ public final class ChroniclerCommands {
 
     private static int giverRemove(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
+        var npc = Npcs.provider().flatMap(c -> c.lookedAt(player, 6.0D));
+        if (npc.isPresent()) {
+            boolean had = GiverStore.get(player.level().getServer()).removeNpc(npc.get());
+            Feedback.chat(player, Lang.get(had ? "msg.giver.removed" : "msg.giver.none_here"));
+            return had ? 1 : 0;
+        }
         var pos = lookedAt(player);
         if (pos.isEmpty()) {
             Feedback.chat(player, Lang.get("msg.giver.look"));
@@ -464,7 +478,7 @@ public final class ChroniclerCommands {
         Registry<Chapter> chapters = source.registryAccess().lookupOrThrow(ChroniclerRegistries.CHAPTER);
         Registry<Quest> quests = source.registryAccess().lookupOrThrow(ChroniclerRegistries.QUEST);
         List<String> siblings = new ArrayList<>();
-        for (String id : List.of("legendquest", "standards", "zombiemod", "cityworld", "storyteller")) {
+        for (String id : List.of("legendquest", "standards", "zombiemod", "cityworld", "cast", "storyteller")) {
             if (ModList.get().isLoaded(id)) siblings.add(id);
         }
         String lines = String.join("\n",

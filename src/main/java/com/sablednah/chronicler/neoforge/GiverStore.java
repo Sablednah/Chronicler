@@ -26,20 +26,24 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 public final class GiverStore extends SavedData {
 
     private static final Codec<GiverStore> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Codec.unboundedMap(Codec.STRING, Identifier.CODEC).fieldOf("givers").forGetter(s -> s.byKey))
+            Codec.unboundedMap(Codec.STRING, Identifier.CODEC).fieldOf("givers").forGetter(s -> s.byKey),
+            Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("placed", Map.of()).forGetter(s -> s.placed))
             .apply(i, GiverStore::new));
 
     public static final SavedDataType<GiverStore> TYPE =
             new SavedDataType<>("chronicler_givers", GiverStore::new, CODEC, null);
 
     private final Map<String, Identifier> byKey;
+    /** quest id -> the Cast npcId its data giver placed. */
+    private final Map<String, String> placed;
 
     public GiverStore() {
-        this(Map.of());
+        this(Map.of(), Map.of());
     }
 
-    private GiverStore(Map<String, Identifier> byKey) {
+    private GiverStore(Map<String, Identifier> byKey, Map<String, String> placed) {
         this.byKey = new LinkedHashMap<>(byKey);
+        this.placed = new LinkedHashMap<>(placed);
     }
 
     public static GiverStore get(MinecraftServer server) {
@@ -48,6 +52,38 @@ public final class GiverStore extends SavedData {
 
     public static String key(ServerLevel level, BlockPos pos) {
         return level.dimension().identifier() + "|" + pos.getX() + "," + pos.getY() + "," + pos.getZ();
+    }
+
+    /** An NPC giver's key: the Cast npcId. */
+    public static String npcKey(java.util.UUID npcId) {
+        return "npc|" + npcId;
+    }
+
+    public Optional<Identifier> atNpc(java.util.UUID npcId) {
+        return Optional.ofNullable(byKey.get(npcKey(npcId)));
+    }
+
+    public void setNpc(java.util.UUID npcId, Identifier quest) {
+        byKey.put(npcKey(npcId), quest);
+        setDirty();
+    }
+
+    public boolean removeNpc(java.util.UUID npcId) {
+        boolean had = byKey.remove(npcKey(npcId)) != null;
+        if (had) setDirty();
+        return had;
+    }
+
+    /** The NPC that data placed for a quest, so it is placed once, not once per start. */
+    public Optional<java.util.UUID> placedFor(Identifier quest) {
+        String v = placed.get(quest.toString());
+        if (v == null) return Optional.empty();
+        try { return Optional.of(java.util.UUID.fromString(v)); } catch (IllegalArgumentException e) { return Optional.empty(); }
+    }
+
+    public void setPlacedFor(Identifier quest, java.util.UUID npcId) {
+        placed.put(quest.toString(), npcId.toString());
+        setDirty();
     }
 
     public Optional<Identifier> at(ServerLevel level, BlockPos pos) {

@@ -27,6 +27,9 @@
 - Stages: ordered beats with narration, per-beat objectives and
   `on_enter` / `on_complete` effects; `title`, `message` and `spawn` effects;
   `{x}` `{y}` `{z}` in commands. Night Watch, a two-beat built-in quest.
+- NPC givers through Cast: an `npc` giver kind placed from quest data, the
+  `chronicler:giver` role on any Cast NPC, `/quest giver set` on the NPC you
+  look at, a spoken greeting. Loads and lists without Cast; places nobody.
 - Bounties: `cooldown` on a repeatable quest; Cull as the built-in example.
 - Choices: decision beats with clickable options, effects, `next` / `end`,
   `start` another quest; `/quest choose`. Deadlines: a timed beat with a

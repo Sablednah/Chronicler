@@ -251,6 +251,28 @@ public final class SelfTest {
                     && QuestEngine.journal(solo).completions(cull) == 1);
             QuestEngine.abandon(solo, cull);
 
+            // NPC givers, when Cast is present: a person hands out a quest on right-click.
+            if (Npcs.available()) {
+                var cast = Npcs.provider().get();
+                QuestEngine.journal(solo).clear();
+                UUID npc = cast.spawnHuman(server.overworld(), solo.position().add(2, 0, 0), 0F, "Test Giver", java.util.Optional.empty());
+                try {
+                    GiverStore.get(server).setNpc(npc, firstSteps);
+                    check("npc giver: right-click accepts (logs still in the pack finish it)", Givers.onUseNpc(solo, npc)
+                            && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));
+                    GiverStore.get(server).removeNpc(npc);
+                    check("npc giver: an NPC with no quest is idle, not an error", Givers.onUseNpc(solo, npc));
+                } finally {
+                    cast.remove(server, npc);
+                }
+                QuestEngine.journal(solo).clear();
+                QuestEngine.journal(solo).complete(firstSteps);
+                QuestEngine.journal(solo).complete(things);
+                Chronicler.LOGGER.info("SelfTest: NPC givers via Cast exercised");
+            } else {
+                check("npc giver kind loads without Cast (hot_foot has none; codec present)", com.sablednah.chronicler.data.GiverTypes.TYPES.size() >= 3);
+            }
+
             // The API other mods call.
             check("api: hot_foot is available (hidden only hides the list)", com.sablednah.chronicler.api.Quests.isAvailable(solo, ChroniclerIds.of("hot_foot")));
             check("api: offer returns true for an available quest", com.sablednah.chronicler.api.Quests.offer(solo, ChroniclerIds.of("hot_foot"), "a test"));

@@ -194,6 +194,9 @@ public final class Lang {
         def("msg.giver.locked", "{prefix}&7Not yet. Something has to happen first -- /quest info tells you what.");
         def("msg.giver.gone", "{prefix}&7This used to offer '{id}', which no longer exists. Tell an admin.");
         def("msg.giver.set", "{prefix}&7That block now offers &f{name}&7.");
+        def("msg.giver.set_npc", "{prefix}&7They now offer &f{name}&7.");
+        def("msg.giver.npc_idle", "{prefix}&7They have nothing for you right now.");
+        def("giver.npc", "{name}");
         def("msg.giver.removed", "{prefix}&7That block offers nothing now.");
         def("msg.giver.none_here", "{prefix}&7That block was not a giver.");
         def("msg.giver.look", "{prefix}&7Look at a block within reach first.");

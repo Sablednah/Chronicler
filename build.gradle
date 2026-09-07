@@ -150,6 +150,7 @@ dependencies {
     compileOnly files(newestJar('../LegendQuest-ReForged/build/libs', 'legendquest-'))
     compileOnly files(newestJar('../ZombieMod/ZombieMod/build/libs', 'zombiemod-'))
     compileOnly files(newestJar('../CityWorld-ReForged/build/libs', 'cityworld-'))
+    compileOnly files(newestJar('../Cast/build/libs', 'cast-'))
 }
 
 // Expand mod metadata properties into the generated neoforge.mods.toml.
