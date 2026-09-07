@@ -276,7 +276,8 @@ and these bodies: `sendSystemMessage(text, overlay)` for `displayClientMessage`
 `chronicler:givers`) **and the file moves to a namespaced folder** (a migration
 that copies to the wrong place logs nothing), `EntityTypes.*` for
 `EntityType.*`, `ChatFormatting` is a bare enum so `Feedback` owns the five
-formatting codes. Sibling 26.2 jars: Standards 1.6.0, LegendQuest 2.4.1,
+formatting codes, `entityTags()` for `getTags()`, and the loot-function
+registry holds the `MapCodec` itself (no `LootItemFunctionType`). Sibling 26.2 jars: Standards 1.6.0, LegendQuest 2.4.1,
 ZombieMod 3.4.0 (in its `build/libs`), Cast 0.1.0. A fresh 26.2 world starts
 at tick 0 and loads no spawn chunks without a player; the self-test allows for
 both.
