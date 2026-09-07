@@ -139,7 +139,7 @@ public final class SelfTest {
             check("new-player give does not double up", count(solo) == 1);
 
             Zombie zombie = new Zombie(server.overworld());
-            Cow cow = new Cow(net.minecraft.world.entity.EntityType.COW, server.overworld());
+            Cow cow = new Cow(net.minecraft.world.entity.EntityTypes.COW, server.overworld());
             QuestEngine.onKill(solo, cow);
             check("a cow is not a zombie", QuestEngine.journal(solo).entry(things).progress.get(0) == 0);
             check("genus matcher: plain zombie is not a harvester", !Trackers.matchesTarget(zombie, "zombiemod:harvester"));
@@ -298,7 +298,7 @@ public final class SelfTest {
 
             // Deadlines: a clock in the past fails the beat on the next poll; with no fall-back, the quest is dropped.
             QuestLog.Entry hf = QuestEngine.journal(solo).entry(ChroniclerIds.of("hot_foot"));
-            hf.deadlineAt = server.overworld().getGameTime() - 1;
+            hf.deadlineAt = Math.max(0L, server.overworld().getGameTime() - 1); // a fresh world is at tick 0, and -1 means no deadline
             check("deadline: clock shows 0:00 when out", QuestEngine.clock(hf.deadlineAt - server.overworld().getGameTime()).equals("0:00"));
             QuestEngine.poll(solo);
             check("deadline: running out abandons a quest with no fall-back", !QuestEngine.journal(solo).isActive(ChroniclerIds.of("hot_foot")));

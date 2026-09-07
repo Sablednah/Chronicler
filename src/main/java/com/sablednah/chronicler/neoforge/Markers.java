@@ -27,6 +27,7 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.phys.Vec3;
 
@@ -115,12 +116,12 @@ public final class Markers {
     }
 
     private static Shown show(ServerPlayer player, ServerLevel level, Vec3 at, String text) {
-        Display.TextDisplay display = EntityType.TEXT_DISPLAY.create(level, EntitySpawnReason.COMMAND);
+        Display.TextDisplay display = EntityTypes.TEXT_DISPLAY.create(level, EntitySpawnReason.COMMAND);
         display.snapTo(at.x, at.y, at.z, 0F, 0F);
         apply(display, level, text);
         if (player.connection != null) {
             player.connection.send(new ClientboundAddEntityPacket(display.getId(), display.getUUID(),
-                    at.x, at.y, at.z, 0F, 0F, EntityType.TEXT_DISPLAY, 0, Vec3.ZERO, 0D));
+                    at.x, at.y, at.z, 0F, 0F, EntityTypes.TEXT_DISPLAY, 0, Vec3.ZERO, 0D));
             sendData(player, display);
         }
         return new Shown(display, text);

@@ -31,7 +31,7 @@ public final class GiverStore extends SavedData {
             .apply(i, GiverStore::new));
 
     public static final SavedDataType<GiverStore> TYPE =
-            new SavedDataType<>("chronicler_givers", GiverStore::new, CODEC, null);
+            new SavedDataType<>(net.minecraft.resources.Identifier.fromNamespaceAndPath("chronicler", "givers"), GiverStore::new, CODEC, null);
 
     private final Map<String, Identifier> byKey;
     /** quest id -> the Cast npcId its data giver placed. */

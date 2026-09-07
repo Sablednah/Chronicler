@@ -27,7 +27,7 @@ public final class FlagStore extends SavedData {
             .apply(i, FlagStore::new));
 
     public static final SavedDataType<FlagStore> TYPE =
-            new SavedDataType<>("chronicler_flags", FlagStore::new, CODEC, null);
+            new SavedDataType<>(net.minecraft.resources.Identifier.fromNamespaceAndPath("chronicler", "flags"), FlagStore::new, CODEC, null);
 
     private static volatile FlagStore cached;
 
