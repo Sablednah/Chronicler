@@ -263,6 +263,63 @@ Standards and LuckPerms both handle.
 the journal. Anything a sibling already owns (karma, money, membership,
 district) is *asked for*, never duplicated.
 
+## NPCs: the Cast plan (agreed with the LegendQuest/StoryTeller session, 2026-09-07)
+
+Sable wants NPC quest givers even with no LegendQuest or StoryTeller present,
+and StoryTeller wants to drive the same NPCs. Neither mod should own NPCs, so
+a **third, dependency-free mod** does — working name **Cast** (StoryTeller's
+word), mod id `cast` — and both soft-depend on it the way everything depends
+on Standards. Name and builder are Sable's call.
+
+**Bodies.** *Human*: a real server entity — a `ServerPlayer` subclass with a
+dummy connection, added with `ServerLevel.addNewPlayer` — that a vanilla
+client renders as a player. Verified in the 1.21.11 sources: the player-info
+packet goes first (`ADD_PLAYER` with `listed=false`, so no tab-list entry; the
+client refuses a player entity it has no info for), then the tracker sends the
+spawn like any entity. Skins need a *signed* textures property, fetched once
+from the session service for whichever real account the skin names and cached
+in SavedData; the client checks the signature, not the wearer. Profile UUID is
+a v3 UUID from the npcId. Display name is a Cast field (profile name when it
+fits 16 chars, else a `text_display` plate with the built-in tag hidden by a
+Cast team). *Mob*: goal-selector mobs only in v1; Cast owns them from spawn and
+rebuilds their goals from its spec. **Brain-driven mobs are refused with a
+message** — Villager, Allay, Armadillo, Axolotl, Breeze, Camel, CopperGolem,
+Creaking, Frog, Goat, HappyGhast, Hoglin, Nautilus, Piglin, PiglinBrute,
+Sniffer, Tadpole, Warden, Zoglin, ZombieNautilus in 21.11 — because a Brain
+ticks outside the goal system and the priority-0 holder-goal trick is a
+silent no-op on them (the LegendQuest session verified this; their villager
+citizens wandered for exactly this reason). Detected at runtime, with that
+list as the self-test fixture, since the list drifts every version.
+
+**Possession stays in StoryTeller.** It must work on wild mobs with Cast
+absent, so it cannot move, and the parking trick must exist in exactly one
+place. Cast gives it `canPossess()`, the real entity, `drive(pos, yaw, pitch)`
+for a human body with no navigation, and `NpcRemovedEvent(npcId, DEATH |
+UNLOAD | REMOVED)` so the camera goes home on every path. `Cast.isBrainDriven`
+is a static both can call; the check may live twice, the parking never does.
+
+**Identity.** `npcId` in `NpcStore` (SavedData; `Identifier` id on 26.x).
+`Cast.byId`, `Npc.isLoaded`, `Cast.isNpc(Entity)`, `Cast.npcAt(ray)` for both
+kinds — StoryTeller's gaze targeting is a ray filtered on `Mob` because an
+un-opped Storyteller cannot use selectors, so a human NPC must be findable
+the same way. `remove(npcId)` is idempotent and works unloaded (StoryTeller's
+undo). Entities materialise on chunk load, despawn on unload, are never saved
+as entities.
+
+**Roles.** `Cast.registerRole(Identifier, handler)`; an NPC carries roles;
+right-click dispatches in order; left-click cancelled unless a role opts in.
+Chronicler registers `chronicler:giver`. **Cast NPCs have no LegendQuest
+character** — StoryTeller's "a named villager, not a character" boundary
+holds; a sheet on an NPC is StoryTeller's attachment, deliberately.
+
+**Traps recorded for the builder** (from the LegendQuest session):
+`EntityType.X` → `EntityTypes.X` on 26.2 only; `npc.Villager` →
+`npc.villager.Villager` on 26.x; ZombieMod's `removeAllGoals` on a re-genused
+mob is unrecoverable (Cast spawns with `EntitySpawnReason.COMMAND` so the roll
+never touches its bodies, and asks ZombieMod to skip `cast:npc`); StoryTeller's
+rotation mirroring in possession is deliberate. Open: StoryTeller possessing a
+Villager is predicted to fight the brain every tick — untested, flagged.
+
 ## ZARP — the first questline, as a test of the design
 
 *Zombie Apocalypse Roleplay*: CityWorld APOCALYPSE style + ZombieMod + the
