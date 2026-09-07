@@ -46,12 +46,14 @@ NAME="$(basename "$INSTANCE")"
 
 [ -d "$MODS" ] || { echo "!! Instance mods folder not found: $MODS" >&2; exit 1; }
 
-# REFUSE if that instance is running. Windows does NOT lock the jar, so the copy
+# REFUSE if that instance is running. The name runs up to the next backslash or quote, NOT the
+# next space: instance folders have spaces in them ("MobHealth - Forge"), and a guard that
+# stops at the space compares "MobHealth" and never refuses anything. Windows does NOT lock the jar, so the copy
 # silently succeeds and the live JVM dies the moment it lazily loads a class it
 # had not touched (NoClassDefFoundError <- ZipException: invalid LOC header).
 RUNNING="$(powershell.exe -NoProfile -Command \
   "Get-CimInstance Win32_Process | Where-Object { \$_.Name -like 'java*' } | ForEach-Object { \
-   \$m=[regex]::Match(\$_.CommandLine,'Instances\\\\([^\\\\\"\s]+)'); if (\$m.Success) { \$m.Groups[1].Value } }" \
+   \$m=[regex]::Match(\$_.CommandLine,'Instances\\\\([^\\\\\"]+)'); if (\$m.Success) { \$m.Groups[1].Value } }" \
   2>/dev/null | tr -d '\r' | sort -u || true)"
 
 if echo "$RUNNING" | grep -qxF "$NAME"; then
