@@ -23,6 +23,13 @@ giver store, so they stay put on restart):
 | **Kit** | +3, -6 | Blood Ties (Immune only) -- and she is the finale's price |
 | **Mags** | -6, 0 | The Board: Cull, Scrap Run, Medicine Run, Night Shift (repeatable) |
 
+The camp is not nailed down: a Storyteller can walk any of the five
+anywhere (`/st cast behave`, or by possessing them), and releasing re-anchors
+the body wherever it ended up. No quest step depends on where a person
+stands -- the marks and offers follow the NPC -- so a GM moving Sarge across
+town moves Sarge's quests with him, and nothing breaks. Only the first
+placement uses the spawn offsets.
+
 One person gives several quests: their mark shows whichever matters to you
 now (`?` on one, `!` on offer, tick when all done), and a right-click offers
 the first you could take. Wake Up has no giver: it is in the journal's On
