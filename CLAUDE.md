@@ -258,16 +258,24 @@ karma triggers to LegendQuest), is in `docs/DESIGN.md`.
 
 ## Versions
 
-Branch per Minecraft version is the decided house pattern (`main` = 1.21.11,
-`mc26.1`, `mc26.2`), docs on `main` only, features cherry-picked forward, jar
-named `chronicler-<ver>+mc<mc>.jar`. Not created yet — do it once step 1 of
-the build order plays, and copy the recipe from ZombieMod's
-`docs/MULTIVERSION.md`. Known 26.x moves that will land here:
-`displayClientMessage` split (isolated in `Feedback`), `SavedDataType` id
-becomes an `Identifier` **and the file moves to a namespaced folder** (a
-migration that copies to the wrong place logs nothing), `ChatFormatting.isFormat`
-gone (already avoided), `EntityType` constants → `EntityTypes`, dyed items via
-`pick(DyeColor)`.
+Branch per Minecraft version is the house pattern: `main` = 1.21.11 (Java 21),
+`mc26.2` = 26.2 on NeoForge 26.2.0.72 (Java 25,
+`/home/sable/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2`), `mc26.1` not
+created yet. Docs on `main` only, features cherry-picked forward, jar named
+`chronicler-<ver>+mc<mc>.jar`; both jars sit in `build/libs` and `newestJar`
+picks siblings by the `+mc` suffix, so the two lines never cross. The 26.2
+branch differs in `gradle.properties` (four lines), `build.gradle` (plugin
+2.0.144, toolchain 25, `gameDirectory = run-mc26.2` so a 1.21.11 world is
+never upgraded in place; it needs its own `eula.txt` and `server.properties`)
+and these bodies: `sendSystemMessage(text, overlay)` for `displayClientMessage`
+(in `Feedback`), `SavedDataType` ids are `Identifier`s (`chronicler:flags`,
+`chronicler:givers`) **and the file moves to a namespaced folder** (a migration
+that copies to the wrong place logs nothing), `EntityTypes.*` for
+`EntityType.*`, `ChatFormatting` is a bare enum so `Feedback` owns the five
+formatting codes. Sibling 26.2 jars: Standards 1.6.0, LegendQuest 2.4.1,
+ZombieMod 3.4.0 (in its `build/libs`), Cast 0.1.0. A fresh 26.2 world starts
+at tick 0 and loads no spawn chunks without a player; the self-test allows for
+both.
 
 ## Releasing
 
