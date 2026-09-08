@@ -14,7 +14,11 @@
       8
     ],
     "yaw": 0.0,
-    "greeting": "&7Fence is electric. Was."
+    "greeting": "&7Fence is electric. Was.",
+    "equipment": {
+      "mainhand": "minecraft:iron_pickaxe",
+      "legs": "minecraft:leather_leggings[dyed_color=4210752]"
+    }
   },
   "stages": [
     {

@@ -103,29 +103,41 @@ public class Chronicler {
         }
     }
 
+    private static boolean mode(net.neoforged.neoforge.common.ModConfigSpec.EnumValue<ChroniclerConfig.ContentMode> value, boolean auto) {
+        try {
+            return switch (value.get()) {
+                case ON -> true;
+                case OFF -> false;
+                case AUTO -> auto;
+            };
+        } catch (IllegalStateException e) {
+            return auto; // config not loaded yet: the auto rule
+        }
+    }
+
+    /** A datapack carried in the jar; the path is from the JAR ROOT, not data/. */
+    private static void builtIn(AddPackFindersEvent event, String path, String title) {
+        event.addPackFinders(Identifier.fromNamespaceAndPath(MODID, path), PackType.SERVER_DATA,
+                net.minecraft.network.chat.Component.literal(title), net.minecraft.server.packs.repository.PackSource.BUILT_IN,
+                true, net.minecraft.server.packs.repository.Pack.Position.TOP);
+    }
+
     private void onAddPackFinders(AddPackFindersEvent event) {
         if (event.getPackType() == PackType.SERVER_DATA) {
             event.addRepositorySource(consumer -> consumer.accept(YamlConfigPack.makePack()));
             // The ZARP questline rides in the jar as a datapack: on when ZombieMod is here (or told to be),
             // otherwise listed and off, so /datapack enable can still turn it on by hand.
-            boolean on;
-            try {
-                on = switch (ChroniclerConfig.ZARP.get()) {
-                    case ON -> true;
-                    case OFF -> false;
-                    case AUTO -> net.neoforged.fml.ModList.get().isLoaded("zombiemod");
-                };
-            } catch (IllegalStateException e) {
-                on = net.neoforged.fml.ModList.get().isLoaded("zombiemod"); // config not loaded yet: the auto rule
-            }
+            boolean zombies = net.neoforged.fml.ModList.get().isLoaded("zombiemod");
+            boolean zarp = mode(ChroniclerConfig.ZARP, zombies);
+            // The sample prologue steps aside when ZARP is on, so a ZARP world does not offer "5 oak logs" beside
+            // "8 logs". The self-test drives the prologue, so -Pselftest keeps it regardless.
+            boolean prologue = mode(ChroniclerConfig.PROLOGUE, !zarp) || Boolean.getBoolean("chronicler.selftest");
             // Registered only when on: a world remembers an enabled pack by name, so merely marking it
             // optional would leave it running in any world that once had it. Absent, the world drops it.
-            if (on) {
-                event.addPackFinders(Identifier.fromNamespaceAndPath(MODID, "datapacks/zarp") /* the path is from the jar root, not data/ */,
-                        PackType.SERVER_DATA, net.minecraft.network.chat.Component.literal("Chronicler: ZARP"),
-                        net.minecraft.server.packs.repository.PackSource.BUILT_IN, true, net.minecraft.server.packs.repository.Pack.Position.TOP);
-            }
-            LOGGER.info("Chronicler: ZARP questline datapack is {}", on ? "on" : "off (content.zarp)");
+            if (zarp) builtIn(event, "datapacks/zarp", "Chronicler: ZARP");
+            if (prologue) builtIn(event, "datapacks/prologue", "Chronicler: Prologue");
+            LOGGER.info("Chronicler: ZARP questline datapack is {}; the sample prologue is {}",
+                    zarp ? "on" : "off (content.zarp)", prologue ? "on" : "off (content.prologue)");
         }
     }
 }

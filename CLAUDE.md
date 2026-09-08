@@ -195,6 +195,8 @@ neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEc
 api/Quests           the door for other mods (StoryTeller): offer / accept / flags / registries
 yaml/                YAML -> JSON pack
 data/QuestItem       chronicler:item registry; marked stacks built at use time; QuestItemLoot function
+datapacks/prologue/  the sample prologue, a built-in pack (content.prologue: auto = on unless ZARP is on;
+                     -Pselftest forces it because the self-test drives it)
 datapacks/zarp/      the ZARP questline, a built-in pack (AddPackFindersEvent; path is from the JAR ROOT,
                      not data/); registered only when content.zarp says so, because a world remembers
                      an enabled pack by name and would keep running it

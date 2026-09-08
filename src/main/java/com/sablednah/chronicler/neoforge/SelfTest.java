@@ -178,12 +178,19 @@ public final class SelfTest {
             Markers.EXTRA_VIEWERS.add(solo);
             Givers.tickMarkers(server);
             String giverKey = GiverStore.key(server.overworld(), here);
-            check("a mark is sent to the player near the op-placed giver", Markers.shownTo(solo.getUUID()) == 1);
+            check("a mark is sent to the player near the op-placed giver", Markers.shownTo(solo.getUUID()) >= 1
+                    && !Markers.textShownTo(solo.getUUID(), giverKey).isEmpty());
             check("the mark says 'available' before accepting", Markers.textShownTo(solo.getUUID(), giverKey)
                     .equals(com.sablednah.chronicler.ChroniclerConfig.GIVER_MARKER_TEXT.get()));
             // The four oak logs are still in the pack, so accepting completes it on the spot.
             check("giver block: first click offers, does not accept", Givers.onUseBlock(solo, server.overworld(), here)
                     && !QuestEngine.journal(solo).isActive(firstSteps) && !QuestEngine.journal(solo).isComplete(firstSteps));
+            var breakGiver = new net.neoforged.neoforge.event.level.BlockEvent.BreakEvent(server.overworld(), here, server.overworld().getBlockState(here), solo);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(breakGiver);
+            check("giver block: breaking it is refused", breakGiver.isCanceled());
+            var breakOther = new net.neoforged.neoforge.event.level.BlockEvent.BreakEvent(server.overworld(), here.above(3), server.overworld().getBlockState(here.above(3)), solo);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(breakOther);
+            check("giver block: breaking any other block is not", !breakOther.isCanceled());
             check("giver block: second click accepts (and the logs finish it)", Givers.onUseBlock(solo, server.overworld(), here)
                     && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));
             Givers.tickMarkers(server);
@@ -195,7 +202,7 @@ public final class SelfTest {
             check("giver block: a plain block is not a giver", !Givers.onUseBlock(solo, server.overworld(), here.above(40)));
             check("giver store removes", store.remove(server.overworld(), here) && Givers.questAt(server.overworld(), here).isEmpty());
             Givers.tickMarkers(server);
-            check("the mark goes with the giver", Markers.shownTo(solo.getUUID()) == 0);
+            check("the mark goes with the giver", Markers.textShownTo(solo.getUUID(), giverKey).isEmpty());
             Markers.EXTRA_VIEWERS.remove(solo);
             QuestEngine.journal(solo).clear();
             QuestEngine.journal(solo).complete(firstSteps);
@@ -548,6 +555,7 @@ public final class SelfTest {
                     var quests = GiverStore.get(server).questsAtNpc(id);
                     check("zarp: Okafor gives her whole storyline (" + quests.size() + " quests)", quests.size() >= 6
                             && quests.contains(Identifier.fromNamespaceAndPath("zarp", "before_dark")));
+                    check("zarp: Okafor holds her potion", Npcs.provider().get().equipment(server, id).getOrDefault("mainhand", "").startsWith("minecraft:potion"));
                     var placed = Npcs.provider().get().byId(server, id);
                     check("zarp: her NPC is within 12 blocks of spawn", placed.map(pl -> pl.pos().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(spawn)) < 40).orElse(false));
                 });
@@ -556,6 +564,10 @@ public final class SelfTest {
             }
             // The main line is gated on flags and requirements, not reachable from a fresh journal.
             var pz = QuestEngine.quest(server, Identifier.fromNamespaceAndPath("zarp", "patient_zero")).get().value();
+            var fireAt = GiverStore.get(server).placedBlock(Identifier.fromNamespaceAndPath("zarp", "wake_up"));
+            check("zarp: the campfire was dropped near spawn", fireAt.isPresent()
+                    && fireAt.get().distManhattan(spawn) < 8 && level.getBlockState(fireAt.get()).is(net.minecraft.world.level.block.Blocks.CAMPFIRE));
+            check("zarp: the campfire gives Wake Up", fireAt.flatMap(f -> Givers.questAt(level, f)).map(q -> q.getPath().equals("wake_up")).orElse(false));
             check("zarp: the finale is locked until the sample is kept", !QuestEngine.available(solo, Identifier.fromNamespaceAndPath("zarp", "patient_zero"), pz));
             check("zarp: wake up is available to a fresh journal", QuestEngine.available(solo, Identifier.fromNamespaceAndPath("zarp", "wake_up"),
                     QuestEngine.quest(server, Identifier.fromNamespaceAndPath("zarp", "wake_up")).get().value()));

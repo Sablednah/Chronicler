@@ -62,6 +62,24 @@ public final class QuestEvents {
         }
     }
 
+    /** A giver block is furniture, not loot: it stays unless an admin sneaks through it. */
+    @SubscribeEvent
+    static void onBreak(net.neoforged.neoforge.event.level.BlockEvent.BreakEvent event) {
+        if (!(event.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) return;
+        if (!ChroniclerConfig.GIVER_PROTECT.get()) return;
+        if (Givers.questAt(level, event.getPos()).isEmpty()) return;
+        if (event.getPlayer() instanceof ServerPlayer p && p.isShiftKeyDown() && ChroniclerPermissions.isAdmin(p.createCommandSourceStack())) return;
+        event.setCanceled(true);
+        if (event.getPlayer() instanceof ServerPlayer p) Feedback.actionBar(p, Lang.get("msg.giver.protected"));
+    }
+
+    @SubscribeEvent
+    static void onExplode(net.neoforged.neoforge.event.level.ExplosionEvent.Detonate event) {
+        if (!(event.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) return;
+        if (!ChroniclerConfig.GIVER_PROTECT.get()) return;
+        event.getAffectedBlocks().removeIf(pos -> Givers.questAt(level, pos).isPresent());
+    }
+
     @SubscribeEvent
     static void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
         Markers.clear(event.getServer());

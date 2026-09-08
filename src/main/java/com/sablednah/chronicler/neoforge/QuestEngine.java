@@ -119,6 +119,32 @@ public final class QuestEngine {
         return Math.max(0, at + quest.cooldown() * 1000L - System.currentTimeMillis());
     }
 
+    /**
+     * Why a quest is not open, said the way the family says things: the story
+     * first ({@code locked} from the file, or a plain sentence), then what it
+     * really means, in grey brackets, so nobody has to guess what "not yet" is.
+     * A quest with a placed NPC has the NPC say the story line.
+     */
+    public static void explainLocked(ServerPlayer player, Identifier id, Quest quest) {
+        MinecraftServer server = player.level().getServer();
+        QuestLog log = journal(player);
+        List<String> why = new ArrayList<>();
+        List<String> missing = new ArrayList<>();
+        for (Identifier r : quest.requires()) {
+            if (!log.isComplete(r)) missing.add(quest(server, r).map(h -> h.value().name()).orElse(r.toString()));
+        }
+        if (!missing.isEmpty()) why.add(Lang.fmt("cond.requires", "quests", String.join(Lang.get("cond.list_join"), missing)));
+        why.addAll(unmet(player, quest));
+        String story = quest.locked().orElseGet(() -> Lang.fmt("msg.locked.story", "name", quest.name()));
+        boolean spoken = false;
+        if (Npcs.available() && quest.giver().orElse(null) instanceof com.sablednah.chronicler.data.GiverTypes.NpcGiver) {
+            var npc = GiverStore.get(server).placedFor(id).filter(n -> Npcs.provider().get().byId(server, n).isPresent());
+            if (npc.isPresent()) { Npcs.provider().get().say(server, npc.get(), story, 12.0); spoken = true; }
+        }
+        if (!spoken) Feedback.chat(player, story);
+        if (!why.isEmpty()) Feedback.chat(player, Lang.fmt("msg.locked.why", "why", String.join(Lang.get("cond.join"), why)));
+    }
+
     /** The availability lines a player does not meet, for the refusal message. */
     public static List<String> unmet(ServerPlayer player, Quest quest) {
         return quest.availability().map(a -> Conditions.unmet(player, a)).orElse(List.of());

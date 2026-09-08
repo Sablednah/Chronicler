@@ -16,7 +16,11 @@
       0
     ],
     "yaw": 90.0,
-    "greeting": "&7Board's behind me. Pays on delivery. Nothing else is guaranteed."
+    "greeting": "&7Board's behind me. Pays on delivery. Nothing else is guaranteed.",
+    "equipment": {
+      "mainhand": "minecraft:writable_book",
+      "offhand": "minecraft:lantern"
+    }
   },
   "objectives": [
     {
