@@ -361,11 +361,8 @@ public final class ChroniclerCommands {
         Identifier id = resolveQuest(ctx).key().identifier();
         var refusal = QuestEngine.accept(player, id);
         if (refusal.isEmpty()) return 1;
-        if (refusal.get() == QuestEngine.Refusal.CONDITIONS) {
-            Feedback.chat(player, Lang.get("msg.refuse.conditions"));
-            QuestEngine.quest(player.level().getServer(), id).ifPresent(h ->
-                    QuestEngine.unmet(player, h.value()).forEach(line ->
-                            Feedback.chat(player, Lang.fmt("msg.refuse.condition_line", "line", line))));
+        if (refusal.get() == QuestEngine.Refusal.CONDITIONS || refusal.get() == QuestEngine.Refusal.LOCKED) {
+            QuestEngine.quest(player.level().getServer(), id).ifPresent(h -> QuestEngine.explainLocked(player, id, h.value()));
             return 0;
         }
         if (refusal.get() == QuestEngine.Refusal.COOLDOWN) {

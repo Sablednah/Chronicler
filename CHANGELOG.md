@@ -20,6 +20,11 @@
   `replayable` chapters, `/quest replay <chapter>`; a progress percentage in
   `/quests` and the journal, moved only by quests that `counts`.
 - Availability by LegendQuest `race` and `class`.
+- Giver blocks are protected from breaking and explosions (`givers.protect`); admins sneak to break.
+- Refusals are story first (`locked` on the quest, spoken by its NPC), mechanics in grey brackets.
+- Position givers `near_spawn` with a placed `block` and `decor`: ZARP's campfire, which gives Wake Up.
+- The sample prologue is a built-in pack (`content.prologue`), off when ZARP is on.
+- NPC givers can be dressed (`equipment` on the giver, via Cast); the ZARP camp is.
 - NPC givers `near_spawn` on any seed, one NPC giving several quests (`of`),
   per-player marks that show the player's own state.
 - `mc26.2` branch: NeoForge 26.2.0.72, Java 25.

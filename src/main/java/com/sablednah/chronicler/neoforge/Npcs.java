@@ -32,6 +32,10 @@ public final class Npcs {
         /** Make sure the NPC carries the giver role (an op may have spawned it bare). */
         void ensureGiverRole(MinecraftServer server, UUID id);
         void say(MinecraftServer server, UUID id, String text, double radius);
+        /** Dress the NPC: slot name -> item string as /give takes it. Says nothing about failures beyond the log. */
+        default void equip(MinecraftServer server, UUID id, java.util.Map<String, String> equipment) {}
+        /** What the NPC wears, by slot name. */
+        default java.util.Map<String, String> equipment(MinecraftServer server, UUID id) { return java.util.Map.of(); }
         boolean remove(MinecraftServer server, UUID id);
     }
 

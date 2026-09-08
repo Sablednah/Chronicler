@@ -46,7 +46,9 @@ with a giver is *found* by walking up to it. Every giver floats a mark over it, 
 each player privately so it shows *their* state: `!` on offer, `?` while on
 it, a tick once done, nothing while locked (`givers.markerText` /
 `markerActive` / `markerComplete` / `markerLocked`, `&` colours). A right-click makes the offer, with Accept and Info buttons; a
-second click within `givers.secondClickSeconds` accepts.
+second click within `givers.secondClickSeconds` accepts. A giver block refuses
+to break and is skipped by explosions (`givers.protect`); an admin sneaking
+while breaking it still can.
 
 With [Cast](https://github.com/Sablednah/Cast) installed, givers can be
 **people**: `giver: { type: npc, name: "Dr Okafor", skin: Sablednah, at: [x, y, z], greeting: "You look like you can hold a torch." }`
@@ -146,16 +148,28 @@ override `scope`. Every word a player sees lives in
   in `custom_data`, so renaming one in an anvil changes nothing. `{ type: item,
   quest_item: zarp:insulin }` rewards one; loot tables use `{ "function":
   "chronicler:quest_item", "id": "zarp:ember_heart" }`; `/chronicler item give|list`.
+- **Position givers** can stand `near_spawn: [dx, dz]` too, and place their own
+  `block` (a campfire) with `decor` around it, once, remembered -- a camp on any
+  seed, offering the first quest on approach. A fixed seed or a schematic can
+  replace it later without touching the quest.
 - **NPC givers** can stand `near_spawn: [dx, dz]` instead of `at`, dropped onto
   the surface on any seed, and `of: zarp:the_camp` makes one person give
   several quests (their mark shows whichever matters now). `npc_say` and
   `npc_remove` effects make them speak or leave (`quest:` picks whose NPC).
+  `equipment: { mainhand: "minecraft:potion[potion_contents={potion:'minecraft:healing'}]", head: minecraft:iron_helmet }`
+  dresses them (slots mainhand, offhand, head, chest, legs, feet; items as
+  `/give` takes them), applied on placement and re-applied on restart if the
+  file changes; `/cast equip` does it by hand.
 - **Availability** takes `race: [immune]` and `class: [doc, combat_medic]`
   (LegendQuest ids, bare or namespaced; any of the list), beside `level_min`.
 - **Endings.** A stage or a choice with `ending: cure` records an ending for
   the chapter; `end: true` on a stage finishes the quest there. A chapter with
   `replayable: true` can be started over with `/quest replay <chapter>` --
   completions, cooldowns and the chapter's own player flags go, endings stay.
+- **`locked`** on a quest is the in-character line for a refusal ("Kit shakes
+  her head. 'They'd look at you.'"), spoken by the NPC if there is one; what it
+  really means follows in grey brackets, generated from the requirements and
+  conditions ("finish The Camp; be Immune"). Without `locked`, a plain sentence.
 - **Progress.** `/quests` and the journal show a percentage. Only quests that
   count move it: `counts: true|false`, unsaid means "main chapter and not
   repeatable", so bounties and side lines never hold anyone short of 100%.
@@ -167,7 +181,9 @@ on whenever ZombieMod is installed (`content.zarp = auto | on | off`). Five
 people at a camp near spawn, four acts, a finale with three endings, a side
 chapter that remembers what you refused, and a bounty board. It plays without
 CityWorld or LegendQuest (lots have vanilla fallbacks; class and race quests
-simply do not offer). `docs/ZARP.md` is the walkthrough.
+simply do not offer). `docs/ZARP.md` is the walkthrough. The sample fantasy
+prologue is a built-in pack too (`content.prologue`), on unless ZARP is, so a
+ZARP world is not offered two kinds of log run.
 
 ## Commands
 

@@ -19,7 +19,10 @@
       -6
     ],
     "yaw": 200.0,
-    "greeting": "&7You're new. Everybody's new. You smell like me."
+    "greeting": "&7You're new. Everybody's new. You smell like me.",
+    "equipment": {
+      "head": "minecraft:leather_helmet[dyed_color=11546150]"
+    }
   },
   "stages": [
     {
@@ -103,5 +106,6 @@
       "standing": "camp",
       "delta": 5
     }
-  ]
+  ],
+  "locked": "&fKit looks you over and shakes her head. 'You're not like me. They'd look at you.'"
 }

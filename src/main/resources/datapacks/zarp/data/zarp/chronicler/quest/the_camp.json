@@ -14,7 +14,11 @@
       0
     ],
     "yaw": 180.0,
-    "greeting": "&7You're upright. Good. We can use upright."
+    "greeting": "&7You're upright. Good. We can use upright.",
+    "equipment": {
+      "mainhand": "minecraft:potion[potion_contents={potion:'minecraft:healing'}]",
+      "chest": "minecraft:leather_chestplate[dyed_color=16777215]"
+    }
   },
   "stages": [
     {
@@ -91,5 +95,6 @@
       "player": true,
       "value": true
     }
-  ]
+  ],
+  "locked": "&fOkafor: 'Wake up properly first. Then we'll talk.'"
 }

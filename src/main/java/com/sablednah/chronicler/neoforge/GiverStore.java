@@ -110,6 +110,21 @@ public final class GiverStore extends SavedData {
         try { return Optional.of(java.util.UUID.fromString(v)); } catch (IllegalArgumentException e) { return Optional.empty(); }
     }
 
+    /** Where a data giver's block was dropped near spawn, once. */
+    public Optional<BlockPos> placedBlock(Identifier quest) {
+        String v = placed.get("block:" + quest);
+        if (v == null) return Optional.empty();
+        try {
+            String[] p = v.split(",");
+            return Optional.of(new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2])));
+        } catch (RuntimeException e) { return Optional.empty(); }
+    }
+
+    public void setPlacedBlock(Identifier quest, BlockPos pos) {
+        placed.put("block:" + quest, pos.getX() + "," + pos.getY() + "," + pos.getZ());
+        setDirty();
+    }
+
     public void setPlacedFor(Identifier quest, java.util.UUID npcId) {
         placed.put(quest.toString(), npcId.toString());
         setDirty();

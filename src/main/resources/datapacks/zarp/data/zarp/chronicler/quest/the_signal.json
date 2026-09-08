@@ -14,7 +14,12 @@
       -6
     ],
     "yaw": 45.0,
-    "greeting": "&7Radio's been dead since day three. I don't like quiet."
+    "greeting": "&7Radio's been dead since day three. I don't like quiet.",
+    "equipment": {
+      "head": "minecraft:iron_helmet",
+      "mainhand": "minecraft:crossbow",
+      "chest": "minecraft:chainmail_chestplate"
+    }
   },
   "stages": [
     {
@@ -122,5 +127,6 @@
       "item": "minecraft:compass",
       "count": 1
     }
-  ]
+  ],
+  "locked": "&fSarge: 'Okafor hasn't cleared you. Talk to her.'"
 }

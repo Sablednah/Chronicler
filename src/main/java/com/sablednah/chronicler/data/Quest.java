@@ -51,11 +51,24 @@ public record Quest(
         List<Stage> stages,
         Optional<Availability> availability,
         int cooldown,
-        Optional<Boolean> counts) {
+        Extras extras) {
+
+    /** The fields past the sixteen a codec group can hold, inline in the same object. */
+    public record Extras(Optional<Boolean> counts, Optional<String> locked) {
+        public static final com.mojang.serialization.MapCodec<Extras> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.BOOL.optionalFieldOf("counts").forGetter(Extras::counts),
+                Codec.STRING.optionalFieldOf("locked").forGetter(Extras::locked))
+                .apply(i, Extras::new));
+        public static final Extras NONE = new Extras(Optional.empty(), Optional.empty());
+    }
+
+    public Optional<Boolean> counts() { return extras.counts(); }
+    /** The in-character line for a refusal. */
+    public Optional<String> locked() { return extras.locked(); }
 
     /** Does finishing this move the progress figure? Unsaid: main-chapter quests that are not repeatable. */
     public boolean countsToward(Chapter chapter) {
-        return counts.orElse(chapter.main() && !repeatable);
+        return extras.counts().orElse(chapter.main() && !repeatable);
     }
 
 
@@ -96,6 +109,6 @@ public record Quest(
             Stage.CODEC.listOf().optionalFieldOf("stages", List.of()).forGetter(Quest::stages),
             Availability.CODEC.optionalFieldOf("availability").forGetter(Quest::availability),
             Codec.INT.optionalFieldOf("cooldown", 0).forGetter(Quest::cooldown),
-            Codec.BOOL.optionalFieldOf("counts").forGetter(Quest::counts))
+            Extras.MAP_CODEC.forGetter(Quest::extras))
             .apply(i, Quest::new));
 }

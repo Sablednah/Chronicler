@@ -200,6 +200,7 @@ public final class Lang {
         def("msg.giver.offer.reward", "  &a+ &f{line}");
         def("msg.giver.offer.prompt", "&7Right-click again to accept, or:");
         def("msg.giver.set_npc", "{prefix}&7They now offer &f{name}&7.");
+        def("msg.giver.protected", "&7That block gives a {term.quest}. It stays. (Admins: sneak to break it.)");
         def("msg.giver.npc_idle", "{prefix}&7They have nothing for you right now.");
         def("giver.npc", "{name}");
         def("msg.giver.removed", "{prefix}&7That block offers nothing now.");
@@ -234,6 +235,7 @@ public final class Lang {
         def("rew.flag_world_clear", "The world forgets: {flag}");
         def("obj.flag", "Wait for: {flag}");
         def("obj.ritual", "Perform the rite at the {block}");
+        def("giver.near_spawn", "near where you first woke");
         def("obj.ritual_item", "Use {item} on the {block}");
         def("obj.wait", "Wait {time}");
         def("rew.npc_say", "Someone has something to say.");
@@ -272,6 +274,11 @@ public final class Lang {
         def("msg.reward.no_character", "  &7({line}, but nothing on this server keeps character sheets)");
         def("msg.reward.no_class", "  &7({line}, but you have no class yet -- pick one and it will count next time)");
         def("msg.refuse.conditions", "{prefix}&7Not yet:");
+        def("msg.locked.story", "&f{name} is not open to you yet.");
+        def("msg.locked.why", "&8({why})");
+        def("cond.requires", "finish {quests}");
+        def("cond.join", "; ");
+        def("cond.list_join", ", ");
         def("msg.refuse.condition_line", "  &7- &f{line}");
         def("cond.no_character", "needs a character system this server does not have");
         def("cond.no_reputation", "needs a reputation system this server does not have");
