@@ -58,7 +58,11 @@
           "type": "spawn",
           "count": 3,
           "radius": 8,
-          "entity": "minecraft:zombie"
+          "entity": "minecraft:zombie",
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          },
+          "genus": "zombiemod:walker"
         },
         {
           "type": "title",

@@ -22,13 +22,14 @@
   },
   "stages": [
     {
-      "text": "Wood for the fires. Eight logs. Any tree still standing.",
+      "text": "Wood for the fires. Eight logs, any tree still standing, into Okafor's hands.",
       "objectives": [
         {
-          "type": "collect",
+          "type": "deliver",
           "tag": "minecraft:logs",
           "count": 8,
-          "consume": true
+          "to": "zarp:the_camp",
+          "label": "Bring Okafor 8 logs"
         }
       ],
       "on_complete": [
@@ -58,7 +59,11 @@
           "type": "spawn",
           "count": 4,
           "radius": 10,
-          "entity": "minecraft:zombie"
+          "entity": "minecraft:zombie",
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          },
+          "genus": "zombiemod:walker"
         }
       ],
       "on_complete": [

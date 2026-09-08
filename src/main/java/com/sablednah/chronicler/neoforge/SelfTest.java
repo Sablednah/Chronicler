@@ -568,6 +568,23 @@ public final class SelfTest {
             check("zarp: the campfire was dropped near spawn", fireAt.isPresent()
                     && fireAt.get().distManhattan(spawn) < 8 && level.getBlockState(fireAt.get()).is(net.minecraft.world.level.block.Blocks.CAMPFIRE));
             check("zarp: the campfire gives Wake Up", fireAt.flatMap(f -> Givers.questAt(level, f)).map(q -> q.getPath().equals("wake_up")).orElse(false));
+            // A delivery: two insulin to Okafor's quest. Held but not handed over is nothing; the click hands it over.
+            var bd = Identifier.fromNamespaceAndPath("zarp", "before_dark");
+            log.complete(Identifier.fromNamespaceAndPath("zarp", "wake_up")); log.complete(Identifier.fromNamespaceAndPath("zarp", "the_camp"));
+            if (com.sablednah.chronicler.api.Quests.accept(solo, bd).isEmpty()) {
+                var bde = log.entry(bd);
+                bde.jump(2, List.of(2)); // the return beat
+                solo.getInventory().add(com.sablednah.chronicler.data.QuestItem.build(registries, Identifier.fromNamespaceAndPath("zarp", "insulin"), 2));
+                QuestEngine.poll(solo);
+                check("deliver: holding the items is not delivering them", log.entry(bd) != null && log.entry(bd).stage == 2 && log.entry(bd).progress.get(0) == 0);
+                check("deliver: a click on the wrong giver does nothing", !QuestEngine.onDeliver(solo, Identifier.fromNamespaceAndPath("zarp", "the_signal")) && log.entry(bd).stage == 2);
+                check("deliver: a click on Okafor hands them over and finishes the quest", QuestEngine.onDeliver(solo, Identifier.fromNamespaceAndPath("zarp", "the_camp")) && log.isComplete(bd));
+                check("deliver: the insulin is gone", Trackers.count(solo, st -> com.sablednah.chronicler.data.QuestItem.is(st, Identifier.fromNamespaceAndPath("zarp", "insulin"))) == 0);
+                check("deliver: the objective names her", QuestEngine.quest(server, bd).get().value().beats().get(2).objectives().getFirst().describe().contains("Okafor"));
+            } else {
+                check("deliver: before_dark could be accepted for the test", false);
+            }
+            log.clear();
             check("zarp: the finale is locked until the sample is kept", !QuestEngine.available(solo, Identifier.fromNamespaceAndPath("zarp", "patient_zero"), pz));
             check("zarp: wake up is available to a fresh journal", QuestEngine.available(solo, Identifier.fromNamespaceAndPath("zarp", "wake_up"),
                     QuestEngine.quest(server, Identifier.fromNamespaceAndPath("zarp", "wake_up")).get().value()));

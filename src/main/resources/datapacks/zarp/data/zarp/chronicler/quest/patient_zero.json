@@ -18,19 +18,19 @@
   },
   "stages": [
     {
-      "text": "Bring her the flame and the shard.",
+      "text": "Put the flame and the shard in her hands.",
       "objectives": [
         {
-          "type": "collect",
+          "type": "deliver",
           "quest_item": "zarp:living_flame",
           "count": 1,
-          "consume": true
+          "to": "zarp:the_camp"
         },
         {
-          "type": "collect",
+          "type": "deliver",
           "quest_item": "zarp:void_shard",
           "count": 1,
-          "consume": true
+          "to": "zarp:the_camp"
         }
       ],
       "on_complete": [
