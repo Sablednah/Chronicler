@@ -263,9 +263,12 @@ karma triggers to LegendQuest), is in `docs/DESIGN.md`.
 ## Versions
 
 Branch per Minecraft version is the house pattern: `main` = 1.21.11 (Java 21),
-`mc26.2` = 26.2 on NeoForge 26.2.0.72 (Java 25,
-`/home/sable/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2`), `mc26.1` not
-created yet. Docs on `main` only, features cherry-picked forward, jar named
+`mc26.1` = 26.1.2 on NeoForge 26.1.2.95 and `mc26.2` = 26.2 on NeoForge
+26.2.0.72 (both Java 25, `/home/sable/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2`).
+26.1 carries the 26.2 drift below EXCEPT the entity-type constants, which it
+still has (`EntityType.TEXT_DISPLAY`); its run dir is `run-mc26.1.2`, and its
+ZombieMod jar (`zombiemod-3.4.0+mc26.1.2.jar`) is copied from the CurseForge
+`26.1.2` instance into `libs/`. Docs on `main` only, features cherry-picked forward, jar named
 `chronicler-<ver>+mc<mc>.jar`; both jars sit in `build/libs` and `newestJar`
 picks siblings by the `+mc` suffix, so the two lines never cross. The 26.2
 branch differs in `gradle.properties` (four lines), `build.gradle` (plugin
