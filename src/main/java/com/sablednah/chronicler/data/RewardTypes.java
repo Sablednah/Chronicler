@@ -110,10 +110,12 @@ public final class RewardTypes {
      * no import and quietly does nothing without ZombieMod).
      */
     public record Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius,
-            Optional<String> name, Optional<String> tag, double health, java.util.Map<String, String> equipment) implements RewardSpec {
+            Optional<String> name, Optional<String> tag, double health, java.util.Map<String, String> equipment,
+            boolean override) implements RewardSpec {
         public Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius) {
-            this(entity, genus, count, radius, Optional.empty(), Optional.empty(), 0D, java.util.Map.of());
+            this(entity, genus, count, radius, Optional.empty(), Optional.empty(), 0D, java.util.Map.of(), false);
         }
+        /** The genus dresses first; {@code equipment} fills the slots it left empty, or every slot with {@code override}. */
         /** {@code equipment}: slot -> item as /give takes it; a leather cap keeps a daytime zombie alive. */
         /**
          * {@code genus} needs ZombieMod; when it is absent and {@code entity} is
@@ -130,7 +132,8 @@ public final class RewardTypes {
                 Codec.STRING.optionalFieldOf("name").forGetter(Spawn::name),
                 Codec.STRING.optionalFieldOf("tag").forGetter(Spawn::tag),
                 Codec.DOUBLE.optionalFieldOf("health", 0D).forGetter(Spawn::health),
-                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("equipment", java.util.Map.of()).forGetter(Spawn::equipment))
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("equipment", java.util.Map.of()).forGetter(Spawn::equipment),
+                Codec.BOOL.optionalFieldOf("override", false).forGetter(Spawn::override))
                 .apply(i, Spawn::new));
 
         @Override public MapCodec<Spawn> codec() { return MAP_CODEC; }
