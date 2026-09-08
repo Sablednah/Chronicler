@@ -38,11 +38,12 @@
       ]
     },
     {
-      "text": "Harvesters. They take pieces. Take them first, and take samples.",
+      "text": "The wards are still full. Patients in masks, and Harvesters that take pieces. Take samples.",
       "objectives": [
         {
           "type": "kill",
           "target": [
+            "zarp:patient",
             "zombiemod:harvester",
             "minecraft:zombie_villager",
             "minecraft:zombie"
@@ -63,15 +64,28 @@
       "on_enter": [
         {
           "type": "spawn",
-          "count": 5,
+          "genus": "zarp:patient",
+          "entity": "minecraft:zombie",
+          "count": 3,
           "radius": 10,
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          }
+        },
+        {
+          "type": "spawn",
           "genus": "zombiemod:harvester",
-          "entity": "minecraft:zombie_villager"
+          "entity": "minecraft:zombie_villager",
+          "count": 2,
+          "radius": 10,
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          }
         },
         {
           "type": "title",
-          "title": "&cHarvesters",
-          "subtitle": "&7They take pieces."
+          "title": "&cThe ward",
+          "subtitle": "&7Patients, and things that take pieces."
         }
       ]
     },
@@ -178,13 +192,13 @@
       ]
     },
     {
-      "text": "Hand over the tissue samples.",
+      "text": "Put the tissue samples in Okafor's hands.",
       "objectives": [
         {
-          "type": "collect",
+          "type": "deliver",
           "quest_item": "zarp:tissue_sample",
           "count": 3,
-          "consume": true
+          "to": "zarp:the_camp"
         }
       ]
     }

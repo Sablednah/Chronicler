@@ -20,6 +20,7 @@
   `replayable` chapters, `/quest replay <chapter>`; a progress percentage in
   `/quests` and the journal, moved only by quests that `counts`.
 - Availability by LegendQuest `race` and `class`.
+- `deliver` objective: hand items to a giver by clicking (or standing near); `spawn` takes `equipment`. ZARP's returns are deliveries and its daytime zombies wear caps.
 - Giver blocks are protected from breaking and explosions (`givers.protect`); admins sneak to break.
 - Refusals are story first (`locked` on the quest, spoken by its NPC), mechanics in grey brackets.
 - Position givers `near_spawn` with a placed `block` and `decor`: ZARP's campfire, which gives Wake Up.

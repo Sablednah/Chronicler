@@ -96,6 +96,23 @@ public final class Trackers {
             }
         });
 
+        register(ObjectiveTypes.Deliver.class, new Tracker<ObjectiveTypes.Deliver>() {
+            @Override
+            public OptionalInt poll(ServerPlayer player, ObjectiveTypes.Deliver spec) {
+                if (spec.radius() <= 0) return OptionalInt.empty(); // click-only: the engine counts the hand-over
+                var at = Givers.positionOf(player.level().getServer(), spec.to());
+                if (at.isEmpty() || !at.get().level().equals(player.level().dimension().identifier())
+                        || player.position().distanceToSqr(at.get().pos()) > spec.radius() * spec.radius()) return OptionalInt.of(0);
+                int held = count(player, matcher(spec));
+                return OptionalInt.of(held >= spec.count() ? spec.count() : 0);
+            }
+            @Override
+            public int settle(ServerPlayer player, ObjectiveTypes.Deliver spec, int amount) {
+                if (amount <= 0) return 0;
+                return player.getInventory().clearOrCountMatchingItems(matcher(spec), amount, player.inventoryMenu.getCraftSlots());
+            }
+        });
+
         // A ritual is an event (the click), counted by the engine; nothing to poll.
         register(ObjectiveTypes.Ritual.class, new Tracker<ObjectiveTypes.Ritual>() {});
 
@@ -187,6 +204,12 @@ public final class Trackers {
         if (id == null) return false;
         if (id.equals(BuiltInRegistries.ENTITY_TYPE.getKey(victim.getType()))) return true;
         return victim.getPersistentData().getString("zombiemod:genus").map(target::equals).orElse(false);
+    }
+
+    public static Predicate<ItemStack> matcher(ObjectiveTypes.Deliver spec) {
+        if (spec.questItem().isPresent()) return st -> QuestItem.is(st, spec.questItem().get());
+        if (spec.tag().isPresent()) { var key = TagKey.create(Registries.ITEM, spec.tag().get()); return st -> !st.isEmpty() && st.is(key); }
+        return st -> !st.isEmpty() && spec.item().equals(BuiltInRegistries.ITEM.getKey(st.getItem()));
     }
 
     /** Entity tags a {@code spawn} effect writes and a {@code kill} objective's {@code tag} reads. */

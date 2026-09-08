@@ -67,7 +67,10 @@
           "count": 4,
           "radius": 8,
           "genus": "zombiemod:runner",
-          "entity": "minecraft:zombie"
+          "entity": "minecraft:zombie",
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          }
         },
         {
           "type": "title",

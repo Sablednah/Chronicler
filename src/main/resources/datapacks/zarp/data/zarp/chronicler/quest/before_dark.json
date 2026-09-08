@@ -53,6 +53,7 @@
         {
           "type": "kill",
           "target": [
+            "zarp:patient",
             "minecraft:zombie",
             "minecraft:husk",
             "minecraft:drowned",
@@ -64,9 +65,13 @@
       "on_enter": [
         {
           "type": "spawn",
+          "genus": "zarp:patient",
+          "entity": "minecraft:zombie",
           "count": 3,
           "radius": 6,
-          "entity": "minecraft:zombie"
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          }
         },
         {
           "type": "title",
@@ -88,13 +93,13 @@
       ]
     },
     {
-      "text": "Back to Okafor with the insulin.",
+      "text": "Back to Okafor with the insulin. Put it in her hands.",
       "objectives": [
         {
-          "type": "collect",
+          "type": "deliver",
           "quest_item": "zarp:insulin",
           "count": 2,
-          "consume": true
+          "to": "zarp:the_camp"
         }
       ],
       "on_complete": [
@@ -134,12 +139,16 @@
       "on_enter": [
         {
           "type": "spawn",
+          "genus": "zarp:patient",
+          "entity": "minecraft:zombie",
           "count": 1,
           "radius": 4,
-          "entity": "minecraft:zombie",
           "name": "&7What Was Left of Priya",
           "tag": "priya",
-          "health": 30
+          "health": 30,
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          }
         }
       ],
       "on_complete": [

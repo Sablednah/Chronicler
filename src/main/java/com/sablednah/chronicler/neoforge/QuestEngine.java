@@ -457,6 +457,39 @@ public final class QuestEngine {
         return false;
     }
 
+    /**
+     * The player clicked the giver of quest {@code giverQuest} (a person or a block).
+     * Every active deliver objective addressed to it either completes (enough in
+     * hand) or says how short they are. True when a delivery was in play, so the
+     * giver does not also make its offer over the top.
+     */
+    public static boolean onDeliver(ServerPlayer player, Identifier giverQuest) {
+        QuestLog log = journal(player);
+        if (log.activeCount() == 0) return false;
+        MinecraftServer server = player.level().getServer();
+        boolean any = false;
+        for (Identifier id : List.copyOf(log.activeView().keySet())) {
+            var holder = quest(server, id);
+            QuestLog.Entry e = log.entry(id);
+            if (holder.isEmpty() || e == null) continue;
+            Quest quest = holder.get().value();
+            List<ObjectiveSpec> objectives = currentObjectives(quest, e);
+            for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
+                if (!(objectives.get(n) instanceof ObjectiveTypes.Deliver d) || !d.to().equals(giverQuest) || e.objectiveDone(n)) continue;
+                any = true;
+                int held = Trackers.count(player, Trackers.matcher(d));
+                if (held >= d.count()) {
+                    set(player, id, quest, n, d.count(), true);
+                } else {
+                    Feedback.chat(player, Lang.fmt("msg.deliver.short", "who", Givers.nameOf(giverQuest), "count", d.count(),
+                            "item", d.questItem().map(QuestItem::displayName).orElseGet(() -> Lang.pretty(d.tag().map(Identifier::getPath).orElse(d.item().getPath()))), "held", held));
+                }
+                if (journal(player).entry(id) == null || journal(player).entry(id).stage != e.stage) break;
+            }
+        }
+        return any;
+    }
+
     private static boolean blockMatches(ServerLevel level, BlockPos pos, String want) {
         var state = level.getBlockState(pos);
         if (want.startsWith("#")) {

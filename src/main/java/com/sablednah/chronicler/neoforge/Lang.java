@@ -238,6 +238,9 @@ public final class Lang {
         def("giver.near_spawn", "near where you first woke");
         def("obj.ritual_item", "Use {item} on the {block}");
         def("obj.wait", "Wait {time}");
+        def("obj.deliver", "Bring {count} x {item} to {who}");
+        def("msg.deliver.short", "&7{who} wants {count} x {item}; you have {held}.");
+        def("giver.someone", "the one who asked");
         def("rew.npc_say", "Someone has something to say.");
         def("rew.npc_remove", "Someone will not be there any more.");
         def("rew.ending", "An ending.");

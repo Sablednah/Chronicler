@@ -138,6 +138,11 @@ override `scope`. Every word a player sees lives in
   entry (`offset: [x, y, z]`, `block`) is in place, holding `item` if named
   (`consume: true` takes it). A click with the pattern wrong says which block
   is missing where. The beat's `on_complete` is where the boss comes out.
+- **`deliver`** is the hand-over: `{ type: deliver, quest_item: zarp:insulin, count: 2, to: zarp:the_camp }`
+  completes when the player clicks the giver of quest `to` holding the items
+  (or, with `radius`, stands near them); the items go then. A bare `collect` is
+  satisfied in your pack, which is not the same thing. `spawn` takes `equipment`
+  (a leather cap keeps a daytime zombie alive).
 - **`wait`** (`seconds`) lets time pass from entering the beat -- "come back later".
 - **`collect`** takes `tag: minecraft:logs` or `quest_item: zarp:insulin`.
 - **`place`** takes `any: [ { lot: Hospital }, { structure: "#minecraft:village" } ]`
