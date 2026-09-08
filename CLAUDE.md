@@ -191,7 +191,9 @@ neoforge/Givers      offers near a block or in a kind of place; GiverStore = op-
 neoforge/Journal     the written book; FlagStore = world flags (SavedData, cached for off-thread)
 neoforge/Party|Money|Rep|Sheet|Lots   neutral bridges, "nothing here" without a sibling
 neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEconomy,
-                     StandardsReputation, LegendQuestCharacter, CityWorldLots, ZombieModConditions
+                     StandardsReputation, LegendQuestCharacter, CityWorldLots, ZombieModConditions,
+                     ZombieModSpawns (Genera bridge: spawn a genus and get the Mob back -- never via the
+                     command, which hands nothing back and whose mob no lookup can find this tick)
 api/Quests           the door for other mods (StoryTeller): offer / accept / flags / registries
 yaml/                YAML -> JSON pack
 data/QuestItem       chronicler:item registry; marked stacks built at use time; QuestItemLoot function

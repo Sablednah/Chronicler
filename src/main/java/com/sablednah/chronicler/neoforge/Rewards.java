@@ -191,24 +191,25 @@ public final class Rewards {
                 int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
                 var at = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                         new net.minecraft.core.BlockPos(x, 0, z));
-                if (r.genus().isPresent() && net.neoforged.fml.ModList.get().isLoaded("zombiemod")) {
-                    // ZombieMod's own command, so no import and a clean nothing without it.
-                    level.getServer().getCommands().performPrefixedCommand(
-                            level.getServer().createCommandSourceStack().withSuppressedOutput(),
-                            "zombiemod spawn " + r.genus().get() + " " + at.getX() + " " + at.getY() + " " + at.getZ());
-                    lastSpawned++;
-                    // Tag and name whatever just appeared there, so a kill objective's tag still matches.
-                    if (r.tag().isPresent() || r.name().isPresent()) {
-                        var box = new net.minecraft.world.phys.AABB(at).inflate(1.5D);
-                        for (var mob : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box,
-                                m -> m.tickCount <= 1 && m.getPersistentData().getString("zombiemod:genus").isPresent())) {
-                            decorate(mob, r);
+                if (r.genus().isPresent() && Genera.available()) {
+                    Identifier genusId = Identifier.tryParse(r.genus().get());
+                    var mob = genusId == null ? java.util.Optional.<net.minecraft.world.entity.Mob>empty()
+                            : Genera.spawn(level, genusId, new net.minecraft.world.phys.Vec3(at.getX() + 0.5D, at.getY(), at.getZ() + 0.5D));
+                    if (mob.isPresent()) {
+                        mob.get().setPersistenceRequired();
+                        if (r.health() > 0) {
+                            var attr = mob.get().getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+                            if (attr != null) { attr.setBaseValue(r.health()); mob.get().setHealth((float) r.health()); }
                         }
+                        decorate(mob.get(), r); // after ZombieMod: the genus dressed it, we fill the gaps
+                        lastSpawned++;
+                        continue;
                     }
-                    continue;
+                    // an unknown genus, or a base that is not a mob: fall through to the stand-in
                 }
                 if (r.genus().isPresent() && r.entity().isEmpty()) {
-                    Chronicler.LOGGER.warn("Chronicler: quest {} spawns genus {} but ZombieMod is not installed and no entity stands in", questId, r.genus().get());
+                    Chronicler.LOGGER.warn("Chronicler: quest {} spawns genus {} but {} and no entity stands in", questId, r.genus().get(),
+                            Genera.available() ? "it did not spawn" : "ZombieMod is not installed");
                     return;
                 }
                 var type = r.entity().flatMap(id -> BuiltInRegistries.ENTITY_TYPE.get(id));
@@ -255,6 +256,7 @@ public final class Rewards {
                 net.minecraft.world.entity.EquipmentSlot slot;
                 try { slot = net.minecraft.world.entity.EquipmentSlot.byName(slotName.trim().toLowerCase(java.util.Locale.ROOT)); }
                 catch (IllegalArgumentException e) { Chronicler.LOGGER.warn("Chronicler: spawn names unknown slot '{}'", slotName); return; }
+                if (!r.override() && !living.getItemBySlot(slot).isEmpty()) return; // the genus got there first, and that is the point
                 try {
                     var parsed = new net.minecraft.commands.arguments.item.ItemParser(entity.level().registryAccess())
                             .parse(new com.mojang.brigadier.StringReader(item.trim()));
