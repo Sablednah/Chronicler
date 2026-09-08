@@ -25,8 +25,9 @@ giver store, so they stay put on restart):
 
 One person gives several quests: their mark shows whichever matters to you
 now (`?` on one, `!` on offer, tick when all done), and a right-click offers
-the first you could take. Wake Up has no giver: it is in the journal's On
-Offer page from the first join (`/quest accept zarp:wake_up`).
+the first you could take. Wake Up is given by the campfire in the middle of the camp (placed once with a
+barrel, a crafting table, a hay bale and two lanterns), offered on approach;
+it is also in the journal's On Offer page from the first join.
 
 ## The main line
 

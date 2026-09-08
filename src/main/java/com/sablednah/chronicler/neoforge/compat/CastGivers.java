@@ -52,6 +52,12 @@ public final class CastGivers {
                     }
                 });
             }
+            @Override public void equip(MinecraftServer server, UUID id, java.util.Map<String, String> equipment) {
+                equipment.forEach((slot, item) -> Cast.equip(server, id, slot, item));
+            }
+            @Override public java.util.Map<String, String> equipment(MinecraftServer server, UUID id) {
+                return Cast.equipment(server, id);
+            }
             @Override public void say(MinecraftServer server, UUID id, String text, double radius) {
                 Cast.say(server, id, text, radius);
             }

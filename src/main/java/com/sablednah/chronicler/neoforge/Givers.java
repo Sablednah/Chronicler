@@ -44,6 +44,8 @@ public final class Givers {
     /** Data givers, indexed once per server start (registries are frozen). */
     private static final List<Entry> DATA = new ArrayList<>();
     private static final Map<String, Identifier> DATA_BLOCKS = new HashMap<>();
+    /** Where each data position giver actually is (fixed, or dropped near spawn and remembered). */
+    private static final Map<Identifier, BlockPos> RESOLVED = new HashMap<>();
     /** Per player: quest -> game time of the last offer, so a giver does not nag. */
     private static final Map<UUID, Map<Identifier, Long>> OFFERED = new HashMap<>();
 
@@ -56,7 +58,11 @@ public final class Givers {
             DATA.add(new Entry(h.key().identifier(), h.value(), g));
             if (g instanceof GiverTypes.Position p) {
                 Identifier dim = p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
-                DATA_BLOCKS.put(dim + "|" + p.at().getX() + "," + p.at().getY() + "," + p.at().getZ(), h.key().identifier());
+                BlockPos at = resolve(server, h.key().identifier(), p, dim);
+                if (at != null) {
+                    RESOLVED.put(h.key().identifier(), at);
+                    DATA_BLOCKS.put(dim + "|" + at.getX() + "," + at.getY() + "," + at.getZ(), h.key().identifier());
+                }
             }
             if (g instanceof GiverTypes.NpcGiver n && n.of().isEmpty()) placeNpc(server, h.key().identifier(), n);
         }));
@@ -65,6 +71,51 @@ public final class Givers {
             if (e.giver() instanceof GiverTypes.NpcGiver n && n.of().isPresent()) shareNpc(server, e.id(), n.of().get());
         }
         OFFERED.clear();
+    }
+
+    /** Where a position giver stands, placing its block and decor the first time a near-spawn one is seen. */
+    private static BlockPos resolve(MinecraftServer server, Identifier questId, GiverTypes.Position p, Identifier dim) {
+        ServerLevel level = server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, dim));
+        if (p.at().isPresent()) {
+            if (level != null && p.block().isPresent()) placeBlock(level, p.at().get(), p.block().get(), questId);
+            return p.at().get();
+        }
+        if (level == null) return null;
+        GiverStore store = GiverStore.get(server);
+        Optional<BlockPos> known = store.placedBlock(questId);
+        if (known.isPresent()) {
+            if (p.block().isPresent() && level.isLoaded(known.get())) placeBlock(level, known.get(), p.block().get(), questId);
+            return known.get();
+        }
+        var spawn = server.overworld().getRespawnData().globalPos().pos();
+        int x = spawn.getX() + p.nearSpawn().get().get(0), z = spawn.getZ() + p.nearSpawn().get().get(1);
+        BlockPos at = surface(level, x, z);
+        p.block().ifPresent(b -> placeBlock(level, at, b, questId));
+        for (GiverTypes.Position.Decor d : p.decor()) {
+            BlockPos column = surface(level, at.getX() + d.offset().get(0), at.getZ() + d.offset().get(2));
+            placeBlock(level, column.above(d.offset().get(1)), d.block(), questId);
+        }
+        store.setPlacedBlock(questId, at);
+        Chronicler.LOGGER.info("Chronicler: placed the giver block for {} at {}", questId, at);
+        return at;
+    }
+
+    private static BlockPos surface(ServerLevel level, int x, int z) {
+        level.getChunk(x >> 4, z >> 4); // generate it, or the heightmap answers for air
+        return level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
+    }
+
+    private static void placeBlock(ServerLevel level, BlockPos pos, String block, Identifier questId) {
+        Identifier id = Identifier.tryParse(block.contains(":") ? block : "minecraft:" + block);
+        var holder = id == null ? Optional.<net.minecraft.core.Holder.Reference<net.minecraft.world.level.block.Block>>empty()
+                : net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(id);
+        if (holder.isEmpty()) {
+            Chronicler.LOGGER.warn("Chronicler: giver of {} names unknown block '{}'", questId, block);
+            return;
+        }
+        var state = holder.get().value().defaultBlockState();
+        if (state.isAir() || level.getBlockState(pos).is(holder.get().value())) return;
+        level.setBlockAndUpdate(pos, state);
     }
 
     /** This quest is given by the NPC of another quest. */
@@ -93,6 +144,7 @@ public final class Givers {
         if (existing.isPresent()) {
             cast.ensureGiverRole(server, existing.get());
             store.setNpc(existing.get(), questId);
+            if (!n.equipment().isEmpty()) cast.equip(server, existing.get(), n.equipment());
             return;
         }
         Identifier dim = n.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
@@ -112,6 +164,7 @@ public final class Givers {
                 : cast.spawnHuman(level, pos, n.yaw(), n.name(), n.skin());
         store.setPlacedFor(questId, id);
         store.setNpc(id, questId);
+        if (!n.equipment().isEmpty()) cast.equip(server, id, n.equipment());
         Chronicler.LOGGER.info("Chronicler: placed NPC giver '{}' for {} at {}", n.name(), questId, at);
     }
 
@@ -194,7 +247,7 @@ public final class Givers {
         MinecraftServer server = player.level().getServer();
         for (Entry e : DATA) {
             if (!QuestEngine.available(player, e.id(), e.quest())) continue;
-            if (present(player, e.giver())) offer(player, e.id(), e.quest(), e.giver().describe());
+            if (present(player, e.id(), e.giver())) offer(player, e.id(), e.quest(), e.giver().describe());
         }
         GiverStore store = GiverStore.get(server);
         if (store.size() > 0) {
@@ -213,13 +266,15 @@ public final class Givers {
         }
     }
 
-    private static boolean present(ServerPlayer player, GiverSpec giver) {
+    private static boolean present(ServerPlayer player, Identifier id, GiverSpec giver) {
         if (giver instanceof GiverTypes.NpcGiver) return false; // the person is the presence; they offer on right-click
         if (giver instanceof GiverTypes.Position p) {
             if (p.dimension().isPresent() && !p.dimension().get().equals(player.level().dimension().identifier())) return false;
             if (p.dimension().isEmpty() && !player.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD)) return false;
             double r = p.radius();
-            return player.blockPosition().distSqr(p.at()) <= r * r;
+            BlockPos at = RESOLVED.get(id);
+            if (at == null) at = p.at().orElse(null);
+            return at != null && player.blockPosition().distSqr(at) <= r * r;
         }
         if (giver instanceof GiverTypes.InPlace ip) {
             return Places.isAt(player, ip.place());
@@ -272,12 +327,11 @@ public final class Givers {
         }
         var why = QuestEngine.refusal(player, id, quest);
         if (why.isPresent()) {
-            Feedback.chat(player, Lang.get(switch (why.get()) {
-                case ALREADY_COMPLETE -> "msg.giver.done";
-                default -> "msg.giver.locked";
-            }));
-            if (why.get() == QuestEngine.Refusal.CONDITIONS) {
-                QuestEngine.unmet(player, quest).forEach(line -> Feedback.chat(player, Lang.fmt("msg.refuse.condition_line", "line", line)));
+            switch (why.get()) {
+                case ALREADY_COMPLETE -> Feedback.chat(player, Lang.get("msg.giver.done"));
+                case COOLDOWN -> Feedback.chat(player, Lang.fmt("msg.refuse.cooldown", "time", QuestEngine.clock(QuestEngine.cooldownLeft(log, id, quest) / 50L)));
+                case LOCKED, CONDITIONS -> QuestEngine.explainLocked(player, id, quest);
+                default -> Feedback.chat(player, Lang.get("msg.giver.locked"));
             }
             return true;
         }

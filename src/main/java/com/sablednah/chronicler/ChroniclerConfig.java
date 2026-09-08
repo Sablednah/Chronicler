@@ -24,6 +24,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.DoubleValue GIVER_RADIUS;
     public static final ModConfigSpec.IntValue GIVER_SECOND_CLICK_SECONDS;
     public static final ModConfigSpec.BooleanValue GIVER_MARKERS;
+    public static final ModConfigSpec.BooleanValue GIVER_PROTECT;
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_TEXT;
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_ACTIVE;
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_COMPLETE;
@@ -75,6 +76,10 @@ public final class ChroniclerConfig {
                 .comment("A right-click on a giver makes the offer; a second click within this many",
                         "seconds accepts it (so does the Accept button). 0 accepts on the first click.")
                 .defineInRange("secondClickSeconds", 20, 0, 600);
+        GIVER_PROTECT = BUILDER
+                .comment("Giver blocks refuse to break and are skipped by explosions.",
+                        "An admin sneaking while breaking one still can.")
+                .define("protect", true);
         GIVER_MARKERS = BUILDER
                 .comment("Float a mark over every giver (a block, an op-placed block, an NPC).",
                         "Sent to each player privately, so it shows THEIR state; vanilla clients see it.")
@@ -100,6 +105,10 @@ public final class ChroniclerConfig {
                 .comment("The Zombie Apocalypse Roleplay questline, built in as a datapack.",
                         "auto = on when ZombieMod is installed; on / off force it. Applies on restart.")
                 .defineEnum("zarp", ContentMode.AUTO);
+        PROLOGUE = BUILDER
+                .comment("The built-in fantasy prologue (First Steps, Night Watch, The Beacon...).",
+                        "auto = on unless ZARP is on; on / off force it. Applies on restart.")
+                .defineEnum("prologue", ContentMode.AUTO);
         BUILDER.pop();
 
         BUILDER.comment("Party quests").push("party");
@@ -114,6 +123,7 @@ public final class ChroniclerConfig {
     }
 
     public static final ModConfigSpec.EnumValue<ContentMode> ZARP;
+    public static final ModConfigSpec.EnumValue<ContentMode> PROLOGUE;
 
     public enum ContentMode { AUTO, ON, OFF }
 

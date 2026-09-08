@@ -1,6 +1,7 @@
 package com.sablednah.chronicler.data;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.mojang.serialization.Codec;
@@ -22,19 +23,43 @@ public final class GiverTypes {
      * within {@code radius} hears the offer; right-clicking the block accepts.
      * {@code label} is what the player is told ("Dr Okafor's desk").
      */
-    public record Position(BlockPos at, Optional<Identifier> dimension, double radius, Optional<String> label)
-            implements GiverSpec {
-        public static final MapCodec<Position> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-                BlockPos.CODEC.fieldOf("at").forGetter(Position::at),
+    public record Position(Optional<BlockPos> at, Optional<List<Integer>> nearSpawn, Optional<Identifier> dimension,
+            double radius, Optional<String> label, Optional<String> block, List<Decor> decor) implements GiverSpec {
+        /**
+         * {@code at} is a fixed block; {@code near_spawn: [dx, dz]} is an offset from the
+         * world spawn, dropped onto the surface the first time the server sees the quest
+         * and remembered. {@code block} is placed there if it is not there already, and
+         * {@code decor} ({@code offset: [dx, dy, dz]}, {@code block}) is set around it,
+         * each column on its own surface -- a campfire and a few crates make a camp on
+         * any seed. Air in {@code block} means "place nothing".
+         */
+        public record Decor(List<Integer> offset, String block) {
+            public static final Codec<Decor> CODEC = RecordCodecBuilder.create(i -> i.group(
+                    Codec.INT.listOf(3, 3).fieldOf("offset").forGetter(Decor::offset),
+                    Codec.STRING.fieldOf("block").forGetter(Decor::block))
+                    .apply(i, Decor::new));
+        }
+        public static final MapCodec<Position> MAP_CODEC = RecordCodecBuilder.<Position>mapCodec(i -> i.group(
+                BlockPos.CODEC.optionalFieldOf("at").forGetter(Position::at),
+                Codec.INT.listOf(2, 2).optionalFieldOf("near_spawn").forGetter(Position::nearSpawn),
                 Identifier.CODEC.optionalFieldOf("dimension").forGetter(Position::dimension),
                 Codec.DOUBLE.optionalFieldOf("radius", 4.0D).forGetter(Position::radius),
-                Codec.STRING.optionalFieldOf("label").forGetter(Position::label))
-                .apply(i, Position::new));
+                Codec.STRING.optionalFieldOf("label").forGetter(Position::label),
+                Codec.STRING.optionalFieldOf("block").forGetter(Position::block),
+                Decor.CODEC.listOf().optionalFieldOf("decor", List.of()).forGetter(Position::decor))
+                .apply(i, Position::new)).validate(p -> p.at().isEmpty() && p.nearSpawn().isEmpty()
+                        ? com.mojang.serialization.DataResult.error(() -> "a position giver needs 'at' or 'near_spawn'")
+                        : com.mojang.serialization.DataResult.success(p));
+
+        public Position(BlockPos at, Optional<Identifier> dimension, double radius, Optional<String> label) {
+            this(Optional.of(at), Optional.empty(), dimension, radius, label, Optional.empty(), List.of());
+        }
 
         @Override public MapCodec<Position> codec() { return MAP_CODEC; }
         @Override public String describe() {
             return label.map(l -> Lang.fmt("giver.position_label", "label", l))
-                    .orElseGet(() -> Lang.fmt("giver.position", "x", at.getX(), "y", at.getY(), "z", at.getZ()));
+                    .orElseGet(() -> at.map(a -> Lang.fmt("giver.position", "x", a.getX(), "y", a.getY(), "z", a.getZ()))
+                            .orElseGet(() -> Lang.get("giver.near_spawn")));
         }
     }
 
@@ -61,7 +86,7 @@ public final class GiverTypes {
      */
     public record NpcGiver(String name, Optional<String> skin, Optional<Identifier> entity,
             Optional<BlockPos> at, Optional<List<Integer>> nearSpawn, Optional<Identifier> dimension, float yaw,
-            Optional<String> greeting, Optional<Identifier> of) implements GiverSpec {
+            Optional<String> greeting, Optional<Identifier> of, Map<String, String> equipment) implements GiverSpec {
         /**
          * {@code at} is a fixed block; {@code near_spawn: [dx, dz]} is an offset
          * from the world spawn, dropped onto the surface the first time the
@@ -78,7 +103,8 @@ public final class GiverTypes {
                 Identifier.CODEC.optionalFieldOf("dimension").forGetter(NpcGiver::dimension),
                 Codec.FLOAT.optionalFieldOf("yaw", 0F).forGetter(NpcGiver::yaw),
                 Codec.STRING.optionalFieldOf("greeting").forGetter(NpcGiver::greeting),
-                ChroniclerIds.CODEC.optionalFieldOf("of").forGetter(NpcGiver::of))
+                ChroniclerIds.CODEC.optionalFieldOf("of").forGetter(NpcGiver::of),
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("equipment", Map.of()).forGetter(NpcGiver::equipment))
                 .apply(i, NpcGiver::new)).validate(n -> n.at().isEmpty() && n.nearSpawn().isEmpty() && n.of().isEmpty()
                         ? com.mojang.serialization.DataResult.error(() -> "an npc giver needs 'at' or 'near_spawn'")
                         : com.mojang.serialization.DataResult.success(n));
