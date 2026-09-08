@@ -46,7 +46,7 @@
       ]
     },
     {
-      "text": "The unit is still in there. Most of it.",
+      "text": "The unit is still in there. Most of it. Bring their tags back to Sarge.",
       "objectives": [
         {
           "type": "kill",
@@ -64,10 +64,10 @@
           }
         },
         {
-          "type": "collect",
+          "type": "deliver",
           "quest_item": "zarp:dog_tags",
           "count": 2,
-          "consume": true
+          "to": "zarp:the_signal"
         }
       ],
       "on_enter": [
@@ -76,7 +76,10 @@
           "count": 5,
           "radius": 8,
           "genus": "zombiemod:vault_dweller",
-          "entity": "minecraft:zombie"
+          "entity": "minecraft:zombie",
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          }
         }
       ],
       "on_complete": [

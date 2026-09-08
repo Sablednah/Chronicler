@@ -184,6 +184,8 @@ public final class Givers {
         }
         if (id.isEmpty()) for (Identifier q : quests) if (QuestEngine.journal(player).isActive(q)) { id = Optional.of(q); break; }
         if (id.isEmpty()) id = Optional.of(quests.getFirst());
+        // A hand-over to this person, for any of the quests they give, comes before any offer.
+        for (Identifier q : quests) if (QuestEngine.onDeliver(player, q)) return true;
         Optional<Holder.Reference<Quest>> holder = QuestEngine.quest(server, id.get());
         if (holder.isEmpty()) {
             Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));
@@ -240,6 +242,36 @@ public final class Givers {
         }
         BlockPos pos = parse(key);
         return pos == null ? null : new Vec3(pos.getX() + 0.5, pos.getY() + 1.6, pos.getZ() + 0.5);
+    }
+
+    /** A giver's place in the world, for "stand near" deliveries. */
+    public record Where(Identifier level, Vec3 pos) {}
+
+    public static Optional<Where> positionOf(MinecraftServer server, Identifier questId) {
+        BlockPos fixed = RESOLVED.get(questId);
+        if (fixed != null) {
+            Identifier dim = QuestEngine.quest(server, questId).map(h -> h.value().giver().orElse(null))
+                    .map(g -> g instanceof GiverTypes.Position p ? p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier()) : null)
+                    .orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
+            return Optional.of(new Where(dim, Vec3.atCenterOf(fixed)));
+        }
+        if (!Npcs.available()) return Optional.empty();
+        return GiverStore.get(server).placedFor(questId).flatMap(id -> Npcs.provider().get().byId(server, id))
+                .map(p -> new Where(p.dimension(), p.pos()));
+    }
+
+    /** What to call a giver in text: the NPC's name, a block's label, or "the one who asked". */
+    public static String nameOf(Identifier questId) {
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return Lang.get("giver.someone");
+        return QuestEngine.quest(server, questId).flatMap(h -> h.value().giver()).map(g -> {
+            if (g instanceof GiverTypes.NpcGiver n) {
+                if (n.of().isPresent()) return nameOf(n.of().get());
+                return Feedback.colored(n.name()).getString();
+            }
+            if (g instanceof GiverTypes.Position p) return p.label().orElse(Lang.get("giver.someone"));
+            return Lang.get("giver.someone");
+        }).orElse(Lang.get("giver.someone"));
     }
 
     /** The tracker tick: offer whatever this player is standing near or in. */
@@ -300,6 +332,7 @@ public final class Givers {
     public static boolean onUseBlock(ServerPlayer player, ServerLevel level, BlockPos pos) {
         Optional<Identifier> id = questAt(level, pos);
         if (id.isEmpty()) return false;
+        if (QuestEngine.onDeliver(player, id.get())) return true;
         Optional<Holder.Reference<Quest>> holder = QuestEngine.quest(level.getServer(), id.get());
         if (holder.isEmpty()) {
             Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));

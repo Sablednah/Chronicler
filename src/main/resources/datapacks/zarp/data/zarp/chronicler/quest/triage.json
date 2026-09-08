@@ -45,9 +45,13 @@
       "on_enter": [
         {
           "type": "spawn",
+          "genus": "zarp:patient",
+          "entity": "minecraft:zombie",
           "count": 3,
           "radius": 10,
-          "entity": "minecraft:zombie"
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          }
         }
       ],
       "on_complete": [

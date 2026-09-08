@@ -250,6 +250,23 @@ public final class Rewards {
     private static void decorate(net.minecraft.world.entity.Entity entity, RewardTypes.Spawn r) {
         r.name().ifPresent(n -> { entity.setCustomName(Feedback.colored(n)); entity.setCustomNameVisible(true); });
         r.tag().ifPresent(t -> entity.addTag(Trackers.TAG_PREFIX + t));
+        if (!r.equipment().isEmpty() && entity instanceof net.minecraft.world.entity.LivingEntity living) {
+            r.equipment().forEach((slotName, item) -> {
+                net.minecraft.world.entity.EquipmentSlot slot;
+                try { slot = net.minecraft.world.entity.EquipmentSlot.byName(slotName.trim().toLowerCase(java.util.Locale.ROOT)); }
+                catch (IllegalArgumentException e) { Chronicler.LOGGER.warn("Chronicler: spawn names unknown slot '{}'", slotName); return; }
+                try {
+                    var parsed = new net.minecraft.commands.arguments.item.ItemParser(entity.level().registryAccess())
+                            .parse(new com.mojang.brigadier.StringReader(item.trim()));
+                    ItemStack stack = new ItemStack(parsed.item(), 1);
+                    stack.applyComponents(parsed.components());
+                    living.setItemSlot(slot, stack);
+                    if (living instanceof net.minecraft.world.entity.Mob mob) mob.setDropChance(slot, 0F);
+                } catch (Exception e) {
+                    Chronicler.LOGGER.warn("Chronicler: spawn cannot equip '{}': {}", item, e.getMessage());
+                }
+            });
+        }
     }
 
     /** The placed NPC that gives a quest, if Cast placed one. */

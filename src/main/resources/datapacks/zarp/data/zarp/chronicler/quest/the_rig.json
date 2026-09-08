@@ -53,7 +53,7 @@
       ]
     },
     {
-      "text": "The Diver has the fuel cell. Had.",
+      "text": "The Diver has the fuel cell. Had. Bring it back to Sarge.",
       "objectives": [
         {
           "type": "kill",
@@ -69,10 +69,10 @@
           }
         },
         {
-          "type": "collect",
+          "type": "deliver",
           "quest_item": "zarp:fuel_cell",
           "count": 1,
-          "consume": true
+          "to": "zarp:the_signal"
         }
       ],
       "on_complete": [

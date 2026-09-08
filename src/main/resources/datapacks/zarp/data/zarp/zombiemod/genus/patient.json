@@ -1,0 +1,60 @@
+{
+  "name": "Patient",
+  "description": "Still in the gown. Still in the mask. The mask did not help, and it is not helping you either.",
+  "base": "minecraft:zombie",
+  "weight": 30,
+  "health": 20.0,
+  "damage": 4.0,
+  "speed": 0.95,
+  "follow_range": 20.0,
+  "armor_color": 15132390,
+  "head": {
+    "properties": {
+      "textures": [
+        "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMWZhOGUyNWQxYmJiNDg5Yjc4OTgzZWIzYTExODQ0YzlhNzQ0YzJhZGY1ODdkNjEzYzU3OTdiMzI2NjE0ODUwOSJ9fX0="
+      ]
+    }
+  },
+  "equipment": {
+    "chest": "minecraft:leather_chestplate",
+    "drop_chance": 0.0
+  },
+  "spawn": {
+    "conditions": [
+      {
+        "type": "zombiemod:dimension",
+        "dimensions": [
+          "minecraft:overworld"
+        ]
+      },
+      {
+        "type": "zombiemod:city_lot",
+        "classes": [
+          "Hospital",
+          "HospitalDept"
+        ]
+      }
+    ]
+  },
+  "clear_goals": false,
+  "abilities": [
+    {
+      "type": "zombiemod:effect",
+      "interval": 60,
+      "chance": 0.3,
+      "target": "nearby_players",
+      "effect": "minecraft:weakness",
+      "duration": 100,
+      "radius": 3.0
+    },
+    {
+      "type": "zombiemod:particles",
+      "interval": 20,
+      "particle": "minecraft:white_ash",
+      "count": 2
+    }
+  ],
+  "bounty": 4.0,
+  "xp": 8,
+  "_comment": "Head: the 'Masked Zombie' surgical mask ZombieMod tried on the Nightstalker (commit de76d12 took it off, because a surgical mask says nothing about hunting in the dark). It says everything about a hospital."
+}

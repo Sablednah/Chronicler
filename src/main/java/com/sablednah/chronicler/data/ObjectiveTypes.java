@@ -91,6 +91,33 @@ public final class ObjectiveTypes {
         }
     }
 
+    /**
+     * Hand {@code count} of an item ({@code quest_item}, or a plain {@code item})
+     * to the giver of quest {@code to}: right-click that person or block while
+     * holding them, or -- with a {@code radius} -- just stand near. Nothing
+     * counts until the hand-over, and the items go on completion. This is what
+     * "bring it back" means; a bare {@code collect} is satisfied in your pack.
+     */
+    public record Deliver(Optional<Identifier> questItem, Identifier item, Optional<Identifier> tag, int count, Identifier to, double radius,
+            Optional<String> label) implements ObjectiveSpec {
+        public static final MapCodec<Deliver> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                ChroniclerIds.CODEC.optionalFieldOf("quest_item").forGetter(Deliver::questItem),
+                Identifier.CODEC.optionalFieldOf("item", Identifier.withDefaultNamespace("air")).forGetter(Deliver::item),
+                Identifier.CODEC.optionalFieldOf("tag").forGetter(Deliver::tag),
+                Codec.INT.optionalFieldOf("count", 1).forGetter(Deliver::count),
+                ChroniclerIds.CODEC.fieldOf("to").forGetter(Deliver::to),
+                Codec.DOUBLE.optionalFieldOf("radius", 0D).forGetter(Deliver::radius),
+                Codec.STRING.optionalFieldOf("label").forGetter(Deliver::label))
+                .apply(i, Deliver::new));
+        @Override public MapCodec<Deliver> codec() { return MAP_CODEC; }
+        @Override public int required() { return count; }
+        @Override public String describe() {
+            return label.orElseGet(() -> Lang.fmt("obj.deliver", "count", count,
+                    "item", questItem.map(QuestItem::displayName).orElseGet(() -> Lang.pretty(tag.map(Identifier::getPath).orElse(item.getPath()))),
+                    "who", com.sablednah.chronicler.neoforge.Givers.nameOf(to)));
+        }
+    }
+
     /** Let time pass: {@code seconds} of game time from entering the beat. Polled; latching. */
     public record Wait(int seconds, Optional<String> label) implements ObjectiveSpec {
         public static final MapCodec<Wait> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -195,6 +222,7 @@ public final class ObjectiveTypes {
         TYPES.register("visit", Visit.MAP_CODEC);
         TYPES.register("ritual", Ritual.MAP_CODEC);
         TYPES.register("wait", Wait.MAP_CODEC);
+        TYPES.register("deliver", Deliver.MAP_CODEC);
     }
 
     /** Touch the class so the static block has run before a codec is asked for. */

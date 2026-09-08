@@ -90,6 +90,20 @@ To jump a requirement chain, `/chronicler reset <you>` clears the journal;
 there is no "complete by hand" command yet, so play the acts in order or edit
 `requires` in a copy of the pack under `config/chronicler/quests/`.
 
+## Genera the pack adds
+
+| Genus | Where | What |
+|---|---|---|
+| **Patient** | Hospital lots, and the hospital quests | A zombie in a gown and a surgical mask (the surgical-mask head ZombieMod once tried on the Nightstalker and rightly took off); weakness on touch. |
+| **Ashwalker** | The Nether once Act III begins | A burning husk that keeps walking. |
+| **Fortress Warden** | Spawned by Living Fire at a fortress | Mini-boss; drops the Ember Heart. |
+| **The Cinder** | Called by the Crucible rite | An infected blaze, boss bar; drops the Living Flame. |
+| **Voidling** | The End once Act IV begins | Never alive, so cannot be dead. |
+| **The Hollow Knight** | Spawned by Never Lived at an End city | Mini-boss; drops the Void Shard. |
+
+Every spawn in the pack names a genus and a vanilla stand-in, and the
+stand-ins wear leather caps so a daytime fight is not won by the sun.
+
 ## What the pack exercises
 
 Rituals, waits, kill drops, tagged spawns with vanilla stand-ins, quest items,
