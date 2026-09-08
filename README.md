@@ -142,7 +142,10 @@ override `scope`. Every word a player sees lives in
   completes when the player clicks the giver of quest `to` holding the items
   (or, with `radius`, stands near them); the items go then. A bare `collect` is
   satisfied in your pack, which is not the same thing. `spawn` takes `equipment`
-  (a leather cap keeps a daytime zombie alive).
+  (a leather cap keeps a daytime zombie alive). With a `genus`, ZombieMod
+  dresses the mob first and `equipment` only fills the slots it left empty --
+  a Patient keeps its mask -- unless `override: true`. Quest items are not
+  eatable or drinkable unless the entry says `usable: true`.
 - **`wait`** (`seconds`) lets time pass from entering the beat -- "come back later".
 - **`collect`** takes `tag: minecraft:logs` or `quest_item: zarp:insulin`.
 - **`place`** takes `any: [ { lot: Hospital }, { structure: "#minecraft:village" } ]`

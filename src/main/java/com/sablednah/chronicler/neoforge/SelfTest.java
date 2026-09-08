@@ -398,6 +398,8 @@ public final class SelfTest {
         check("quest item is named", stack.getHoverName().getString().contains("Ember"));
         check("a plain blaze powder is not the quest item", !com.sablednah.chronicler.data.QuestItem.is(new ItemStack(Items.BLAZE_POWDER), ember));
         check("unknown quest item builds nothing", com.sablednah.chronicler.data.QuestItem.build(registries, ChroniclerIds.of("no_such_item"), 1).isEmpty());
+        check("quest item on a consumable base is not consumable", !com.sablednah.chronicler.data.QuestItem.build(registries, ember, 1).has(net.minecraft.core.component.DataComponents.CONSUMABLE)
+                && new ItemStack(Items.HONEY_BOTTLE).has(net.minecraft.core.component.DataComponents.CONSUMABLE));
         try {
             var params = new net.minecraft.world.level.storage.loot.LootParams.Builder(level)
                     .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.EMPTY);
@@ -564,6 +566,20 @@ public final class SelfTest {
             }
             // The main line is gated on flags and requirements, not reachable from a fresh journal.
             var pz = QuestEngine.quest(server, Identifier.fromNamespaceAndPath("zarp", "patient_zero")).get().value();
+            // Genus spawns go through the seam and come back as a mob, dressed by ZombieMod first.
+            var genusMob = Genera.spawn(level, Identifier.fromNamespaceAndPath("zarp", "patient"), net.minecraft.world.phys.Vec3.atCenterOf(spawn.above(2)));
+            check("genus: the seam spawns a Patient and hands it back", genusMob.isPresent()
+                    && genusMob.get().getPersistentData().getString("zombiemod:genus").map("zarp:patient"::equals).orElse(false));
+            genusMob.ifPresent(m -> {
+                boolean masked = !m.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty();
+                check("genus: ZombieMod put the mask on its head", masked);
+                Rewards.grant(solo, new com.sablednah.chronicler.data.RewardTypes.Spawn(java.util.Optional.of(Identifier.withDefaultNamespace("zombie")),
+                        java.util.Optional.of("zarp:patient"), 1, 2.0, java.util.Optional.of("&7Test Patient"), java.util.Optional.of("probe_patient"), 0D,
+                        java.util.Map.of("head", "minecraft:leather_helmet", "mainhand", "minecraft:stick"), false), ChroniclerIds.of("selftest"), nightWatch);
+                check("genus: a spawn effect placed one through the seam", Rewards.lastSpawned() == 1);
+                m.discard();
+            });
+            check("quest item insulin is not drinkable", !com.sablednah.chronicler.data.QuestItem.build(registries, Identifier.fromNamespaceAndPath("zarp", "insulin"), 1).has(net.minecraft.core.component.DataComponents.CONSUMABLE));
             var fireAt = GiverStore.get(server).placedBlock(Identifier.fromNamespaceAndPath("zarp", "wake_up"));
             check("zarp: the campfire was dropped near spawn", fireAt.isPresent()
                     && fireAt.get().distManhattan(spawn) < 8 && level.getBlockState(fireAt.get()).is(net.minecraft.world.level.block.Blocks.CAMPFIRE));

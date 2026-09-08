@@ -31,7 +31,9 @@ import net.minecraft.world.item.component.ItemLore;
  * <p>No {@code ItemStack} is ever held in a codec: the id is, and the stack is
  * built at use time -- on 26.x a stack cannot exist while registries load.</p>
  */
-public record QuestItem(Identifier item, String name, List<String> lore, boolean glint, int maxStack) {
+public record QuestItem(Identifier item, String name, List<String> lore, boolean glint, int maxStack, boolean usable) {
+
+    /** {@code usable: false} (the default) strips eating, drinking and use-remainders: insulin is a thing you carry, not a thing you drink. */
 
     public static final String MARK = "chronicler:item";
 
@@ -40,7 +42,8 @@ public record QuestItem(Identifier item, String name, List<String> lore, boolean
             Codec.STRING.fieldOf("name").forGetter(QuestItem::name),
             Codec.STRING.listOf().optionalFieldOf("lore", List.of()).forGetter(QuestItem::lore),
             Codec.BOOL.optionalFieldOf("glint", true).forGetter(QuestItem::glint),
-            Codec.INT.optionalFieldOf("max_stack", 0).forGetter(QuestItem::maxStack))
+            Codec.INT.optionalFieldOf("max_stack", 0).forGetter(QuestItem::maxStack),
+            Codec.BOOL.optionalFieldOf("usable", false).forGetter(QuestItem::usable))
             .apply(i, QuestItem::new));
 
     public static Optional<QuestItem> get(HolderLookup.Provider registries, Identifier id) {
@@ -72,6 +75,11 @@ public record QuestItem(Identifier item, String name, List<String> lore, boolean
         }
         if (q.get().glint()) stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
         if (q.get().maxStack() > 0) stack.set(DataComponents.MAX_STACK_SIZE, Math.min(99, q.get().maxStack()));
+        if (!q.get().usable()) {
+            stack.remove(DataComponents.CONSUMABLE);
+            stack.remove(DataComponents.FOOD);
+            stack.remove(DataComponents.USE_REMAINDER);
+        }
         CompoundTag tag = new CompoundTag();
         tag.putString(MARK, id.toString());
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
