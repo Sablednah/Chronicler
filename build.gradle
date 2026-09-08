@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '2.0.141'
+    id 'net.neoforged.moddev' version '2.0.144'
     id 'idea'
 }
 
@@ -37,7 +37,7 @@ base {
 }
 
 // Mojang ships Java 21 to 1.21.x players. The 26.x branches say 25 here.
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 neoForge {
     version = project.neo_version
@@ -69,6 +69,8 @@ neoForge {
 
         server {
             server()
+            // A world per Minecraft line: a 26.x server upgrades a 1.21.11 world in place, one way.
+            gameDirectory = file("run-mc${project.minecraft_version}")
             // Capped: five sibling dev servers and their Gradle daemons share one
             // box, and an uncapped JVM reserves a quarter of RAM it never needs.
             jvmArgument '-Xmx2G'

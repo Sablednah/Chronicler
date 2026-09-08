@@ -16,15 +16,15 @@ import net.minecraft.server.level.ServerPlayer;
 public final class Feedback {
 
     public static void actionBar(ServerPlayer player, String text) {
-        player.displayClientMessage(colored(text), true);
+        player.sendSystemMessage(colored(text), true);
     }
 
     public static void chat(ServerPlayer player, String text) {
-        player.displayClientMessage(colored(text), false);
+        player.sendSystemMessage(colored(text), false);
     }
 
     public static void chat(ServerPlayer player, Component message) {
-        player.displayClientMessage(message, false);
+        player.sendSystemMessage(message, false);
     }
 
     /** A title card alone -- a scene change, no chime. */
@@ -78,7 +78,7 @@ public final class Feedback {
         for (Component b : buttons) {
             line.append(Component.literal(" ")).append(b);
         }
-        player.displayClientMessage(line, false);
+        player.sendSystemMessage(line, false);
     }
 
     /**
@@ -130,7 +130,14 @@ public final class Feedback {
         if (code == ChatFormatting.RESET) {
             return Style.EMPTY;
         }
-        return "klmno".indexOf(code.getChar()) >= 0 ? style.applyFormat(code) : Style.EMPTY.withColor(code);
+        return isFormatting(code) ? style.applyFormat(code) : Style.EMPTY.withColor(code);
+    }
+
+    /** Ours: 26.2 stripped ChatFormatting to a bare enum, taking isFormat() and getChar() with it. */
+    private static boolean isFormatting(ChatFormatting code) {
+        return code == ChatFormatting.OBFUSCATED || code == ChatFormatting.BOLD
+                || code == ChatFormatting.STRIKETHROUGH || code == ChatFormatting.UNDERLINE
+                || code == ChatFormatting.ITALIC;
     }
 
     private Feedback() {}

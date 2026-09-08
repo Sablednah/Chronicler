@@ -484,7 +484,7 @@ public final class SelfTest {
         check("ritual: a torch that is not consumed stays in hand", torch.getCount() == 1);
         // The section index lags a tick on a dev server with no player; the flat entity list does not.
         List<Zombie> drawn = new ArrayList<>();
-        for (var ent : level.getAllEntities()) if (ent instanceof Zombie zz && zz.getTags().contains(Trackers.TAG_PREFIX + "drawn")) drawn.add(zz);
+        for (var ent : level.getAllEntities()) if (ent instanceof Zombie zz && zz.entityTags().contains(Trackers.TAG_PREFIX + "drawn")) drawn.add(zz);
         // Entities added before the forced chunk's first tick are not yet visible to any lookup (a known dev-server
         // trap), so the spawn is proven by what the granter reports, and the kill by a pair we can hold.
         check("spawn: the beat's spawn effect placed two entities (granter reports " + Rewards.lastSpawned() + ", lookup sees " + drawn.size() + ")",

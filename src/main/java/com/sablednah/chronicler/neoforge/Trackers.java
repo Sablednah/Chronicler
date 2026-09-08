@@ -68,7 +68,7 @@ public final class Trackers {
         register(ObjectiveTypes.Kill.class, new Tracker<ObjectiveTypes.Kill>() {
             @Override
             public boolean countsKill(ServerPlayer killer, LivingEntity victim, ObjectiveTypes.Kill spec) {
-                if (spec.tag().isPresent() && victim.getTags().contains(TAG_PREFIX + spec.tag().get())) return true;
+                if (spec.tag().isPresent() && victim.entityTags().contains(TAG_PREFIX + spec.tag().get())) return true;
                 for (String t : spec.targets()) if (matchesTarget(victim, t)) return true;
                 return false;
             }

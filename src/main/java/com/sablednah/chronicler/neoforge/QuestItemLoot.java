@@ -11,7 +11,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
-import net.minecraft.world.level.storage.loot.functions.LootItemFunctionType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -31,7 +30,7 @@ public final class QuestItemLoot {
                 .apply(i, Function::new));
 
         @Override
-        public LootItemFunctionType<? extends LootItemFunction> getType() { return TYPE.get(); }
+        public MapCodec<? extends LootItemFunction> codec() { return CODEC; }
 
         @Override
         public ItemStack apply(ItemStack stack, LootContext context) {
@@ -44,10 +43,11 @@ public final class QuestItemLoot {
         }
     }
 
-    private static final DeferredRegister<LootItemFunctionType<?>> TYPES =
+    // 26.2: the registry holds the MapCodec itself; there is no LootItemFunctionType wrapper any more.
+    private static final DeferredRegister<MapCodec<? extends LootItemFunction>> TYPES =
             DeferredRegister.create(Registries.LOOT_FUNCTION_TYPE, Chronicler.MODID);
-    public static final java.util.function.Supplier<LootItemFunctionType<Function>> TYPE =
-            TYPES.register("quest_item", () -> new LootItemFunctionType<>(Function.CODEC));
+    public static final java.util.function.Supplier<MapCodec<? extends LootItemFunction>> TYPE =
+            TYPES.register("quest_item", () -> Function.CODEC);
 
     public static void register(IEventBus modBus) { TYPES.register(modBus); }
 
