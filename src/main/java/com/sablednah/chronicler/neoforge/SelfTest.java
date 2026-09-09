@@ -172,7 +172,7 @@ public final class SelfTest {
             // Givers: an op-placed block offers, right-click accepts, the store round-trips.
             QuestEngine.journal(solo).clear();
             GiverStore store = GiverStore.get(server);
-            net.minecraft.core.BlockPos here = solo.blockPosition();
+            net.minecraft.core.BlockPos here = solo.blockPosition().offset(-4, 0, 4); // off the ZARP camp: a data giver on the same block would outrank the store
             store.set(server.overworld(), here, firstSteps);
             check("giver store answers", Givers.questAt(server.overworld(), here).map(firstSteps::equals).orElse(false));
             Markers.EXTRA_VIEWERS.add(solo);
