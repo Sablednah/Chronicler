@@ -23,7 +23,7 @@ public final class QuestEvents {
             QuestEngine.onKill(killer, victim);
         } else {
             // Not a player's doing. If a quest spawned it for someone, that someone still gets an answer.
-            for (String tag : victim.getTags()) {
+            for (String tag : victim.entityTags()) {
                 if (!tag.startsWith(Rewards.FOR_PREFIX)) continue;
                 try {
                     ServerPlayer owner = victim.level().getServer().getPlayerList().getPlayer(java.util.UUID.fromString(tag.substring(Rewards.FOR_PREFIX.length())));

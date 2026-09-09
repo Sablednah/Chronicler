@@ -505,7 +505,7 @@ public final class SelfTest {
         }
         int itemsBefore = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(fire).inflate(24)).size();
         check("spawn: what was spawned is remembered, and for whom", Rewards.spawnedCount() >= 1
-                && drawn.stream().allMatch(zz -> zz.getTags().stream().anyMatch(t -> t.startsWith(Rewards.FOR_PREFIX))) || drawn.size() < 2);
+                && drawn.stream().allMatch(zz -> zz.entityTags().stream().anyMatch(t -> t.startsWith(Rewards.FOR_PREFIX))) || drawn.size() < 2);
         // One kill is the player's; the other dies to "a fall" and still counts, because it was spawned for them.
         QuestEngine.onKill(solo, drawn.get(0)); drawn.get(0).discard();
         be = log.entry(beacon);
