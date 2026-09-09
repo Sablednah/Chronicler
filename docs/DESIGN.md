@@ -502,3 +502,10 @@ quests that *say* they count contribute -- a repeatable bounty or a side
 errand must not stop anyone reaching 100%. Quest field `counts` (default:
 true for quests in a `main` chapter, false for repeatables; side chapters
 false unless set). Per chapter and overall: "Prologue 3/4 -- 75%".
+
+### Modded-client sugar, as asked for so far (step 9)
+
+- A **keybind for the journal** (Sable, 2026-09-09). Default must not be the
+  backtick -- "the classic ` bind that fights with vein-mine". `J` is unbound
+  in vanilla and reads as journal. Client-only, optional, opens the same book
+  the item does; the server side already exists (`/quest journal`).

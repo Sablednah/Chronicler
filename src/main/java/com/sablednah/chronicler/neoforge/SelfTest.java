@@ -583,6 +583,22 @@ public final class SelfTest {
             var fireAt = GiverStore.get(server).placedBlock(Identifier.fromNamespaceAndPath("zarp", "wake_up"));
             check("zarp: the campfire was dropped near spawn", fireAt.isPresent()
                     && fireAt.get().distManhattan(spawn) < 8 && level.getBlockState(fireAt.get()).is(net.minecraft.world.level.block.Blocks.CAMPFIRE));
+            // Decor on a cleared patch (the dev world keeps older camps): a post on the ground, its lantern ON it, no gap.
+            {
+                var patch = spawn.offset(12, 0, 12);
+                var g = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, patch).below();
+                for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int dy = 1; dy <= 4; dy++)
+                    level.setBlockAndUpdate(g.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                level.setBlockAndUpdate(g, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+                Givers.placeDecor(level, g.above(), List.of(
+                        new com.sablednah.chronicler.data.GiverTypes.Position.Decor(List.of(0, 0, 0), "minecraft:oak_fence"),
+                        new com.sablednah.chronicler.data.GiverTypes.Position.Decor(List.of(0, 1, 0), "minecraft:lantern")), ChroniclerIds.of("selftest"));
+                boolean postOk = level.getBlockState(g.above()).is(net.minecraft.world.level.block.Blocks.OAK_FENCE);
+                boolean lanternOk = level.getBlockState(g.above(2)).is(net.minecraft.world.level.block.Blocks.LANTERN);
+                boolean gap = level.getBlockState(g.above(3)).is(net.minecraft.world.level.block.Blocks.LANTERN);
+                check("decor: the lantern sits on its post, no gap (post " + postOk + ", lantern " + lanternOk + ", gap " + gap + ")", postOk && lanternOk && !gap);
+                for (int dy = 1; dy <= 3; dy++) level.setBlockAndUpdate(g.above(dy), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
             check("zarp: the campfire gives Wake Up", fireAt.flatMap(f -> Givers.questAt(level, f)).map(q -> q.getPath().equals("wake_up")).orElse(false));
             // A delivery: two insulin to Okafor's quest. Held but not handed over is nothing; the click hands it over.
             var bd = Identifier.fromNamespaceAndPath("zarp", "before_dark");
