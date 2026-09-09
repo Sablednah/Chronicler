@@ -64,7 +64,7 @@
       "on_enter": [
         {
           "type": "spawn",
-          "count": 4,
+          "count": 7,
           "radius": 8,
           "genus": "zombiemod:runner",
           "entity": "minecraft:zombie",
@@ -80,19 +80,36 @@
       ]
     },
     {
-      "text": "Splice the antenna. Copper and redstone, and steady hands.",
+      "text": "Sarge has the hands for the splice. Three copper ingots and a redstone, gathered.",
       "objectives": [
         {
           "type": "collect",
           "item": "minecraft:copper_ingot",
           "count": 3,
-          "consume": true
+          "consume": false
         },
         {
           "type": "collect",
           "item": "minecraft:redstone",
           "count": 1,
-          "consume": true
+          "consume": false
+        }
+      ]
+    },
+    {
+      "text": "Bring the parts to Sarge.",
+      "objectives": [
+        {
+          "type": "deliver",
+          "item": "minecraft:copper_ingot",
+          "count": 3,
+          "to": "zarp:the_signal"
+        },
+        {
+          "type": "deliver",
+          "item": "minecraft:redstone",
+          "count": 1,
+          "to": "zarp:the_signal"
         }
       ],
       "on_complete": [
@@ -104,9 +121,9 @@
         },
         {
           "type": "npc_say",
+          "quest": "zarp:the_signal",
           "text": "&7Static. Then a voice. 'Anyone. Hospital. Come.' Then static.",
-          "radius": 16.0,
-          "quest": "zarp:the_signal"
+          "radius": 16.0
         }
       ]
     }

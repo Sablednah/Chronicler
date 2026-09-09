@@ -156,7 +156,7 @@
         },
         {
           "type": "spawn",
-          "count": 6,
+          "count": 7,
           "radius": 8,
           "entity": "minecraft:zombie",
           "equipment": {
