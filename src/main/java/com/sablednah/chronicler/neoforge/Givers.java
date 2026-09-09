@@ -157,6 +157,7 @@ public final class Givers {
             cast.ensureGiverRole(server, existing.get());
             store.setNpc(existing.get(), questId);
             if (!n.equipment().isEmpty()) cast.equip(server, existing.get(), n.equipment());
+            cast.setDefyGravity(server, existing.get(), n.defyGravity());
             return;
         }
         Identifier dim = n.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
@@ -177,6 +178,7 @@ public final class Givers {
         store.setPlacedFor(questId, id);
         store.setNpc(id, questId);
         if (!n.equipment().isEmpty()) cast.equip(server, id, n.equipment());
+        cast.setDefyGravity(server, id, n.defyGravity());
         Chronicler.LOGGER.info("Chronicler: placed NPC giver '{}' for {} at {}", n.name(), questId, at);
     }
 
