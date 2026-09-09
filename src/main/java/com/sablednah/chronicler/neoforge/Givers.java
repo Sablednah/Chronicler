@@ -91,13 +91,25 @@ public final class Givers {
         int x = spawn.getX() + p.nearSpawn().get().get(0), z = spawn.getZ() + p.nearSpawn().get().get(1);
         BlockPos at = surface(level, x, z);
         p.block().ifPresent(b -> placeBlock(level, at, b, questId));
-        for (GiverTypes.Position.Decor d : p.decor()) {
-            BlockPos column = surface(level, at.getX() + d.offset().get(0), at.getZ() + d.offset().get(2));
-            placeBlock(level, column.above(d.offset().get(1)), d.block(), questId);
-        }
+        placeDecor(level, at, p.decor(), questId);
         store.setPlacedBlock(questId, at);
         Chronicler.LOGGER.info("Chronicler: placed the giver block for {} at {}", questId, at);
         return at;
+    }
+
+    /** Set dressing around a giver, each column on its own ground. Package-visible for the self-test. */
+    static void placeDecor(ServerLevel level, BlockPos at, List<GiverTypes.Position.Decor> decor, Identifier questId) {
+        // Measure every column BEFORE placing anything: once a fence post stands, the surface of that
+        // column is the top of the post, and a lantern "one above the ground" floats a block over it.
+        Map<Long, BlockPos> columns = new HashMap<>();
+        for (GiverTypes.Position.Decor d : decor) {
+            int cx = at.getX() + d.offset().get(0), cz = at.getZ() + d.offset().get(2);
+            columns.computeIfAbsent(BlockPos.asLong(cx, 0, cz), k -> surface(level, cx, cz));
+        }
+        for (GiverTypes.Position.Decor d : decor) {
+            BlockPos column = columns.get(BlockPos.asLong(at.getX() + d.offset().get(0), 0, at.getZ() + d.offset().get(2)));
+            placeBlock(level, column.above(d.offset().get(1)), d.block(), questId);
+        }
     }
 
     private static BlockPos surface(ServerLevel level, int x, int z) {
