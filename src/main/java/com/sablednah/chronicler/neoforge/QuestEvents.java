@@ -17,12 +17,22 @@ public final class QuestEvents {
 
     @SubscribeEvent
     static void onDeath(LivingDeathEvent event) {
-        if (event.getSource().getEntity() instanceof ServerPlayer killer && !killer.isFakePlayer()) {
-            QuestEngine.onKill(killer, event.getEntity());
-        } else if (event.getSource().getEntity() instanceof ServerPlayer killer) {
+        var victim = event.getEntity();
+        if (event.getSource().getEntity() instanceof ServerPlayer killer) {
             // A FakePlayer with a journal is the self-test driving the real path.
-            QuestEngine.onKill(killer, event.getEntity());
+            QuestEngine.onKill(killer, victim);
+        } else {
+            // Not a player's doing. If a quest spawned it for someone, that someone still gets an answer.
+            for (String tag : victim.getTags()) {
+                if (!tag.startsWith(Rewards.FOR_PREFIX)) continue;
+                try {
+                    ServerPlayer owner = victim.level().getServer().getPlayerList().getPlayer(java.util.UUID.fromString(tag.substring(Rewards.FOR_PREFIX.length())));
+                    if (owner != null) QuestEngine.onUnownedDeath(owner, victim);
+                } catch (IllegalArgumentException ignored) {}
+                break;
+            }
         }
+        Rewards.forget(victim);
     }
 
     /** Polled objectives (inventory, position) on the configured interval, not every tick. */

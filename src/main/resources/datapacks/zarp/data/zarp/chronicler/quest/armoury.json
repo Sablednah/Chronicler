@@ -73,7 +73,7 @@
       "on_enter": [
         {
           "type": "spawn",
-          "count": 5,
+          "count": 6,
           "radius": 8,
           "genus": "zombiemod:vault_dweller",
           "entity": "minecraft:zombie",

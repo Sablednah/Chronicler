@@ -509,3 +509,19 @@ false unless set). Per chapter and overall: "Prologue 3/4 -- 75%".
   backtick -- "the classic ` bind that fights with vein-mine". `J` is unbound
   in vanilla and reads as journal. Client-only, optional, opens the same book
   the item does; the server side already exists (`/quest journal`).
+
+### The GUI Sable wants next (2026-09-10, after playing to the Nether)
+
+Modded-client sugar, after the initial release of Cast and Chronicler:
+
+- **An objectives box** on the left of the screen: the tracked quest's current
+  beat and its objectives with progress. The action-bar tracker stays for
+  vanilla clients.
+- **A branching guide / quest map**: chapters and quests as a graph with the
+  branches visible -- what you did, what you did not, endings found.
+- **Proper pop-up choice selectors** for decision beats, instead of chat
+  buttons.
+- The journal keybind (`J`, never the backtick).
+
+Server side is already there for all four (`/quest`, the journal, choices via
+`/quest choose`); the client reads the same answers over a payload.

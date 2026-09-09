@@ -144,9 +144,16 @@ public final class Journal {
             if (QuestEngine.available(player, id, h.value())) available.add(h);
         });
 
-        // Page numbering: 1 = contents, then one per active quest, then available, then done.
+        // Page numbering: 1 = contents, then the pages of each active quest (one, or two when it would
+        // not fit -- a written page holds about fourteen short lines, and a clipped "3 x" told nobody
+        // anything), then available, then done.
+        List<List<MutableComponent>> questPages = new ArrayList<>();
+        for (Identifier id : active) questPages.add(questPages(server, player, log, id));
         int firstQuestPage = 2;
-        int availablePage = firstQuestPage + active.size();
+        int[] questPageAt = new int[active.size()];
+        int cursor = firstQuestPage;
+        for (int n = 0; n < active.size(); n++) { questPageAt[n] = cursor; cursor += questPages.get(n).size(); }
+        int availablePage = cursor;
         int availablePages = Math.max(1, (available.size() + 5) / 6);
         int donePage = availablePage + availablePages;
 
@@ -165,64 +172,15 @@ public final class Journal {
             String name = QuestEngine.quest(server, active.get(n)).map(h -> h.value().name()).orElse(active.get(n).toString());
             boolean tracked = log.tracked().map(active.get(n)::equals).orElse(false);
             contents.append(pageLink(Lang.fmt(tracked ? "journal.contents.tracked" : "journal.contents.quest", "name", name),
-                    firstQuestPage + n, Lang.get("journal.tip.turn"))).append("\n");
+                    questPageAt[n], Lang.get("journal.tip.turn"))).append("\n");
         }
         contents.append("\n");
         contents.append(pageLink(Lang.fmt("journal.contents.available", "count", available.size()), availablePage, Lang.get("journal.tip.turn"))).append("\n");
         contents.append(pageLink(Lang.fmt("journal.contents.done", "count", done.size()), donePage, Lang.get("journal.tip.turn")));
         pages.add(Filterable.passThrough(contents));
 
-        // --- one page per active quest ---
-        for (Identifier id : active) {
-            MutableComponent page = Component.empty();
-            var holder = QuestEngine.quest(server, id);
-            QuestLog.Entry e = log.entry(id);
-            if (holder.isEmpty() || e == null) {
-                page.append(Feedback.colored(Lang.fmt("journal.quest.gone", "id", id)));
-                pages.add(Filterable.passThrough(page));
-                continue;
-            }
-            Quest q = holder.get().value();
-            page.append(Feedback.colored(Lang.fmt("journal.quest.name", "name", q.name()))).append("\n");
-            String chapter = QuestEngine.chapters(server)
-                    .get(net.minecraft.resources.ResourceKey.create(com.sablednah.chronicler.ChroniclerRegistries.CHAPTER, q.chapter()))
-                    .map(h -> h.value().name()).orElse(q.chapter().toString());
-            page.append(Feedback.colored(Lang.fmt("journal.quest.chapter", "chapter", chapter))).append("\n");
-            if (QuestEngine.scopeOf(server, q) == QuestScope.PARTY) {
-                page.append(Feedback.colored(Lang.get("journal.quest.party"))).append("\n");
-            }
-            q.description().ifPresent(d -> page.append(Feedback.colored(Lang.fmt("journal.quest.description", "description", d))).append("\n"));
-            List<com.sablednah.chronicler.data.ObjectiveSpec> objectives = QuestEngine.currentObjectives(q, e);
-            if (q.beats().size() > 1) {
-                page.append(Feedback.colored(Lang.fmt("journal.quest.stage", "stage", e.stage + 1, "stages", q.beats().size()))).append("\n");
-                q.beats().get(Math.min(e.stage, q.beats().size() - 1)).text().ifPresent(t ->
-                        page.append(Feedback.colored(Lang.fmt("journal.quest.text", "text", t))).append("\n"));
-            }
-            page.append("\n");
-            com.sablednah.chronicler.data.Stage beat = q.beats().get(Math.min(e.stage, q.beats().size() - 1));
-            if (beat.isDecision()) {
-                page.append(Feedback.colored(Lang.get("journal.quest.decision"))).append("\n");
-                for (int n = 0; n < beat.choices().size(); n++) {
-                    page.append(commandLink(Lang.fmt("journal.choice", "label", beat.choices().get(n).label()),
-                            "/quest choose " + id + " " + (n + 1), Lang.get("msg.choice.tip"))).append("\n");
-                }
-            }
-            for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
-                String line = objectives.get(n).describe();
-                page.append(Feedback.colored(e.objectiveDone(n)
-                        ? Lang.fmt("journal.objective.done", "line", line)
-                        : Lang.fmt("journal.objective.open", "line", line, "done", e.progress.get(n), "target", e.targets.get(n))))
-                        .append("\n");
-            }
-            page.append("\n");
-            boolean tracked = log.tracked().map(id::equals).orElse(false);
-            if (!tracked) {
-                page.append(commandLink(Lang.get("journal.link.track"), "/quest track " + id, Lang.get("button.track.tip"))).append("  ");
-            }
-            page.append(commandLink(Lang.get("journal.link.abandon"), "/quest abandon " + id, Lang.get("button.abandon.tip"))).append("\n");
-            page.append(pageLink(Lang.get("journal.link.back"), 1, Lang.get("journal.tip.contents")));
-            pages.add(Filterable.passThrough(page));
-        }
+        // --- the pages of each active quest ---
+        for (List<MutableComponent> qp : questPages) for (MutableComponent page : qp) pages.add(Filterable.passThrough(page));
 
         // --- available ---
         MutableComponent page = Component.empty();
@@ -273,6 +231,70 @@ public final class Journal {
             pages.add(Filterable.passThrough(page));
         }
         return pages;
+    }
+
+    /** A written page shows about this much before it clips; past it, the objectives go on a second page. */
+    private static final int PAGE_BUDGET = 200;
+
+    /** One quest's page, or two when it would not fit. */
+    private static List<MutableComponent> questPages(MinecraftServer server, ServerPlayer player, QuestLog log, Identifier id) {
+        List<MutableComponent> out = new ArrayList<>();
+        var holder = QuestEngine.quest(server, id);
+        QuestLog.Entry e = log.entry(id);
+        if (holder.isEmpty() || e == null) {
+            out.add(Component.empty().append(Feedback.colored(Lang.fmt("journal.quest.gone", "id", id))));
+            return out;
+        }
+        Quest q = holder.get().value();
+        MutableComponent head = Component.empty();
+        head.append(Feedback.colored(Lang.fmt("journal.quest.name", "name", q.name()))).append("\n");
+        String chapter = QuestEngine.chapters(server)
+                .get(net.minecraft.resources.ResourceKey.create(com.sablednah.chronicler.ChroniclerRegistries.CHAPTER, q.chapter()))
+                .map(h -> h.value().name()).orElse(q.chapter().toString());
+        head.append(Feedback.colored(Lang.fmt("journal.quest.chapter", "chapter", chapter))).append("\n");
+        if (QuestEngine.scopeOf(server, q) == QuestScope.PARTY) {
+            head.append(Feedback.colored(Lang.get("journal.quest.party"))).append("\n");
+        }
+        q.description().ifPresent(d -> head.append(Feedback.colored(Lang.fmt("journal.quest.description", "description", d))).append("\n"));
+        List<com.sablednah.chronicler.data.ObjectiveSpec> objectives = QuestEngine.currentObjectives(q, e);
+        if (q.beats().size() > 1) {
+            head.append(Feedback.colored(Lang.fmt("journal.quest.stage", "stage", e.stage + 1, "stages", q.beats().size()))).append("\n");
+            q.beats().get(Math.min(e.stage, q.beats().size() - 1)).text().ifPresent(t ->
+                    head.append(Feedback.colored(Lang.fmt("journal.quest.text", "text", t))).append("\n"));
+        }
+        MutableComponent body = Component.empty();
+        com.sablednah.chronicler.data.Stage beat = q.beats().get(Math.min(e.stage, q.beats().size() - 1));
+        if (beat.isDecision()) {
+            body.append(Feedback.colored(Lang.get("journal.quest.decision"))).append("\n");
+            for (int n = 0; n < beat.choices().size(); n++) {
+                body.append(commandLink(Lang.fmt("journal.choice", "label", beat.choices().get(n).label()),
+                        "/quest choose " + id + " " + (n + 1), Lang.get("msg.choice.tip"))).append("\n");
+            }
+        }
+        for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
+            String line = objectives.get(n).describe();
+            body.append(Feedback.colored(e.objectiveDone(n)
+                    ? Lang.fmt("journal.objective.done", "line", line)
+                    : Lang.fmt("journal.objective.open", "line", line, "done", e.progress.get(n), "target", e.targets.get(n))))
+                    .append("\n");
+        }
+        body.append("\n");
+        boolean tracked = log.tracked().map(id::equals).orElse(false);
+        if (!tracked) {
+            body.append(commandLink(Lang.get("journal.link.track"), "/quest track " + id, Lang.get("button.track.tip"))).append("  ");
+        }
+        body.append(commandLink(Lang.get("journal.link.abandon"), "/quest abandon " + id, Lang.get("button.abandon.tip"))).append("\n");
+        body.append(pageLink(Lang.get("journal.link.back"), 1, Lang.get("journal.tip.contents")));
+        if (head.getString().length() + body.getString().length() <= PAGE_BUDGET) {
+            out.add(head.append("\n").append(body));
+        } else {
+            head.append("\n").append(pageLink(Lang.get("journal.link.back"), 1, Lang.get("journal.tip.contents")));
+            out.add(head);
+            MutableComponent second = Component.empty();
+            second.append(Feedback.colored(Lang.fmt("journal.quest.cont", "name", q.name()))).append("\n\n");
+            out.add(second.append(body));
+        }
+        return out;
     }
 
     private static Component pageLink(String label, int page, String tooltip) {

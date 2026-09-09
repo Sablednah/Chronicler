@@ -363,6 +363,19 @@ public final class QuestEngine {
     // --- measuring ---
 
     public static void onKill(ServerPlayer killer, LivingEntity victim) {
+        creditDeath(killer, victim, true);
+    }
+
+    /**
+     * A mob this player's quest spawned died to something else -- a fall, the sun,
+     * its own explosion. Kill objectives that wanted it still get it, unless they
+     * say {@code own_kill}, in which case one more is spawned and the player told.
+     */
+    public static void onUnownedDeath(ServerPlayer player, LivingEntity victim) {
+        creditDeath(player, victim, false);
+    }
+
+    private static void creditDeath(ServerPlayer killer, LivingEntity victim, boolean ownKill) {
         QuestLog log = journal(killer);
         if (log.activeCount() == 0) return;
         MinecraftServer server = killer.level().getServer();
@@ -375,6 +388,12 @@ public final class QuestEngine {
             for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
                 ObjectiveSpec spec = objectives.get(n);
                 if (Trackers.of(spec).countsKill(killer, victim, spec)) {
+                    if (!ownKill && spec instanceof ObjectiveTypes.Kill k && k.ownKill()) {
+                        var was = Rewards.spawnedRecord(victim);
+                        Feedback.chat(killer, Lang.fmt(was.isPresent() ? "msg.kill.escaped_again" : "msg.kill.escaped", "what", spec.describe()));
+                        was.ifPresent(w -> Rewards.respawnOne(w, killer));
+                        continue;
+                    }
                     if (spec instanceof ObjectiveTypes.Kill k && k.drop().isPresent() && e.progress.get(n) < e.targets.get(n)) {
                         dropQuestItem(victim, k.drop().get());
                     }

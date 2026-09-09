@@ -31,6 +31,11 @@ public final class Rewards {
     private static final Map<Class<? extends RewardSpec>, Granter<?>> BY_CLASS = new LinkedHashMap<>();
     // Declared before the static block that fills BY_CLASS: a static after the block that uses it is a forward reference.
     private static int lastSpawned = 0;
+    /** Tag on every mob a quest spawned: who it was spawned for. */
+    public static final String FOR_PREFIX = "chronicler:for:";
+    /** What was spawned for whom, so a death the player did not cause can be credited or the mob spawned again. */
+    public record Spawned(RewardTypes.Spawn spec, java.util.UUID player, Identifier questId, Quest quest) {}
+    private static final Map<java.util.UUID, Spawned> SPAWNED = new LinkedHashMap<>();
 
     public static synchronized <R extends RewardSpec> void register(Class<R> type, Granter<R> granter) {
         BY_CLASS.put(type, granter);
@@ -201,7 +206,7 @@ public final class Rewards {
                             var attr = mob.get().getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
                             if (attr != null) { attr.setBaseValue(r.health()); mob.get().setHealth((float) r.health()); }
                         }
-                        decorate(mob.get(), r); // after ZombieMod: the genus dressed it, we fill the gaps
+                        decorate(mob.get(), r, player, questId, quest); // after ZombieMod: the genus dressed it, we fill the gaps
                         lastSpawned++;
                         continue;
                     }
@@ -229,7 +234,7 @@ public final class Rewards {
                         if (attr != null) { attr.setBaseValue(r.health()); mob.setHealth((float) r.health()); }
                     }
                 }
-                decorate(spawned, r);
+                decorate(spawned, r, player, questId, quest);
                 if (level.addFreshEntity(spawned)) lastSpawned++;
             }
         });
@@ -248,7 +253,25 @@ public final class Rewards {
     /** How many entities the most recent spawn effect placed; the self-test's window onto a lookup that lags a tick. */
     public static int lastSpawned() { return lastSpawned; }
 
-    private static void decorate(net.minecraft.world.entity.Entity entity, RewardTypes.Spawn r) {
+    /** The quest spawn this entity came from, if any, and who it was for. */
+    public static java.util.Optional<Spawned> spawnedRecord(net.minecraft.world.entity.Entity entity) {
+        return java.util.Optional.ofNullable(SPAWNED.get(entity.getUUID()));
+    }
+
+    public static void forget(net.minecraft.world.entity.Entity entity) { SPAWNED.remove(entity.getUUID()); }
+
+    public static int spawnedCount() { return SPAWNED.size(); }
+
+    /** Spawn one more of what this was, for the same player: the one that got away comes back. */
+    public static void respawnOne(Spawned was, ServerPlayer player) {
+        RewardTypes.Spawn one = new RewardTypes.Spawn(was.spec().entity(), was.spec().genus(), 1, was.spec().radius(),
+                was.spec().name(), was.spec().tag(), was.spec().health(), was.spec().equipment(), was.spec().override());
+        grant(player, one, was.questId(), was.quest());
+    }
+
+    private static void decorate(net.minecraft.world.entity.Entity entity, RewardTypes.Spawn r, ServerPlayer player, Identifier questId, Quest quest) {
+        entity.addTag(FOR_PREFIX + player.getUUID());
+        SPAWNED.put(entity.getUUID(), new Spawned(r, player.getUUID(), questId, quest));
         r.name().ifPresent(n -> { entity.setCustomName(Feedback.colored(n)); entity.setCustomNameVisible(true); });
         r.tag().ifPresent(t -> entity.addTag(Trackers.TAG_PREFIX + t));
         if (!r.equipment().isEmpty() && entity instanceof net.minecraft.world.entity.LivingEntity living) {

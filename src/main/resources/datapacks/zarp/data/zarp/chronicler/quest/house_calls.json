@@ -66,7 +66,7 @@
           "type": "spawn",
           "genus": "zarp:patient",
           "entity": "minecraft:zombie",
-          "count": 3,
+          "count": 4,
           "radius": 10,
           "equipment": {
             "head": "minecraft:leather_helmet"
@@ -76,7 +76,7 @@
           "type": "spawn",
           "genus": "zombiemod:harvester",
           "entity": "minecraft:zombie_villager",
-          "count": 2,
+          "count": 3,
           "radius": 10,
           "equipment": {
             "head": "minecraft:leather_helmet"
@@ -90,7 +90,7 @@
       ]
     },
     {
-      "text": "Ward C. The first bed. The chart is still clipped to the rail.",
+      "text": "Ward C. The first bed. The chart is still clipped to the rail. It will blow before it lets you take a sample; be faster.",
       "objectives": [
         {
           "type": "kill",
@@ -106,7 +106,8 @@
           "drop": {
             "quest_item": "zarp:origin_sample",
             "chance": 1.0
-          }
+          },
+          "own_kill": true
         }
       ],
       "on_enter": [
