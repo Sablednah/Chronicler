@@ -258,7 +258,8 @@ public final class Rewards {
                 catch (IllegalArgumentException e) { Chronicler.LOGGER.warn("Chronicler: spawn names unknown slot '{}'", slotName); return; }
                 if (!r.override() && !living.getItemBySlot(slot).isEmpty()) return; // the genus got there first, and that is the point
                 try {
-                    var parsed = new net.minecraft.commands.arguments.item.ItemParser(entity.level().registryAccess())
+                    // 26.x: parse() returns an ItemInput record (holder + component patch), not ItemResult.
+                    net.minecraft.commands.arguments.item.ItemInput parsed = new net.minecraft.commands.arguments.item.ItemParser(entity.level().registryAccess())
                             .parse(new com.mojang.brigadier.StringReader(item.trim()));
                     ItemStack stack = new ItemStack(parsed.item(), 1);
                     stack.applyComponents(parsed.components());

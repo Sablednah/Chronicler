@@ -185,10 +185,10 @@ public final class SelfTest {
             // The four oak logs are still in the pack, so accepting completes it on the spot.
             check("giver block: first click offers, does not accept", Givers.onUseBlock(solo, server.overworld(), here)
                     && !QuestEngine.journal(solo).isActive(firstSteps) && !QuestEngine.journal(solo).isComplete(firstSteps));
-            var breakGiver = new net.neoforged.neoforge.event.level.BlockEvent.BreakEvent(server.overworld(), here, server.overworld().getBlockState(here), solo);
+            var breakGiver = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(server.overworld(), here, server.overworld().getBlockState(here), solo);
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(breakGiver);
             check("giver block: breaking it is refused", breakGiver.isCanceled());
-            var breakOther = new net.neoforged.neoforge.event.level.BlockEvent.BreakEvent(server.overworld(), here.above(3), server.overworld().getBlockState(here.above(3)), solo);
+            var breakOther = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(server.overworld(), here.above(3), server.overworld().getBlockState(here.above(3)), solo);
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(breakOther);
             check("giver block: breaking any other block is not", !breakOther.isCanceled());
             check("giver block: second click accepts (and the logs finish it)", Givers.onUseBlock(solo, server.overworld(), here)
