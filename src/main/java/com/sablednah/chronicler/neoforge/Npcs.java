@@ -34,6 +34,8 @@ public final class Npcs {
         void say(MinecraftServer server, UUID id, String text, double radius);
         /** Dress the NPC: slot name -> item string as /give takes it. Says nothing about failures beyond the log. */
         default void equip(MinecraftServer server, UUID id, java.util.Map<String, String> equipment) {}
+        /** Keep the NPC exactly where placed even with nothing underneath (default: it drops to the ground). */
+        default void setDefyGravity(MinecraftServer server, UUID id, boolean defy) {}
         /** What the NPC wears, by slot name. */
         default java.util.Map<String, String> equipment(MinecraftServer server, UUID id) { return java.util.Map.of(); }
         boolean remove(MinecraftServer server, UUID id);
