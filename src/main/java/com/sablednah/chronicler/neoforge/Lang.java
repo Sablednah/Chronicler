@@ -239,6 +239,13 @@ public final class Lang {
         def("obj.ritual_item", "Use {item} on the {block}");
         def("obj.wait", "Wait {time}");
         def("obj.deliver", "Bring {count} x {item} to {who}");
+        def("msg.kill.escaped", "{prefix}&7That one was not yours to claim ({what}).");
+        def("msg.kill.escaped_again", "{prefix}&7That one got away from you ({what}). Another comes.");
+        def("cmd.now.none", "{prefix}&7Nothing on the go. /quests lists what there is.");
+        def("cmd.now.header", "{prefix}&e&l{name}&r &7- {stage}");
+        def("cmd.now.objective", "  &7- &f{line} &8({done}/{target})");
+        def("cmd.now.objective_done", "  &a- &f{line} &a\u2714");
+        def("journal.quest.cont", "&8({name}, continued)");
         def("msg.deliver.short", "&7{who} wants {count} x {item}; you have {held}.");
         def("giver.someone", "the one who asked");
         def("rew.npc_say", "Someone has something to say.");

@@ -94,6 +94,7 @@ public final class ChroniclerCommands {
 
     private static LiteralArgumentBuilder<CommandSourceStack> questTree(String root) {
         return Commands.literal(root)
+                .executes(ChroniclerCommands::now)
                 .then(Commands.literal("list").executes(ChroniclerCommands::list))
                 .then(Commands.literal("log").executes(ChroniclerCommands::log))
                 .then(Commands.literal("info").then(questArg().executes(ChroniclerCommands::info)))
@@ -484,6 +485,35 @@ public final class ChroniclerCommands {
     }
 
     // --- /quest log ---
+
+    /** {@code /quest} alone: the tracked quest (or the first active one), its beat, its objectives, its buttons. */
+    private static int now(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        QuestLog log = QuestEngine.journal(player);
+        Identifier id = log.tracked().filter(log::isActive).orElseGet(() -> log.activeView().keySet().stream().findFirst().orElse(null));
+        if (id == null) { Feedback.chat(player, Lang.get("cmd.now.none")); return 0; }
+        var holder = QuestEngine.quest(player.level().getServer(), id);
+        QuestLog.Entry e = log.entry(id);
+        if (holder.isEmpty() || e == null) { Feedback.chat(player, Lang.get("cmd.now.none")); return 0; }
+        Quest q = holder.get().value();
+        var beat = q.beats().get(Math.min(e.stage, q.beats().size() - 1));
+        MutableComponent out = Feedback.colored(Lang.fmt("cmd.now.header", "name", q.name(), "stage", beat.text().orElse(q.description().orElse("")))).copy();
+        var objectives = QuestEngine.currentObjectives(q, e);
+        for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
+            out.append("\n").append(Feedback.colored(e.objectiveDone(n)
+                    ? Lang.fmt("cmd.now.objective_done", "line", objectives.get(n).describe())
+                    : Lang.fmt("cmd.now.objective", "line", objectives.get(n).describe(), "done", e.progress.get(n), "target", e.targets.get(n))));
+        }
+        if (beat.isDecision()) {
+            for (int n = 0; n < beat.choices().size(); n++) {
+                out.append("\n").append(Feedback.button(Lang.fmt("msg.choice.button", "label", beat.choices().get(n).label()),
+                        "/quest choose " + id + " " + (n + 1), Lang.get("msg.choice.tip")));
+            }
+        }
+        for (Component b : buttonsFor(player, id, q)) out.append(" ").append(b);
+        player.sendSystemMessage(out);
+        return 1;
+    }
 
     private static int log(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();

@@ -501,12 +501,19 @@ public final class SelfTest {
         if (drawn.size() < 2) {
             // The entity index can lag a tick on a dev server; drive the kill with our own tagged pair so the rest still runs.
             drawn = new ArrayList<>();
-            for (int n = 0; n < 2; n++) { Zombie zz = new Zombie(level); zz.snapTo(fire.getX(), fire.getY(), fire.getZ(), 0F, 0F); zz.addTag(Trackers.TAG_PREFIX + "drawn"); drawn.add(zz); }
+            for (int n = 0; n < 2; n++) { Zombie zz = new Zombie(level); zz.snapTo(fire.getX(), fire.getY(), fire.getZ(), 0F, 0F); zz.addTag(Trackers.TAG_PREFIX + "drawn"); zz.addTag(Rewards.FOR_PREFIX + solo.getUUID()); drawn.add(zz); }
         }
         int itemsBefore = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(fire).inflate(24)).size();
-        for (Zombie zz : drawn) { QuestEngine.onKill(solo, zz); zz.discard(); }
+        check("spawn: what was spawned is remembered, and for whom", Rewards.spawnedCount() >= 1
+                && drawn.stream().allMatch(zz -> zz.getTags().stream().anyMatch(t -> t.startsWith(Rewards.FOR_PREFIX))) || drawn.size() < 2);
+        // One kill is the player's; the other dies to "a fall" and still counts, because it was spawned for them.
+        QuestEngine.onKill(solo, drawn.get(0)); drawn.get(0).discard();
         be = log.entry(beacon);
-        check("kill: tagged kills advance the beat", be != null && be.stage == 3);
+        check("kill: the player's own kill counts", be != null && be.stage == 2 && be.progress.get(0) == 1);
+        drawn.get(1).addTag(Rewards.FOR_PREFIX + solo.getUUID());
+        QuestEngine.onUnownedDeath(solo, drawn.get(1)); drawn.get(1).discard();
+        be = log.entry(beacon);
+        check("kill: a spawned mob that died to something else still counts", be != null && be.stage == 3);
         int itemsAfter = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(fire).inflate(24)).size();
         Chronicler.LOGGER.info("SelfTest: kill drops on the ground before {} after {}", itemsBefore, itemsAfter);
         solo.getInventory().add(com.sablednah.chronicler.data.QuestItem.build(registries, ember, 2));
@@ -615,6 +622,22 @@ public final class SelfTest {
                 check("deliver: the objective names her", QuestEngine.quest(server, bd).get().value().beats().get(2).objectives().getFirst().describe().contains("Okafor"));
             } else {
                 check("deliver: before_dark could be accepted for the test", false);
+            }
+            // own_kill: the First Bed blowing itself up is not a kill; another is spawned and the player told.
+            var hc = Identifier.fromNamespaceAndPath("zarp", "house_calls");
+            log.complete(Identifier.fromNamespaceAndPath("zarp", "the_signal"));
+            if (com.sablednah.chronicler.api.Quests.accept(solo, hc).isEmpty()) {
+                var hce = log.entry(hc);
+                hce.jump(2, List.of(1)); // the First Bed beat
+                Zombie bed = new Zombie(level); bed.snapTo(spawn.getX(), spawn.getY(), spawn.getZ(), 0F, 0F);
+                bed.addTag(Trackers.TAG_PREFIX + "first_bed"); bed.addTag(Rewards.FOR_PREFIX + solo.getUUID());
+                int spawnedBefore = Rewards.lastSpawned();
+                QuestEngine.onUnownedDeath(solo, bed); bed.discard();
+                check("own_kill: a self-destructed boss does not count", log.entry(hc) != null && log.entry(hc).stage == 2 && log.entry(hc).progress.get(0) == 0);
+                QuestEngine.onKill(solo, bed);
+                check("own_kill: the player's own kill does", log.entry(hc) != null && log.entry(hc).stage == 3);
+            } else {
+                check("own_kill: house_calls could be accepted for the test", false);
             }
             log.clear();
             check("zarp: the finale is locked until the sample is kept", !QuestEngine.available(solo, Identifier.fromNamespaceAndPath("zarp", "patient_zero"), pz));

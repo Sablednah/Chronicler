@@ -57,7 +57,7 @@
       "on_enter": [
         {
           "type": "spawn",
-          "count": 4,
+          "count": 6,
           "radius": 10,
           "entity": "minecraft:zombie",
           "equipment": {

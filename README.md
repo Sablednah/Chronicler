@@ -131,7 +131,10 @@ override `scope`. Every word a player sees lives in
   counts any of them, so a file names the genus first and the vanilla stand-in
   second. `tag: warden` also counts anything a `spawn` effect tagged. `drop:
   { quest_item: zarp:ember_heart, chance: 1.0 }` makes counted kills drop a
-  quest item, no loot table needed.
+  quest item, no loot table needed. A mob a quest spawned that dies to
+  anything else (a fall, the sun, itself) still counts for the player it was
+  spawned for; `own_kill: true` refuses that and spawns another instead, so a
+  boss that blows itself up can be tried again.
 - **`spawn`** takes `name`, `tag` and `health`; with a `genus` *and* an
   `entity`, the entity stands in when ZombieMod is absent -- one file, two servers.
 - **`ritual`** is a multiblock: right-click `block` while every `pattern`

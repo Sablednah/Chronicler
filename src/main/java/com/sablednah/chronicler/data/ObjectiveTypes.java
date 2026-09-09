@@ -31,9 +31,13 @@ public final class ObjectiveTypes {
      * counts anything a {@code spawn} effect tagged (a named mini-boss with no
      * ZombieMod behind it). {@code drop} makes each counted kill drop a quest
      * item with the given chance, so samples come off the things you hunt
-     * whether or not a loot table exists.
+     * whether or not a loot table exists. A mob this quest spawned that dies
+     * to anything else -- a fall, sunlight, its own explosion -- still counts,
+     * unless {@code own_kill} is set, in which case it is spawned again so the
+     * player can keep trying (the Bloater you must kill before it blows).
      */
-    public record Kill(List<String> targets, int count, Optional<String> tag, Optional<Drop> drop) implements ObjectiveSpec {
+    public record Kill(List<String> targets, int count, Optional<String> tag, Optional<Drop> drop, boolean ownKill) implements ObjectiveSpec {
+        public Kill(List<String> targets, int count, Optional<String> tag, Optional<Drop> drop) { this(targets, count, tag, drop, false); }
         public record Drop(Identifier questItem, double chance, int count) {
             public static final Codec<Drop> CODEC = RecordCodecBuilder.create(i -> i.group(
                     ChroniclerIds.CODEC.fieldOf("quest_item").forGetter(Drop::questItem),
@@ -47,10 +51,11 @@ public final class ObjectiveTypes {
                 TARGETS.optionalFieldOf("target", List.of("any")).forGetter(Kill::targets),
                 Codec.INT.optionalFieldOf("count", 1).forGetter(Kill::count),
                 Codec.STRING.optionalFieldOf("tag").forGetter(Kill::tag),
-                Drop.CODEC.optionalFieldOf("drop").forGetter(Kill::drop))
+                Drop.CODEC.optionalFieldOf("drop").forGetter(Kill::drop),
+                Codec.BOOL.optionalFieldOf("own_kill", false).forGetter(Kill::ownKill))
                 .apply(i, Kill::new));
 
-        public Kill(String target, int count) { this(List.of(target), count, Optional.empty(), Optional.empty()); }
+        public Kill(String target, int count) { this(List.of(target), count, Optional.empty(), Optional.empty(), false); }
         /** The first named target, for text. */
         public String target() { return targets.isEmpty() ? "any" : targets.getFirst(); }
 
