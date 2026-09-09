@@ -167,7 +167,9 @@ override `scope`. Every word a player sees lives in
   `equipment: { mainhand: "minecraft:potion[potion_contents={potion:'minecraft:healing'}]", head: minecraft:iron_helmet }`
   dresses them (slots mainhand, offhand, head, chest, legs, feet; items as
   `/give` takes them), applied on placement and re-applied on restart if the
-  file changes; `/cast equip` does it by hand.
+  file changes; `/cast equip` does it by hand. NPCs obey gravity (mine the
+  block under one and it lands); `defy_gravity: true` keeps one exactly where
+  it was put.
 - **Availability** takes `race: [immune]` and `class: [doc, combat_medic]`
   (LegendQuest ids, bare or namespaced; any of the list), beside `level_min`.
 - **Endings.** A stage or a choice with `ending: cure` records an ending for

@@ -86,7 +86,7 @@ public final class GiverTypes {
      */
     public record NpcGiver(String name, Optional<String> skin, Optional<Identifier> entity,
             Optional<BlockPos> at, Optional<List<Integer>> nearSpawn, Optional<Identifier> dimension, float yaw,
-            Optional<String> greeting, Optional<Identifier> of, Map<String, String> equipment) implements GiverSpec {
+            Optional<String> greeting, Optional<Identifier> of, Map<String, String> equipment, boolean defyGravity) implements GiverSpec {
         /**
          * {@code at} is a fixed block; {@code near_spawn: [dx, dz]} is an offset
          * from the world spawn, dropped onto the surface the first time the
@@ -104,7 +104,8 @@ public final class GiverTypes {
                 Codec.FLOAT.optionalFieldOf("yaw", 0F).forGetter(NpcGiver::yaw),
                 Codec.STRING.optionalFieldOf("greeting").forGetter(NpcGiver::greeting),
                 ChroniclerIds.CODEC.optionalFieldOf("of").forGetter(NpcGiver::of),
-                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("equipment", Map.of()).forGetter(NpcGiver::equipment))
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("equipment", Map.of()).forGetter(NpcGiver::equipment),
+                Codec.BOOL.optionalFieldOf("defy_gravity", false).forGetter(NpcGiver::defyGravity))
                 .apply(i, NpcGiver::new)).validate(n -> n.at().isEmpty() && n.nearSpawn().isEmpty() && n.of().isEmpty()
                         ? com.mojang.serialization.DataResult.error(() -> "an npc giver needs 'at' or 'near_spawn'")
                         : com.mojang.serialization.DataResult.success(n));

@@ -55,6 +55,9 @@ public final class CastGivers {
             @Override public void equip(MinecraftServer server, UUID id, java.util.Map<String, String> equipment) {
                 equipment.forEach((slot, item) -> Cast.equip(server, id, slot, item));
             }
+            @Override public void setDefyGravity(MinecraftServer server, UUID id, boolean defy) {
+                Cast.setDefyGravity(server, id, defy);
+            }
             @Override public java.util.Map<String, String> equipment(MinecraftServer server, UUID id) {
                 return Cast.equipment(server, id);
             }

@@ -20,6 +20,7 @@
   `replayable` chapters, `/quest replay <chapter>`; a progress percentage in
   `/quests` and the journal, moved only by quests that `counts`.
 - Availability by LegendQuest `race` and `class`.
+- NPC givers obey gravity through Cast; `defy_gravity: true` on the giver keeps one in place.
 - Genus spawns go through a seam and hand the mob back, so names, tags and equipment land on them; ZombieMod dresses first, `equipment` fills the gaps (`override: true` to replace). Quest items are not consumable unless `usable: true`.
 - `deliver` objective: hand items to a giver by clicking (or standing near); `spawn` takes `equipment`. ZARP's returns are deliveries and its daytime zombies wear caps.
 - Giver blocks are protected from breaking and explosions (`givers.protect`); admins sneak to break.
