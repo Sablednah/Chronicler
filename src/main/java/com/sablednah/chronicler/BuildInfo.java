@@ -30,20 +30,19 @@ public final class BuildInfo {
      * malformed cases instead of trusting the sentence above.
      */
     public static Stamp parse(InputStream in) {
-        String commit = "unknown", branch = "unknown", time = "unknown", version = "unknown";
+        Stamp unknown = new Stamp("unknown", "unknown", "unknown", "unknown");
+        if (in == null) return unknown;
+        Properties p = new Properties();
         try {
-            if (in != null) {
-                Properties p = new Properties();
-                p.load(in);
-                commit = p.getProperty("commit", commit);
-                branch = p.getProperty("branch", branch);
-                time = p.getProperty("time", time);
-                version = p.getProperty("version", version);
-            }
-        } catch (Exception ignored) {
-            // fall through with what was read, or unknowns
+            p.load(in);
+        } catch (Exception e) {
+            // All or nothing. Properties.load fills the map as it goes, so by the time it throws the
+            // keys before the bad line are already there -- a half-stamp with a real commit and an
+            // unknown time reads as a fact. (CityWorld printed the map from inside the catch to prove it.)
+            return unknown;
         }
-        return new Stamp(commit, branch, time, version);
+        return new Stamp(p.getProperty("commit", "unknown"), p.getProperty("branch", "unknown"),
+                p.getProperty("time", "unknown"), p.getProperty("version", "unknown"));
     }
 
     static {
