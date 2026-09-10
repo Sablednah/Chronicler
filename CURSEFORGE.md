@@ -1,3 +1,5 @@
+![Chronicler](https://raw.githubusercontent.com/Sablednah/Chronicler/main/docs/wordmark-850.png)
+
 # Chronicler — quests that are given by someone, somewhere
 
 **Chapters, quests and storylines from datapack files, played entirely on a vanilla client.**

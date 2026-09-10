@@ -1,3 +1,5 @@
+![Chronicler](docs/wordmark-850.png)
+
 # Chronicler
 
 Data-driven quests, chapters and storylines for NeoForge, given by someone,

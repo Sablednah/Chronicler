@@ -307,6 +307,8 @@ both.
 
 ## Releasing
 
+Artwork lives in `docs/`: `wordmark-850.png` (CurseForge caps description images at 850 wide; the store page and README use it), `wordmark.png` (full size), `icon.png` (1254 square), `icon-512.png` and `icon-256.png` (Modrinth rejects icons over 256 KiB; the 256 is under it).
+
 `CHANGELOG.md`, `CURSEFORGE.md` (not written yet), `mod_version`, tag, GitHub
 release — publishing fires `.github/workflows/curseforge.yml` and
 `modrinth.yml`, both of which skip cleanly until `CURSEFORGE_TOKEN` /
