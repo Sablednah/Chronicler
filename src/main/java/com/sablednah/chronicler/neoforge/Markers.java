@@ -45,7 +45,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class Markers {
 
-    private record Shown(Display.TextDisplay display, String text) {}
+    private record Shown(Display.TextDisplay display, String text, Vec3 at) {}
 
     /** giver key -> viewer -> what they were sent. */
     private static final Map<String, Map<UUID, Shown>> SHOWN = new HashMap<>();
@@ -81,8 +81,11 @@ public final class Markers {
                 }
                 if (shown == null) {
                     viewers.put(player.getUUID(), show(player, level, at, text));
-                } else if (!text.equals(shown.text())) {
-                    viewers.put(player.getUUID(), retext(player, level, shown, text));
+                } else {
+                    if (!text.equals(shown.text())) shown = retext(player, level, shown, text);
+                    // The giver moved (a possessed NPC walked off): the mark follows, or it hangs where they were.
+                    if (shown.at().distanceToSqr(at) > 0.0001D) shown = move(player, shown, at);
+                    viewers.put(player.getUUID(), shown);
                 }
             }
             viewers.keySet().removeIf(id -> !seen.contains(id));
@@ -138,13 +141,19 @@ public final class Markers {
                     at.x, at.y, at.z, 0F, 0F, EntityType.TEXT_DISPLAY, 0, Vec3.ZERO, 0D));
             sendData(player, display);
         }
-        return new Shown(display, text);
+        return new Shown(display, text, at);
+    }
+
+    private static Shown move(ServerPlayer player, Shown shown, Vec3 at) {
+        shown.display().snapTo(at.x, at.y, at.z, 0F, 0F);
+        if (player.connection != null) player.connection.send(net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket.of(shown.display()));
+        return new Shown(shown.display(), shown.text(), at);
     }
 
     private static Shown retext(ServerPlayer player, ServerLevel level, Shown shown, String text) {
         apply(shown.display(), level, text);
         sendData(player, shown.display());
-        return new Shown(shown.display(), text);
+        return new Shown(shown.display(), text, shown.at());
     }
 
     private static void sendData(ServerPlayer player, Display.TextDisplay display) {
@@ -181,6 +190,11 @@ public final class Markers {
         int n = 0;
         for (var v : SHOWN.values()) if (v.containsKey(player)) n++;
         return n;
+    }
+
+    public static Vec3 positionShownTo(UUID player, String key) {
+        Shown s = SHOWN.getOrDefault(key, Map.of()).get(player);
+        return s == null ? null : s.at();
     }
 
     public static String textShownTo(UUID player, String key) {
