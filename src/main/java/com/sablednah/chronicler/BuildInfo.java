@@ -20,9 +20,18 @@ public final class BuildInfo {
     private static final String TIME;
     private static final String VERSION;
 
-    static {
+    /** The four values, as read; {@code unknown} for anything missing. */
+    public record Stamp(String commit, String branch, String time, String version) {}
+
+    /**
+     * Read a stamp from a stream that may be null, empty or garbage: the answer is
+     * always a stamp and never an exception, because this is diagnostic, not a
+     * dependency. Package-visible so the self-test can run the missing and the
+     * malformed cases instead of trusting the sentence above.
+     */
+    public static Stamp parse(InputStream in) {
         String commit = "unknown", branch = "unknown", time = "unknown", version = "unknown";
-        try (InputStream in = BuildInfo.class.getResourceAsStream(RESOURCE)) {
+        try {
             if (in != null) {
                 Properties p = new Properties();
                 p.load(in);
@@ -32,9 +41,24 @@ public final class BuildInfo {
                 version = p.getProperty("version", version);
             }
         } catch (Exception ignored) {
-            // diagnostic, not a dependency
+            // fall through with what was read, or unknowns
         }
-        COMMIT = commit; BRANCH = branch; TIME = time; VERSION = version;
+        return new Stamp(commit, branch, time, version);
+    }
+
+    static {
+        Stamp s;
+        try (InputStream in = BuildInfo.class.getResourceAsStream(RESOURCE)) {
+            s = parse(in);
+        } catch (Exception e) {
+            s = new Stamp("unknown", "unknown", "unknown", "unknown");
+        }
+        COMMIT = s.commit(); BRANCH = s.branch(); TIME = s.time(); VERSION = s.version();
+    }
+
+    /** The one-line form of any stamp. */
+    public static String describe(Stamp s) {
+        return s.version() + " (build " + s.commit() + " on " + s.branch() + ", " + s.time() + ")";
     }
 
     public static String commit() { return COMMIT; }
@@ -44,7 +68,7 @@ public final class BuildInfo {
 
     /** {@code 0.1.0 (build a1b2c3d4 on main, 2026-09-10T09:15:00Z)}; {@code -dirty} means uncommitted changes. */
     public static String describe() {
-        return VERSION + " (build " + COMMIT + " on " + BRANCH + ", " + TIME + ")";
+        return describe(new Stamp(COMMIT, BRANCH, TIME, VERSION));
     }
 
     private BuildInfo() {}
