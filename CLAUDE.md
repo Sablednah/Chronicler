@@ -236,6 +236,19 @@ datapacks/zarp/      the ZARP questline, a built-in pack (AddPackFindersEvent; p
   LuckPerms are both handlers, so nothing lives in `compat/` for them. Boolean
   nodes only; every default resolver reproduces `NODES.md`.
 
+## The build stamp
+
+Family format (agreed 2026-09-10; LegendQuest holds the reference). `build.gradle`
+reads the short commit (`-dirty` when uncommitted), branch and UTC time at
+configure time, writes them into the manifest (`Build-Commit` / `Build-Branch` /
+`Build-Time`, for `unzip -p <jar> META-INF/MANIFEST.MF` without loading it) and
+into `/chronicler/build.properties` (namespaced; read by `BuildInfo` at runtime,
+because a dev run has no jar). The startup line and `/chronicler status` print it:
+`Chronicler 0.1.0 (build 32dac07e on main, 2026-09-10T07:30:11Z)`. A missing
+stamp reads `unknown` and never fails a load. **Same filename, different bytes**
+bit three sessions in one day; the stamp is the answer, and the log line is the
+half that matters because it says what ran.
+
 ## Soft dependencies — the seam pattern
 
 All four siblings are `type="optional"` in the mods.toml and `compileOnly` from

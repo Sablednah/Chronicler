@@ -564,6 +564,7 @@ public final class ChroniclerCommands {
         String lines = String.join("\n",
                 Lang.fmt("cmd.status", "chapters", chapters.size(), "quests", quests.size(),
                         "objectives", ObjectiveTypes.TYPES.size(), "rewards", RewardTypes.TYPES.size()),
+                Lang.fmt("cmd.status.build", "build", com.sablednah.chronicler.BuildInfo.describe()),
                 Lang.fmt("cmd.status.config", "path", FMLPaths.CONFIGDIR.get().resolve(Chronicler.MODID).toAbsolutePath()),
                 Lang.fmt("cmd.status.siblings", "list", siblings.isEmpty() ? "none" : String.join(", ", siblings)),
                 Lang.fmt("cmd.status.party", "provider", Party.providerName()),
