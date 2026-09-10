@@ -1,20 +1,42 @@
 # Chronicler
 
-Data-driven quests, chapters and storylines for NeoForge. Server-authoritative:
-vanilla clients play the whole thing.
+Data-driven quests, chapters and storylines for NeoForge, given by someone,
+somewhere, told in beats, with choices that branch and consequences the world
+remembers. Server-authoritative: **a vanilla client plays the whole thing**.
 
 Built to sit beside [LegendQuest ReForged](https://github.com/Sablednah/LegendQuest-ReForged),
 [ZombieMod ReForged](https://github.com/Sablednah/ZombieMod),
-[CityWorld ReForged](https://github.com/Sablednah/CityWorld-ReForged) and
-[SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) — and
-needs none of them.
+[CityWorld ReForged](https://github.com/Sablednah/CityWorld-ReForged),
+[SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) and
+[Cast](https://github.com/Sablednah/Cast) -- and needs none of them.
 
-**Status: 0.1.0 (unreleased) — engine, journal, givers, stages, conditions, choices, deadlines, bounties.** Quests load from datapacks
-and YAML, can be accepted, are measured (kills, items held, places reached),
-complete with a title card and pay out. The journal is a written book with a
-page per quest and clickable links, handed to every new player. Party quests pool progress across a party when
-SableCraft Standards is present. The design and build order are in
-[docs/DESIGN.md](docs/DESIGN.md).
+**Status: 0.1.0, heading for a first release.** The engine, the journal, givers
+(blocks, places, NPCs), stages, choices, deadlines, endings and replay, quest
+items, rituals, deliveries, party quests, reputation, progress, and the shipped
+**ZARP** questline, all self-tested headlessly and played through to the Nether.
+The store page is [CURSEFORGE.md](CURSEFORGE.md); the design and build order are
+in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
+[docs/ZARP.md](docs/ZARP.md).
+
+## Playing
+
+- A giver floats a mark: `!` on offer, `?` while you are on it, a tick when done.
+  Right-click to hear the offer; right-click again to accept.
+- `/quest` alone says what you are doing now. `/quests` lists everything with
+  your progress. The journal is a written book in your inventory (right-click
+  it, or `/quest journal`), with clickable Track / Abandon / Accept links.
+- Choices arrive as buttons in chat and in the book. `/quest replay <chapter>`
+  starts a replayable chapter over, keeping the endings you found.
+
+## Requirements
+
+| Minecraft | NeoForge | Java | branch |
+|---|---|---|---|
+| 1.21.11 | 21.11.42+ | 21 | `main` |
+| 26.1.2 | 26.1.2.95+ | 25 | `mc26.1` |
+| 26.2 | 26.2.0.72+ | 25 | `mc26.2` |
+
+Install on the server; players need nothing. Every sibling mod is optional.
 
 ## Writing content
 
