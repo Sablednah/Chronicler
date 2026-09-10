@@ -174,7 +174,13 @@ var buildCommit = gitOut(projectDir, "git", "rev-parse", "--short=8", "HEAD") ?:
 var buildBranch = gitOut(projectDir, "git", "rev-parse", "--abbrev-ref", "HEAD") ?: "unknown"
 var buildDirty  = gitOut(projectDir, "git", "status", "--porcelain")
 if (buildDirty) buildCommit += "-dirty"   // built from uncommitted changes; say so
-var buildTime = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone("UTC"))
+// The COMMIT's time, not the wall clock: a wall-clock stamp changes every Gradle run, so the
+// generated resource changes, so processResources and jar are never up to date (measured by
+// Standards: 25s vs 8s). %ct is UTC-normalised, so the same commit stamps the same on any machine.
+var commitEpoch = gitOut(projectDir, "git", "show", "-s", "--format=%ct", "HEAD")
+var buildTime = commitEpoch
+        ? new Date(commitEpoch.toLong() * 1000L).format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone("UTC"))
+        : "unknown"
 logger.lifecycle("Build stamp: ${buildCommit} on ${buildBranch} at ${buildTime}")
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
