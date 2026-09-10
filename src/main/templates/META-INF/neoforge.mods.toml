@@ -19,10 +19,11 @@ displayURL="https://sablecraft.co.uk/chronicler/"
 #   iconFile   - small SQUARE beside the name (26.2+)
 #   bannerFile - wide info-panel image (26.2+)
 #   logoFile   - what 1.21.x and 26.1 show; 26.2's fallback
-# No artwork yet -- add the files to src/main/resources and uncomment.
-#iconFile="chronicler-icon.png"
-#bannerFile="chronicler.png"
-#logoFile="chronicler.png"
+# chronicler-icon.png is the 256 square (docs/icon-256.png); chronicler.png the 850 wordmark.
+iconFile="chronicler-icon.png"
+bannerFile="chronicler.png"
+logoFile="chronicler.png"
+logoBlur=false
 
 # The mod is server-authoritative: vanilla clients can join and play. A future
 # optional client entrypoint may add a quest tracker HUD for modded clients.
