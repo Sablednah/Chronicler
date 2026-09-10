@@ -19,6 +19,7 @@ import net.minecraft.world.entity.animal.cow.Cow;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
 /**
@@ -180,6 +181,15 @@ public final class SelfTest {
             String giverKey = GiverStore.key(server.overworld(), here);
             check("a mark is sent to the player near the op-placed giver", Markers.shownTo(solo.getUUID()) >= 1
                     && !Markers.textShownTo(solo.getUUID(), giverKey).isEmpty());
+            {
+                // A giver that moves (a possessed NPC): the mark goes with it, sent as a move, not a new entity.
+                Vec3 was = Markers.positionShownTo(solo.getUUID(), giverKey);
+                Vec3 moved = was.add(3, 0, 0);
+                Markers.sync(server, java.util.Map.of(giverKey, List.of(ChroniclerIds.of("first_steps"))), k -> moved, k -> server.overworld());
+                check("a mark follows a giver that moved", moved.equals(Markers.positionShownTo(solo.getUUID(), giverKey)));
+                Givers.tickMarkers(server); // back to the block's own position
+                check("a mark comes back when the giver does", was.equals(Markers.positionShownTo(solo.getUUID(), giverKey)));
+            }
             check("the mark says 'available' before accepting", Markers.textShownTo(solo.getUUID(), giverKey)
                     .equals(com.sablednah.chronicler.ChroniclerConfig.GIVER_MARKER_TEXT.get()));
             // The four oak logs are still in the pack, so accepting completes it on the spot.
