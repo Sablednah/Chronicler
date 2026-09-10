@@ -134,6 +134,7 @@ public final class Lang {
         def("cmd.reload_notice", "{prefix}&7messages.yml applied. {term.chapters} and {term.quests} are frozen registries: content changes apply on server RESTART.");
         def("cmd.status", "{prefix}&f{chapters} {term.chapters}, {quests} {term.quests}, {objectives} objective types, {rewards} reward types.");
         def("cmd.status.config", "&7Config: &f{path}");
+        def("cmd.status.build", "&7Build: &f{build}");
         def("cmd.status.siblings", "&7Siblings: &f{list}");
         def("cmd.status.party", "&7Party membership: &f{provider}");
         def("cmd.status.character", "&7Character sheets: &f{provider}");

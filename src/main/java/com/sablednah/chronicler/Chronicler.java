@@ -40,7 +40,7 @@ public class Chronicler {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public Chronicler(IEventBus modEventBus, ModContainer modContainer) {
-        LOGGER.info("Chronicler initialising");
+        LOGGER.info("Chronicler {} initialising", BuildInfo.describe());
 
         modContainer.registerConfig(ModConfig.Type.COMMON, ChroniclerConfig.SPEC);
 
