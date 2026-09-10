@@ -348,6 +348,10 @@ public final class SelfTest {
             solo.discard();
         }
 
+        check("build stamp: no resource at all reads unknown, and does not throw",
+                com.sablednah.chronicler.BuildInfo.parse(null).commit().equals("unknown") && com.sablednah.chronicler.BuildInfo.describe(com.sablednah.chronicler.BuildInfo.parse(null)).contains("unknown"));
+        check("build stamp: a malformed resource reads unknown, and does not throw",
+                com.sablednah.chronicler.BuildInfo.parse(new java.io.ByteArrayInputStream("\u0000garbage=\\u00zz\n=\n".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1))).version().equals("unknown"));
         check("build stamp: a dev run reads its commit (" + com.sablednah.chronicler.BuildInfo.describe() + ")",
                 !"unknown".equals(com.sablednah.chronicler.BuildInfo.commit()) && !"unknown".equals(com.sablednah.chronicler.BuildInfo.version()));
         CommandSourceStack source = server.createCommandSourceStack();

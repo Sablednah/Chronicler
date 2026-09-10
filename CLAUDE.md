@@ -239,8 +239,9 @@ datapacks/zarp/      the ZARP questline, a built-in pack (AddPackFindersEvent; p
 ## The build stamp
 
 Family format (agreed 2026-09-10; LegendQuest holds the reference). `build.gradle`
-reads the short commit (`-dirty` when uncommitted), branch and UTC time at
-configure time, writes them into the manifest (`Build-Commit` / `Build-Branch` /
+reads the short commit (`-dirty` when uncommitted), branch and the COMMIT's UTC
+time (never the wall clock: that would change the resource every run and keep
+`jar` from ever being up to date) at configure time, writes them into the manifest (`Build-Commit` / `Build-Branch` /
 `Build-Time`, for `unzip -p <jar> META-INF/MANIFEST.MF` without loading it) and
 into `/chronicler/build.properties` (namespaced; read by `BuildInfo` at runtime,
 because a dev run has no jar). The startup line and `/chronicler status` print it:
