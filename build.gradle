@@ -212,7 +212,7 @@ tasks.named('jar', Jar) {
     manifest {
         attributes([
                 "Implementation-Title"  : mod_name,
-                "Implementation-Version": mod_version,
+                "Implementation-Version": "${mod_version}+mc${minecraft_version}".toString(),
                 "Build-Commit"          : buildCommit,
                 "Build-Branch"          : buildBranch,
                 "Build-Time"            : buildTime,
