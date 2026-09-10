@@ -348,6 +348,8 @@ public final class SelfTest {
             solo.discard();
         }
 
+        check("build stamp: a dev run reads its commit (" + com.sablednah.chronicler.BuildInfo.describe() + ")",
+                !"unknown".equals(com.sablednah.chronicler.BuildInfo.commit()) && !"unknown".equals(com.sablednah.chronicler.BuildInfo.version()));
         CommandSourceStack source = server.createCommandSourceStack();
         command(server, source, "quest list", true);
         command(server, source, "quests list", true);
