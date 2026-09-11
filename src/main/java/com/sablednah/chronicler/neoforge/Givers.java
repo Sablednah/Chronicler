@@ -113,8 +113,40 @@ public final class Givers {
     }
 
     private static BlockPos surface(ServerLevel level, int x, int z) {
+        return dryColumn(level, x, z);
+    }
+
+    private static BlockPos rawSurface(ServerLevel level, int x, int z) {
         level.getChunk(x >> 4, z >> 4); // generate it, or the heightmap answers for air
         return level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
+    }
+
+    private static boolean dry(ServerLevel level, BlockPos surface) {
+        BlockPos below = surface.below();
+        return level.getFluidState(surface).isEmpty() && level.getFluidState(below).isEmpty()
+                && !level.getBlockState(below).getCollisionShape(level, below).isEmpty();
+    }
+
+    /**
+     * The surface at this column, or the nearest dry one: the heightmap counts water as
+     * a surface, and a camp dropped by the shoreline put Mags in the sea. Spirals out to
+     * eight blocks; past that, the wet spot is returned and the placement says so in the log.
+     * Package-visible for the self-test.
+     */
+    static BlockPos dryColumn(ServerLevel level, int x, int z) {
+        BlockPos here = rawSurface(level, x, z);
+        if (dry(level, here)) return here;
+        for (int r = 1; r <= 8; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                    BlockPos c = rawSurface(level, x + dx, z + dz);
+                    if (dry(level, c)) return c;
+                }
+            }
+        }
+        Chronicler.LOGGER.warn("Chronicler: no dry ground within 8 of {}, {}; placing on what is there", x, z);
+        return here;
     }
 
     private static void placeBlock(ServerLevel level, BlockPos pos, String block, Identifier questId) {
@@ -167,9 +199,7 @@ public final class Givers {
             // An offset from the world spawn, dropped onto the surface: a shipped camp stands on any seed.
             var spawn = server.overworld().getRespawnData().globalPos().pos();
             int x = spawn.getX() + n.nearSpawn().get().get(0), z = spawn.getZ() + n.nearSpawn().get().get(1);
-            level.getChunk(x >> 4, z >> 4); // generate it, or the heightmap answers for air
-            return level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                    new net.minecraft.core.BlockPos(x, 0, z));
+            return dryColumn(level, x, z); // never in the sea, whatever the heightmap says
         });
         Vec3 pos = new Vec3(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
         UUID id = n.entity().isPresent()
