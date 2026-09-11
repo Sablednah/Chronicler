@@ -94,7 +94,8 @@ public final class ChroniclerCommands {
 
     private static LiteralArgumentBuilder<CommandSourceStack> questTree(String root) {
         return Commands.literal(root)
-                .executes(ChroniclerCommands::now)
+                // /quest alone: what you are doing now. /quests alone: everything there is.
+                .executes(root.endsWith("s") ? ChroniclerCommands::list : ChroniclerCommands::now)
                 .then(Commands.literal("list").executes(ChroniclerCommands::list))
                 .then(Commands.literal("log").executes(ChroniclerCommands::log))
                 .then(Commands.literal("info").then(questArg().executes(ChroniclerCommands::info)))

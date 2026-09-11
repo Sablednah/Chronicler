@@ -620,6 +620,20 @@ public final class SelfTest {
             var fireAt = GiverStore.get(server).placedBlock(Identifier.fromNamespaceAndPath("zarp", "wake_up"));
             check("zarp: the campfire was dropped near spawn", fireAt.isPresent()
                     && fireAt.get().distManhattan(spawn) < 8 && level.getBlockState(fireAt.get()).is(net.minecraft.world.level.block.Blocks.CAMPFIRE));
+            // Dry ground: a column whose surface is water resolves to the nearest column that is not.
+            {
+                var wet = spawn.offset(-14, 0, -14);
+                var g = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wet);
+                for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
+                    level.setBlockAndUpdate(g.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+                    level.setBlockAndUpdate(g.offset(dx, 0, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                }
+                var found = Givers.dryColumn(level, wet.getX(), wet.getZ());
+                boolean moved = Math.max(Math.abs(found.getX() - wet.getX()), Math.abs(found.getZ() - wet.getZ())) >= 2;
+                boolean isDry = level.getFluidState(found.below()).isEmpty() && level.getFluidState(found).isEmpty();
+                check("placement: a wet column resolves to nearby dry ground (moved " + moved + ", dry " + isDry + ")", moved && isDry);
+                for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) level.setBlockAndUpdate(g.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+            }
             // Decor on a cleared patch (the dev world keeps older camps): a post on the ground, its lantern ON it, no gap.
             {
                 var patch = spawn.offset(12, 0, 12);
