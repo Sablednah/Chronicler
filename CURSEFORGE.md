@@ -34,6 +34,8 @@ modded client might add later is sugar; nothing is required.
 - **Shared.** A party quest pools progress across a party, scales targets to its size, and pays
   everyone.
 
+![The camp near spawn: five people, a fire, and the marks over the ones with work for you](https://raw.githubusercontent.com/Sablednah/Chronicler/main/docs/screenshots/camp.png)
+
 ## The Zombie Apocalypse Roleplay questline
 
 Chronicler ships with **ZARP**, built for CityWorld's apocalypse cities, ZombieMod and the
@@ -44,6 +46,10 @@ parts and come back to find a nest where the garage was), a bounty board, and a 
 undead for the wards and the fortresses, including a Patient in a gown and a surgical mask. It
 turns itself on when ZombieMod is present. It is also the worked example: every mechanism above
 is in it, in readable JSON.
+
+![Dr Okafor, dressed, with the mark that says she has something for you](https://raw.githubusercontent.com/Sablednah/Chronicler/main/docs/screenshots/okafor-mark.png)
+
+![The journal: a written book, regenerated every time you open it](https://raw.githubusercontent.com/Sablednah/Chronicler/main/docs/screenshots/journal.png)
 
 ## Writing your own
 
