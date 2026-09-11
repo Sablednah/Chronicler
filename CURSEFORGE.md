@@ -47,6 +47,8 @@ undead for the wards and the fortresses, including a Patient in a gown and a sur
 turns itself on when ZombieMod is present. It is also the worked example: every mechanism above
 is in it, in readable JSON.
 
+![Patients, at dusk, by the camp](https://raw.githubusercontent.com/Sablednah/Chronicler/main/docs/screenshots/patients.png)
+
 ![Dr Okafor, dressed, with the mark that says she has something for you](https://raw.githubusercontent.com/Sablednah/Chronicler/main/docs/screenshots/okafor-mark.png)
 
 ![The journal: a written book, regenerated every time you open it](https://raw.githubusercontent.com/Sablednah/Chronicler/main/docs/screenshots/journal.png)
