@@ -323,6 +323,11 @@ tokens.
 
 ## Known traps (paid for next door, not yet here)
 
+- **Resolving a cherry-pick conflict with `git add -A` resurrects files the commit deleted.**
+  Cast paid for it: `Proxies.java`, deleted on main, came back on both 26.x branches as an
+  orphan nothing called. After `cherry-pick --continue`, `git grep` for the name of the thing
+  the commit removed.
+
 - Giver marks are per-player packets (`Markers`), not entities: a `TextDisplay` built with
   `EntityType.TEXT_DISPLAY.create(level, COMMAND)`, configured by NBT `load`, then
   `ClientboundAddEntityPacket` + `ClientboundSetEntityDataPacket(getNonDefaultValues())`.
