@@ -63,14 +63,16 @@ else
     done
 fi
 
-# REFUSE if an instance is running. The name runs up to the next backslash or quote, NOT the
-# next space: instance folders have spaces in them ("MobHealth - Forge"), and a guard that
-# stops at the space compares "MobHealth" and never refuses anything. Windows does NOT lock the jar, so the copy
-# silently succeeds and the live JVM dies the moment it lazily loads a class it
-# had not touched (NoClassDefFoundError <- ZipException: invalid LOC header).
+# REFUSE if an instance is running. The name runs up to the next backslash, quote or " --", NOT
+# the next space: instance folders have spaces in them ("MobHealth - Forge"), and a guard that
+# stops at the space compares "MobHealth" and never refuses anything. But the launcher passes
+# --gameDir unquoted, so the name is followed by " --assetsDir C:\..." and a guard that only stops
+# at a backslash captured "26.2 --assetsDir C:" and let a copy into a live 26.2 through. Windows
+# may or may not lock the jar; when it does not, the copy silently succeeds and the live JVM dies
+# the moment it lazily loads a class it had not touched (NoClassDefFoundError <- ZipException).
 RUNNING="$(powershell.exe -NoProfile -Command \
   "Get-CimInstance Win32_Process | Where-Object { \$_.Name -like 'java*' } | ForEach-Object { \
-   \$m=[regex]::Match(\$_.CommandLine,'Instances\\\\([^\\\\\"]+)'); if (\$m.Success) { \$m.Groups[1].Value } }" \
+   \$m=[regex]::Match(\$_.CommandLine,'Instances\\\\([^\\\\\"]+?)(?= --|\\\\|\"|$)'); if (\$m.Success) { \$m.Groups[1].Value } }" \
   2>/dev/null | tr -d '\r' | sort -u || true)"
 
 for INSTANCE in "${TARGETS[@]}"; do
