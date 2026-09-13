@@ -78,6 +78,7 @@ jobs:
         env:
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
           CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          CURSEFORGE_REQUIRED_DEPENDENCIES: ${{ vars.CURSEFORGE_REQUIRED_DEPENDENCIES }}
           RELEASE_TYPE: ${{ inputs.release_type || 'release' }}
           CURSEFORGE_DEBUG: ${{ inputs.debug && '1' || '' }}
           ONLY: ${{ inputs.only }}

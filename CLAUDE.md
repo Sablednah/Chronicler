@@ -7,13 +7,13 @@ Guidance for Claude Code (claude.ai/code) working in this repository.
 **Chronicler** — a data-driven quest mod for NeoForge: chapters, quests, stages,
 givers in the world, a journal. It is the family's answer to FTB Quests, built
 for tight compatibility with **LegendQuest**, **ZombieMod**, **CityWorld** and
-**SableCraft Standards** — and it requires none of them. First use: the *Zombie
+**SableCraft Standards** — requiring Standards and Cast, nothing else. First use: the *Zombie
 Apocalypse Roleplay* (ZARP) questline. `docs/DESIGN.md` is the thinking, the
 data model and the build order — **read it before adding a feature.**
 
 | | |
 |---|---|
-| Minecraft | 1.21.11 (`main`); `mc26.1` / `mc26.2` branches to come |
+| Minecraft | 1.21.11 (`main`), 26.1.2 (`mc26.1`), 26.2 (`mc26.2`) |
 | Loader | NeoForge 21.11.42 |
 | Java | 21 (25 on 26.x) |
 | Build | Gradle 9.2.1 + ModDevGradle 2.0.141 |
@@ -116,9 +116,9 @@ kill <the JVM whose cmdline has Chronicler/build/classes>; rm run/mods/*.jar
   the background-task memory monitor killed two boots mid world-load and
   reported "BUILD FAILED" with no cause. The server heap is capped at 2G in
   `build.gradle` for the same reason.
-- **Boot with the siblings AND without.** The compat classes only link when
-  the mod is present; 47 checks pass with nobody there, 106 with everybody,
-  and both numbers matter.
+- **Boot with every sibling AND with only the required two** (Standards and Cast; without
+  them NeoForge refuses to start). The compat classes only link when the mod is present, and
+  both counts matter (192 and 166 at 1.0.0).
 - **`libs/` (gitignored) holds a sibling jar that has no `build/libs` for this
   line** -- ZombieMod builds 1.21.11 elsewhere, so its jar is copied from the
   CurseForge instance. `build.gradle` compiles against the NEWEST jar of each
@@ -245,27 +245,29 @@ time (never the wall clock: that would change the resource every run and keep
 `Build-Time`, for `unzip -p <jar> META-INF/MANIFEST.MF` without loading it) and
 into `/chronicler/build.properties` (namespaced; read by `BuildInfo` at runtime,
 because a dev run has no jar). The startup line and `/chronicler status` print it:
-`Chronicler 0.1.0 (build 32dac07e on main, 2026-09-10T07:30:11Z)`. A missing
+`Chronicler 1.0.0+mc1.21.11 (build 32dac07e on main, 2026-09-10T07:30:11Z)`. A missing
 stamp reads `unknown` and never fails a load. **Same filename, different bytes**
 bit three sessions in one day; the stamp is the answer, and the log line is the
 half that matters because it says what ran.
 
 ## Soft dependencies — the seam pattern
 
-All four siblings are `type="optional"` in the mods.toml and `compileOnly` from
-their `build/libs`. **Only a class under `neoforge/compat/` may import
+**Standards and Cast are `type="required"`** (Sable, 2026-09-13: a modpack that pulls Chronicler
+must pull the economy, groups and reputation it pays through and the people who give its quests;
+CurseForge carries the same as a required-dependency relation on each upload, via the repository
+variable `CURSEFORGE_REQUIRED_DEPENDENCIES`, comma-separated slugs -- Standards only until Cast
+has a page). LegendQuest, ZombieMod and CityWorld stay `type="optional"`. All five are
+`compileOnly` from their `build/libs`, and the code still treats every one as a seam. **Only a class under `neoforge/compat/` may import
 `com.sablednah.standards`, `com.sablednah.legendquest`, `com.sablednah.zombiemod`
 or `me.daddychurchill.CityWorld`.** Everything else talks to a neutral bridge
 that answers sensibly when the sibling is absent (no economy → reward skipped
 and said so; no CityWorld → `lot` objective never completes and the file is
 rejected at load with a clear message).
 
-**Floors are what is consumed, not what is newest.** Standards 1.5.0 (released
-2026-09-06) carries `api/reputation`, but the floor stays `[1.2.0,)` because
-economy and groups are what is consumed unconditionally and every 1.21.11 test
-instance still runs 1.2.0 -- NeoForge refuses to start when an optional
-dependency is present but below its floor. Raise it only when the instances
-have moved and a seam genuinely needs the newer build.
+**Floors are what is consumed, not what is newest.** Standards' floor is `[1.5.0,)` because
+reputation (1.5.0) is consumed; Cast's is `[1.0.0,)` because `equip` and `setDefyGravity` are.
+NeoForge refuses to start when a dependency is present but below its floor, so raise a floor only
+when a seam genuinely needs the newer build.
 
 Wire each seam through `Chronicler.optionalIntegration(name, runnable)`, which
 catches **`LinkageError`** — `ModList.isLoaded` says "present", not "new
@@ -301,7 +303,7 @@ formatting codes, `entityTags()` for `getTags()`, the loot-function
 registry holds the `MapCodec` itself (no `LootItemFunctionType`), the block-break event is
 `event.level.block.BreakBlockEvent` (with `setNotifyClient(true)` on cancel, so the client's
 predicted removal is undone), and `ItemParser.parse` returns an `ItemInput` record. Sibling 26.2 jars: Standards 1.6.0, LegendQuest 2.4.1,
-ZombieMod 3.4.0 (in its `build/libs`), Cast 0.1.0. A fresh 26.2 world starts
+ZombieMod 3.4.0 (in its `build/libs`), Cast 1.0.0 (the instances now carry Standards 1.8.0, LegendQuest 2.5.0, ZombieMod 3.4.1). A fresh 26.2 world starts
 at tick 0 and loads no spawn chunks without a player; the self-test allows for
 both.
 
@@ -309,19 +311,18 @@ both.
 
 Artwork lives in `docs/`: `wordmark-850.png` (CurseForge caps description images at 850 wide; the store page and README use it), `wordmark.png` (full size), `icon.png` (1254 square), `icon-512.png` and `icon-256.png` (Modrinth rejects icons over 256 KiB; the 256 is under it).
 
-`CHANGELOG.md`, `CURSEFORGE.md` (not written yet), `mod_version`, tag, GitHub
-release — publishing fires `.github/workflows/curseforge.yml` and
-`modrinth.yml`, both of which skip cleanly until `CURSEFORGE_TOKEN` /
-`CURSEFORGE_PROJECT_ID` / `MODRINTH_TOKEN` / `MODRINTH_PROJECT_ID` exist. Both
-scripts were copied from MobHealth and renamed; **review `scripts/*.sh` before
-the first real release**, and copy Standards' `only_mc` workflow input so one
-Minecraft line can be re-uploaded after a partial failure without duplicating
-the others (CurseForge has 500'd one of three jars twice across these repos). A 200 from CurseForge is acceptance, not
+`CHANGELOG.md`, `CURSEFORGE.md` (the store page: https://www.curseforge.com/minecraft/mc-mods/sablecraft-chronicler, project 1690352), `mod_version`, tag, GitHub
+release — publishing fires `.github/workflows/curseforge.yml` (live since 1.0.0:
+`CURSEFORGE_TOKEN` and `CURSEFORGE_PROJECT_ID` are set, so a published release
+uploads for real) and `modrinth.yml` (skips until `MODRINTH_TOKEN` /
+`MODRINTH_PROJECT_ID` exist). The workflow's `only` input re-uploads one
+Minecraft line after a partial failure without duplicating the others
+(CurseForge has 500'd one of three jars twice across these repos). A 200 from CurseForge is acceptance, not
 publication; the changelog sanitiser 500s on blockquotes and autolinks;
 Modrinth rejects AI-looking artwork and icons over 256 KiB. Never handle the
 tokens.
 
-## Known traps (paid for next door, not yet here)
+## Known traps (paid for next door, and some here)
 
 - **Resolving a cherry-pick conflict with `git add -A` resurrects files the commit deleted.**
   Cast paid for it: `Proxies.java`, deleted on main, came back on both 26.x branches as an

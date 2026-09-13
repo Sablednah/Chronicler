@@ -1,7 +1,9 @@
 # Chronicler — design
 
 A configurable quest system for NeoForge. Built to sit beside LegendQuest,
-ZombieMod, CityWorld and SableCraft Standards; needs none of them. This is the
+ZombieMod, CityWorld and SableCraft Standards; since 1.0.0 it requires Standards
+and Cast (the economy it pays through and the people who give quests) and none of
+the others. This is the
 thinking document: what makes it *not* FTB Quests rehashed, what the data
 looks like, and the order to build it in. `CLAUDE.md` holds the working
 conventions; `README.md` will hold what a server owner needs once there is

@@ -10,9 +10,9 @@ Built to sit beside [LegendQuest ReForged](https://github.com/Sablednah/LegendQu
 [ZombieMod ReForged](https://github.com/Sablednah/ZombieMod),
 [CityWorld ReForged](https://github.com/Sablednah/CityWorld-ReForged),
 [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) and
-[Cast](https://github.com/Sablednah/Cast) -- and needs none of them.
+[Cast](https://github.com/Sablednah/Cast). Standards and Cast are required; the rest are optional.
 
-**Status: 0.1.0, heading for a first release.** The engine, the journal, givers
+**Status: 1.0.0.** The engine, the journal, givers
 (blocks, places, NPCs), stages, choices, deadlines, endings and replay, quest
 items, rituals, deliveries, party quests, reputation, progress, and the shipped
 **ZARP** questline, all self-tested headlessly and played through to the Nether.
@@ -38,7 +38,7 @@ in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
 | 26.1.2 | 26.1.2.95+ | 25 | `mc26.1` |
 | 26.2 | 26.2.0.72+ | 25 | `mc26.2` |
 
-Install on the server; players need nothing. Every sibling mod is optional.
+Install on the server; players need nothing. **Requires [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) and [Cast](https://github.com/Sablednah/Cast)** (the economy, groups and reputation the quests pay through, and the people who give them); LegendQuest, ZombieMod and CityWorld are optional.
 
 ## Writing content
 

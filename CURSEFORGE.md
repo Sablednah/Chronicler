@@ -79,7 +79,7 @@ are doing now, the journal book does the rest.
 
 ## Plays well with others
 
-Every one of these is optional; Chronicler asks each for what it has and says so when it is absent.
+Standards and Cast are required; the other three are optional, and Chronicler says so when one is absent.
 
 - **[SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards)** —
   money rewards through its economy, party quests through its groups, reputation through its
@@ -113,7 +113,7 @@ journal for someone, a reset.
 There is **a jar per Minecraft version**, named for the one it was built against — take the one
 that matches your server.
 
-**Install on the server. That is all.** No dependencies, and nothing your players have to do.
+**Install on the server, with [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) and [Cast](https://github.com/Sablednah/Cast).** Both are required: Standards is the economy, groups and reputation the quests pay through, Cast is the people who give them. LegendQuest, ZombieMod and CityWorld are optional and make it richer. Nothing your players have to do.
 
 ## Credits and licence
 
