@@ -30,11 +30,13 @@ export PATH="$JAVA_HOME/bin:$PATH"
 echo ">> Building (JAVA_HOME=$JAVA_HOME)..."
 "$ROOT/gradlew" build --console=plain -q
 
-# The jar for the Minecraft version this checkout builds, never "the newest": three lines share
-# build/libs, and the newest file is whichever branch was built last, not the one checked out.
+# The exact jar this checkout builds, never "the newest" and never a glob: three lines share
+# build/libs, the newest file is whichever branch was built last, and a glob with head -1 sorts
+# alphabetically, which deployed the stale 0.1.0 jar over a freshly built 1.0.0.
 MC_BUILD="$(sed -n 's/^minecraft_version=//p' "$ROOT/gradle.properties" | tr -d '\r')"
-JAR="$(ls "$ROOT"/build/libs/chronicler-*+mc"$MC_BUILD".jar 2>/dev/null | grep -v -- '-sources' | head -1 || true)"
-[ -n "$JAR" ] || { echo "!! No built jar in build/libs" >&2; exit 1; }
+MOD_VERSION="$(sed -n 's/^mod_version=//p' "$ROOT/gradle.properties" | tr -d '\r')"
+JAR="$ROOT/build/libs/chronicler-${MOD_VERSION}+mc${MC_BUILD}.jar"
+[ -f "$JAR" ] || { echo "!! No $(basename "$JAR") in build/libs" >&2; exit 1; }
 JARNAME="$(basename "$JAR")"
 
 MC_TAG=""
