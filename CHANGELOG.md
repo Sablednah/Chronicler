@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased — 0.1.0
+## 1.0.0 — 2026-09-13
+
+The first release. Requires SableCraft Standards 1.5.0+ and Cast 1.0.0+; LegendQuest, ZombieMod and CityWorld stay optional. Everything below is in it.
 
 - **ZARP**: the Zombie Apocalypse Roleplay questline, built in as a datapack
   (`content.zarp`, auto with ZombieMod): a camp of five near spawn, four acts

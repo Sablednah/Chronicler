@@ -51,9 +51,9 @@ LOADER_ID="$(jq -r 'map(select(.name == "NeoForge")) | .[0].id // empty' <<<"$VE
 [ -n "$LOADER_ID" ] || echo "!! Warning: no 'NeoForge' modloader tag found; uploading without it." >&2
 
 # CurseForge rejects an upload that names no environment ("You must select at least one version from
-# the environment group of versions"). Chronicler is genuinely both: it installs server-only (chat,
-# action bar, nameplate and boss bars all reach vanilla clients), client-only (graphical bars are
-# drawn from health the client already has), or both sides.
+# the environment group of versions"). Chronicler runs on the server (offers, marks, journal and
+# title cards all reach a vanilla client), and the same jar goes on a client for singleplayer and
+# LAN worlds, so it is tagged both.
 CLIENT_ID="$(jq -r 'map(select(.name == "Client")) | .[0].id // empty' <<<"$VERSIONS_JSON")"
 SERVER_ID="$(jq -r 'map(select(.name == "Server")) | .[0].id // empty' <<<"$VERSIONS_JSON")"
 if [ -z "$CLIENT_ID" ] || [ -z "$SERVER_ID" ]; then
@@ -85,13 +85,28 @@ else
     DISPLAY_NAME="$(basename "$JAR" .jar)"
 fi
 
-METADATA="$(jq -n \
-    --rawfile changelog "$CHANGELOG_FILE" \
-    --arg displayName "$DISPLAY_NAME" \
-    --arg releaseType "$RELEASE_TYPE" \
-    --argjson gameVersions "$GAME_VERSIONS" \
-    '{changelog: $changelog, changelogType: "markdown", displayName: $displayName,
-      releaseType: $releaseType, gameVersions: $gameVersions}')"
+METADATA="$(CHANGELOG_FILE="$CHANGELOG_FILE" DISPLAY_NAME="$DISPLAY_NAME" \
+    RELEASE_TYPE="$RELEASE_TYPE" GAME_VERSIONS="$GAME_VERSIONS" \
+    DEPS="${CURSEFORGE_REQUIRED_DEPENDENCIES:-}" python3 - <<'PY'
+import json, os, pathlib
+path = os.environ["CHANGELOG_FILE"]
+changelog = pathlib.Path(path).read_text() if path and os.path.exists(path) else ""
+meta = {
+    "changelog": changelog,
+    "changelogType": "markdown",
+    "displayName": os.environ["DISPLAY_NAME"],
+    "releaseType": os.environ["RELEASE_TYPE"],
+    "gameVersions": json.loads(os.environ["GAME_VERSIONS"]),
+}
+# Required dependencies, as CurseForge project slugs, comma-separated (the repository variable
+# CURSEFORGE_REQUIRED_DEPENDENCIES). A wrong slug fails the whole upload and CurseForge 403s any
+# attempt to look one up from a script, so only list projects whose pages exist.
+deps = [d.strip() for d in os.environ.get("DEPS", "").split(",") if d.strip()]
+if deps:
+    meta["relations"] = {"projects": [{"slug": d, "type": "requiredDependency"} for d in deps]}
+print(json.dumps(meta))
+PY
+)"
 
 if [ -n "${CURSEFORGE_DEBUG:-}" ]; then
     # The metadata carries no credentials, so it is safe to print when diagnosing a rejection.

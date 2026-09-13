@@ -65,7 +65,7 @@ public final class BuildInfo {
     public static String time() { return TIME; }
     public static String version() { return VERSION; }
 
-    /** {@code 0.1.0 (build a1b2c3d4 on main, 2026-09-10T09:15:00Z)}; {@code -dirty} means uncommitted changes. */
+    /** {@code 1.0.0+mc1.21.11 (build a1b2c3d4 on main, 2026-09-10T09:15:00Z)}; {@code -dirty} means uncommitted changes. */
     public static String describe() {
         return describe(new Stamp(COMMIT, BRANCH, TIME, VERSION));
     }

@@ -62,8 +62,8 @@ logoBlur=false
 
 [[dependencies.${mod_id}]]
     modId="standards"
-    type="optional"
-    versionRange="[1.2.0,)"
+    type="required"
+    versionRange="[1.5.0,)"
     ordering="AFTER"
     side="BOTH"
 
@@ -83,7 +83,7 @@ logoBlur=false
 
 [[dependencies.${mod_id}]]
     modId="cast"
-    type="optional"
-    versionRange="[0.1,)"
+    type="required"
+    versionRange="[1.0.0,)"
     ordering="AFTER"
     side="BOTH"
