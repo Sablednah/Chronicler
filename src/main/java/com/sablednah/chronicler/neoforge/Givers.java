@@ -304,13 +304,20 @@ public final class Givers {
                 .map(p -> new Where(p.dimension(), p.pos()));
     }
 
+    /** How far {@code of} is followed before giving up: a chain that long is a loop in the data. */
+    private static final int OF_HOPS = 8;
+
     /** What to call a giver in text: the NPC's name, a block's label, or "the one who asked". */
     public static String nameOf(Identifier questId) {
+        return nameOf(questId, 0);
+    }
+
+    private static String nameOf(Identifier questId, int hops) {
         var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return Lang.get("giver.someone");
+        if (server == null || hops >= OF_HOPS) return Lang.get("giver.someone");
         return QuestEngine.quest(server, questId).flatMap(h -> h.value().giver()).map(g -> {
             if (g instanceof GiverTypes.NpcGiver n) {
-                if (n.of().isPresent()) return nameOf(n.of().get());
+                if (n.of().isPresent()) return nameOf(n.of().get(), hops + 1);
                 return Feedback.colored(n.name()).getString();
             }
             if (g instanceof GiverTypes.Position p) return p.label().orElse(Lang.get("giver.someone"));
@@ -318,12 +325,27 @@ public final class Givers {
         }).orElse(Lang.get("giver.someone"));
     }
 
+    /**
+     * A quest's giver as text for "From:" and the offer line, following {@code of} to the quest whose
+     * NPC it borrows. A borrowing giver's own {@code name} is filler the codec demands ({@code "-"} in
+     * ZARP), and printed as-is it read "From: -" under a quest Dr Okafor plainly hands out.
+     */
+    public static String describe(MinecraftServer server, com.sablednah.chronicler.data.Quest quest) {
+        com.sablednah.chronicler.data.GiverSpec g = quest.giver().orElse(null);
+        for (int hops = 0; hops < OF_HOPS && g instanceof GiverTypes.NpcGiver n && n.of().isPresent(); hops++) {
+            Identifier borrowed = n.of().get();
+            g = QuestEngine.quest(server, borrowed).flatMap(h -> h.value().giver()).orElse(null);
+        }
+        if (g == null || (g instanceof GiverTypes.NpcGiver n && n.of().isPresent())) return Lang.get("giver.someone");
+        return g.describe();
+    }
+
     /** The tracker tick: offer whatever this player is standing near or in. */
     public static void tick(ServerPlayer player) {
         MinecraftServer server = player.level().getServer();
         for (Entry e : DATA) {
             if (!QuestEngine.available(player, e.id(), e.quest())) continue;
-            if (present(player, e.id(), e.giver())) offer(player, e.id(), e.quest(), e.giver().describe());
+            if (present(player, e.id(), e.giver())) offer(player, e.id(), e.quest(), describe(server, e.quest()));
         }
         GiverStore store = GiverStore.get(server);
         if (store.size() > 0) {

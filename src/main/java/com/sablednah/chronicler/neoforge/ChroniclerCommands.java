@@ -305,7 +305,7 @@ public final class ChroniclerCommands {
         lines.add(Lang.fmt("cmd.info.chapter", "chapter", chapterName));
         q.description().ifPresent(d -> lines.add(Lang.fmt("cmd.info.description", "description", d)));
         if (QuestEngine.scopeOf(source.getServer(), q) == QuestScope.PARTY) lines.add(Lang.get("cmd.info.scope_party"));
-        q.giver().ifPresent(g -> lines.add(Lang.fmt("cmd.info.giver", "where", g.describe())));
+        q.giver().ifPresent(g -> lines.add(Lang.fmt("cmd.info.giver", "where", Givers.describe(source.getServer(), q))));
         if (player != null) {
             QuestEngine.unmet(player, q).forEach(line -> lines.add(Lang.fmt("cmd.info.needs", "line", line)));
         }
