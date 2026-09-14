@@ -20,6 +20,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.BooleanValue SHOW_HIDDEN_TO_OPS;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> PARTY_GROUP_KINDS;
     public static final ModConfigSpec.BooleanValue JOURNAL_GIVE_NEW;
+    public static final ModConfigSpec.BooleanValue JOURNAL_PANEL;
     public static final ModConfigSpec.IntValue GIVER_COOLDOWN_SECONDS;
     public static final ModConfigSpec.DoubleValue GIVER_RADIUS;
     public static final ModConfigSpec.IntValue GIVER_SECOND_CLICK_SECONDS;
@@ -61,6 +62,11 @@ public final class ChroniclerConfig {
                 .comment("Hand every player a journal the first time they join. Once per player,",
                         "not per world visit; /quest journal give replaces a lost one either way.")
                 .define("giveToNewPlayers", true);
+        JOURNAL_PANEL = BUILDER
+                .comment("A player whose client has Chronicler gets the journal as a panel -- chapters,",
+                        "quests and a quest map -- instead of the written book, from the item, the ` key",
+                        "or /quest journal. Vanilla clients always get the book. Off: the book for everyone.")
+                .define("panel", true);
         BUILDER.pop();
 
         BUILDER.comment("Givers -- where quests are offered").push("givers");

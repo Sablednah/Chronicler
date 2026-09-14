@@ -154,6 +154,27 @@ public final class QuestEngine {
         return refusal(player, id, quest).isEmpty();
     }
 
+    /** Is this quest listed to this player at all? Started or finished always is; before that, its {@code visibility}. */
+    public static boolean visible(ServerPlayer player, Identifier id, Quest quest) {
+        QuestLog log = journal(player);
+        if (log.isActive(id) || log.isComplete(id)) return true;
+        return switch (quest.visibility()) {
+            case ALWAYS -> true;
+            case UNLOCKED -> quest.requires().stream().allMatch(log::isComplete);
+            case FOUND -> false;
+        };
+    }
+
+    /** Chapters as every list shows them: the main line first, then by order, then by id. */
+    public static java.util.Comparator<Identifier> chapterOrder(MinecraftServer server) {
+        return java.util.Comparator
+                .comparing((Identifier c) -> !chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, c))
+                        .map(h -> h.value().main()).orElse(false))
+                .thenComparingInt(c -> chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, c))
+                        .map(h -> h.value().order()).orElse(Integer.MAX_VALUE))
+                .thenComparing(Identifier::toString);
+    }
+
     // --- accept / abandon / track ---
 
     public static Optional<Refusal> accept(ServerPlayer player, Identifier id) {
