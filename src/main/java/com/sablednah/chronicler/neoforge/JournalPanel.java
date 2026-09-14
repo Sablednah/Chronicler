@@ -205,7 +205,7 @@ public final class JournalPanel {
 
         q.description().ifPresent(d -> out.add(Lang.fmt("cmd.info.description", "description", d)));
         if (party) out.add(Lang.get("cmd.info.scope_party"));
-        q.giver().ifPresent(g -> out.add(Lang.fmt("cmd.info.giver", "where", g.describe())));
+        q.giver().ifPresent(g -> out.add(Lang.fmt("cmd.info.giver", "where", Givers.describe(server, q))));
         if (status == JournalPayload.LOCKED) {
             q.locked().ifPresent(t -> out.add(Lang.fmt("panel.quest.locked", "text", t)));
             List<String> missing = new ArrayList<>();
