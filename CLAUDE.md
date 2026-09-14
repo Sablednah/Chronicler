@@ -41,7 +41,8 @@ export PATH="$JAVA_HOME/bin:$PATH"
 ./gradlew build                   # -> build/libs/chronicler-<ver>+mc<mc>.jar
 ./gradlew runServer               # headless dedicated server on port 25573
 ./gradlew runServer -Pselftest    # the same, running neoforge/SelfTest on ServerStartedEvent
-./deploy.sh                       # build + copy into the CurseForge test instance
+./deploy.sh                       # build + copy the EXACT versioned jar into every CurseForge instance on this
+                                  # line that already has the mod; refuses a running one (run on each branch)
 .\TestClient.cmd                  # (Windows) TestBuddy dev client, auto-joins the dev server
 ```
 
@@ -103,9 +104,11 @@ ps -eo pid,etime,args | grep "[f]ml.modFolders" | grep "Chronicler/build/classes
 ### The self-test boot, as it is actually run
 
 ```bash
-cp ../SableCraft-Standards/build/libs/standards-*+mc1.21.11.jar \
-   ../LegendQuest-ReForged/build/libs/legendquest-*+mc1.21.11.jar \
-   libs/zombiemod-*+mc1.21.11.jar run/mods/        # the seams only link with a consumer present
+cp ../SableCraft-Standards/build/libs/standards-1.8.0+mc1.21.11.jar \
+   ../Cast/build/libs/cast-1.0.0+mc1.21.11.jar \      # these two are REQUIRED: without them NeoForge refuses to start
+   ../LegendQuest-ReForged/build/libs/legendquest-2.5.0+mc1.21.11.jar \
+   ../CityWorld-ReForged/build/libs/cityworld-5.7.1+mc1.21.11.jar \
+   ../ZombieMod/ZombieMod/build/libs/zombiemod-3.4.1+mc1.21.11.jar run/mods/   # the seams only link with a consumer present
 ./gradlew runServer -Pselftest > server.log 2>&1 & # then wait for "Chronicler SelfTest:"
 grep -nE "SelfTest:|FAILED:" server.log; grep -nE "ERROR|FATAL" server.log
 kill <the JVM whose cmdline has Chronicler/build/classes>; rm run/mods/*.jar
@@ -120,8 +123,9 @@ kill <the JVM whose cmdline has Chronicler/build/classes>; rm run/mods/*.jar
   the mod is present; 47 checks pass with nobody there, 106 with everybody,
   and both numbers matter.
 - **`libs/` (gitignored) holds a sibling jar that has no `build/libs` for this
-  line** -- ZombieMod builds 1.21.11 elsewhere, so its jar is copied from the
-  CurseForge instance. `build.gradle` compiles against the NEWEST jar of each
+  line** -- ZombieMod's 26.1.2 jar is copied there from the CurseForge `26.1.2`
+  instance (its 1.21.11 jar does build in `../ZombieMod/ZombieMod/build/libs`
+  now; `libs/` is the fallback). `build.gradle` compiles against the NEWEST jar of each
   sibling by mtime, never an alphabetical fileTree (which quietly picked the
   oldest and "lost" a method added last week).
 - **A FakePlayer is a real ServerPlayer with a journal**, and the self-test
@@ -343,5 +347,20 @@ tokens.
 - A negative check ("no offer shown") needs a positive control in the same
   run, or a dead client passes it.
 - After a rewrite, grep for the name of the thing you **removed**.
-- Never copy a jar into a running instance; `deploy.sh` refuses.
+- Never copy a jar into a running instance; `deploy.sh` refuses. **Two faults it had on 1.0.0
+  day, fixed in both repos on every branch:** a glob with `head -1` picks the ALPHABETICALLY
+  first jar (it deployed 0.1.0 over a freshly built 1.0.0; now the exact
+  `chronicler-<mod_version>+mc<mc>.jar`), and the running-instance regex stopped only at a
+  backslash while the launcher passes `--gameDir` unquoted, so it captured "26.2 --assetsDir C:"
+  and refused nothing (now it also stops at `" --"`). Windows happened to lock the jar that day;
+  do not count on it.
+- `git cherry-pick` has no `-q`; it errors, and a `| tail -1` behind it hides the error while the
+  loop moves on and reports the OLD head. Show cherry-pick output, and check the head moved.
+- **Release day, as run (1.0.0, 2026-09-13):** edit template mods.toml + `mod_version` + dated
+  CHANGELOG heading + rot sweep (`grep -rn "0\.1\.0\|not yet\|to come"` over docs), build, the
+  two self-test boots, commit main, cherry-pick to `mc26.1`/`mc26.2` (docs conflicts: `--ours`
+  on CLAUDE.md/README.md, `rm` CURSEFORGE.md, which 26.x does not carry), build a jar per branch
+  and read `Build-Commit` from each manifest (no `-dirty`), `git tag -a`, `gh release create`
+  with the three jars and the CHANGELOG section as notes, watch `gh run list
+  --workflow=curseforge.yml`, then `./deploy.sh` on each branch.
 - Never edit a sibling's `CLAUDE.md`; raise it with Sable instead.
