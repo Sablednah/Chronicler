@@ -335,6 +335,37 @@ public final class Lang {
         def("obj.reputation", "Be held in at least {amount} regard by {standing}");
     }
 
+    // --- the journal panel (modded clients; the text is still ours, sent whole) ---
+    static {
+        def("panel.title", "&6&l{term.journal}");
+        def("panel.progress", "&7{percent}% of the story");
+        def("panel.back", "«");
+        def("panel.close", "✕");
+        def("panel.empty", "&7Nothing written here yet. Somebody out there needs something doing.");
+        def("panel.to_map", "&7« The map");
+        def("panel.requires", "&7Comes after:");
+        def("panel.external", "&8From {chapter}");
+        def("panel.map.hint", "&8Click a {term.quest} to read it. Drag to look around.");
+        def("panel.map.none", "&8No {term.quests} to show here yet.");
+        def("panel.glyph.locked", "&8○");
+        def("panel.glyph.available", "&e&l!");
+        def("panel.glyph.active", "&b◆");
+        def("panel.glyph.complete", "&a✔");
+        def("panel.glyph.cooldown", "&8⌛");
+        def("panel.glyph.tracked", "&b✦");
+        def("panel.glyph.open", "&7▾");
+        def("panel.glyph.closed", "&7▸");
+        def("panel.quest.status", "{status}{tags}");
+        def("panel.quest.locked", "&8&o{text}");
+        def("panel.quest.stage_text", "&f&o{text}");
+        def("panel.quest.deadline", "&cTime left: {time}");
+        def("panel.quest.decision", "&eA decision is waiting -- the buttons above.");
+        def("panel.quest.times", "&8Done {times} times.");
+        def("panel.objective.done", "  &a✔ &7{line}");
+        def("panel.chapter.progress", "&7{done} of {total} done &8({percent}%)");
+        def("panel.chapter.endings", "&7Endings found: &d{found} of {total}");
+    }
+
     /** Resolve a key to its (term- and prefix-substituted) template. Unknown key = the key, loudly. */
     public static String get(String key) {
         String template = active.getOrDefault(key, DEFAULTS.get(key));

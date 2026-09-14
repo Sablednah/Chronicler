@@ -20,16 +20,28 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class Net {
 
     public static void sendIfAble(ServerPlayer player, CustomPacketPayload payload) {
-        // Null check: FakePlayers (other mods' automation, headless probes)
-        // sit in the player list with no connection at all.
-        if (player.connection != null && player.connection.hasChannel(payload.type())) {
+        if (listening(player, payload.type())) {
             PacketDistributor.sendToPlayer(player, payload);
         }
     }
 
-    /** Is this player running our client half? Vanilla says no. */
+    /**
+     * Is this player running our client half? Vanilla says no, and so does a
+     * fake player. Not just a null check: NeoForge's {@code FakePlayer} HAS a
+     * connection, whose netty channel is null, and {@code hasChannel} throws on
+     * it -- from whatever event asked. Found by the self-test's FakePlayers the
+     * first time a panel send reached one; another mod's automation clicking a
+     * journal would have found it on someone's server instead.
+     *
+     * <p>{@code isFakePlayer()} rather than an instanceof, so subclasses count;
+     * {@code isConnected()} (a channel, and open) for a mod that hand-rolls a
+     * fake ServerPlayer without NeoForge's class. The same guard ZombieMod
+     * settled on when told of this (2026-09-14).</p>
+     */
     public static boolean listening(ServerPlayer player, CustomPacketPayload.Type<?> type) {
-        return player.connection != null && player.connection.hasChannel(type);
+        return player.connection != null && !player.isFakePlayer()
+                && player.connection.getConnection().isConnected()
+                && player.connection.hasChannel(type);
     }
 
     private Net() {}

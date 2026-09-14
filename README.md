@@ -27,6 +27,9 @@ in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
 - `/quest` alone says what you are doing now. `/quests` lists everything with
   your progress. The journal is a written book in your inventory (right-click
   it, or `/quest journal`), with clickable Track / Abandon / Accept links.
+  With Chronicler on the client too, the same journal opens as a **panel**
+  (the **backtick** key, the item, or `/quest journal`): chapters and their quests on the
+  left, a map of what leads to what, a page per quest with its buttons.
 - Choices arrive as buttons in chat and in the book. `/quest replay <chapter>`
   starts a replayable chapter over, keeping the endings you found.
 
@@ -65,7 +68,10 @@ offers it to anyone standing near that block and accepts on right-click;
 `giver: { type: place, biome: "#minecraft:is_jungle" }` (or `structure`,
 `dimension`, `lot` for a CityWorld lot) offers it the moment a player is in
 that kind of place, with no coordinate written down. An admin can also make
-any block a giver by looking at it: `/quest giver set <quest>`. A hidden quest
+any block a giver by looking at it: `/quest giver set <quest>`. When a quest
+is listed at all is its `visibility`: `always` (the default -- locked quests
+show, so players see what is coming), `unlocked` (once everything it
+`requires` is done) or `found` (once started; `hidden: true` means this). A hidden quest
 with a giver is *found* by walking up to it. Every giver floats a mark over it, sent to
 each player privately so it shows *their* state: `!` on offer, `?` while on
 it, a tick once done, nothing while locked (`givers.markerText` /
@@ -233,7 +239,7 @@ ZARP world is not offered two kinds of log run.
 | `/quest abandon <quest>` | everyone |
 | `/quest track <quest>` | everyone — follow it on the action bar |
 | `/quest choose <quest> <n>` | everyone — pick an option at a decision |
-| `/quest journal` | everyone — open the journal book, no item needed |
+| `/quest journal` | everyone — open the journal (the panel on a modded client, else the book), no item needed |
 | `/quest journal give` | everyone — a (replacement) journal item |
 | `/quest giver set <quest>` / `remove` / `list` | `chronicler.admin` or op 2 — the block you are looking at offers a quest |
 | `/chronicler reload` | `chronicler.admin` or op 2 — messages only |

@@ -193,6 +193,11 @@ neoforge/Trackers    how an objective is measured (poll or event), keyed by spec
 neoforge/Rewards     how a reward or effect is granted, keyed by spec class
 neoforge/Givers      offers near a block or in a kind of place; GiverStore = op-placed (SavedData)
 neoforge/Journal     the written book; FlagStore = world flags (SavedData, cached for off-thread)
+neoforge/JournalPanel the same journal as one payload for a modded client (journal.panel): text resolved
+                     here, buttons are /quest commands the client sends back (RUN runs only "quest ...")
+network/             JournalPayload (clientbound, whole journal) + JournalRequestPayload (open/refresh/run)
+client/              dist=CLIENT entrypoint: JournalScreen (chapters | quest map or page), ` key (never J: JourneyMap), ClientJournal
+core/QuestMap        prerequisite-depth layout for the map; loader-light so the self-test checks it
 neoforge/Party|Money|Rep|Sheet|Lots   neutral bridges, "nothing here" without a sibling
 neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEconomy,
                      StandardsReputation, LegendQuestCharacter, CityWorldLots, ZombieModConditions,
@@ -227,6 +232,10 @@ datapacks/zarp/      the ZARP questline, a built-in pack (AddPackFindersEvent; p
 - **Every clientbound send goes through `Net.sendIfAble`** — written before any
   payload exists, because `optional()` makes the handshake tolerant and does
   not make sends droppable; an unguarded send kicks vanilla clients at login.
+  `Net.listening` also refuses a fake player: NeoForge's `FakePlayer` HAS a connection
+  whose channel is null, and `hasChannel` throws on it (the first panel send in the
+  self-test crashed the boot). A bare `connection != null` check is not enough; the
+  guard is `!isFakePlayer()` plus `getConnection().isConnected()`, as ZombieMod's now is.
 - **Where state lives:** the journal is an attachment (belongs to the player,
   survives death). World flags, reputation and givers go in **SavedData** when
   built — they must answer for offline players. Pending offers and countdowns

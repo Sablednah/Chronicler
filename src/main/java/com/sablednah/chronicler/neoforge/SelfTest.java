@@ -9,7 +9,10 @@ import com.mojang.brigadier.ParseResults;
 import com.sablednah.chronicler.Chronicler;
 import com.sablednah.chronicler.ChroniclerRegistries;
 import com.sablednah.chronicler.core.QuestLog;
+import com.sablednah.chronicler.core.QuestMap;
 import com.sablednah.chronicler.data.ChroniclerIds;
+import com.sablednah.chronicler.data.Quest;
+import com.sablednah.chronicler.network.JournalPayload;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.resources.Identifier;
@@ -65,6 +68,19 @@ public final class SelfTest {
                 .allMatch(r -> quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, r)).isPresent())));
         check("objectives describe themselves", quests.listElements().allMatch(h ->
                 h.value().objectives().stream().allMatch(o -> !o.describe().isBlank() && !o.describe().startsWith("obj."))));
+
+        // The quest map's layout, which the client draws and the self-test can check.
+        var map = QuestMap.layout(List.of(new QuestMap.Node("a", List.of(), 0), new QuestMap.Node("b", List.of("a"), 1),
+                new QuestMap.Node("c", List.of("b"), 2), new QuestMap.Node("d", List.of("elsewhere:x"), 3)));
+        java.util.function.Function<String, QuestMap.Placed> cell = cid -> map.stream().filter(m -> m.id().equals(cid)).findFirst().orElseThrow();
+        check("map: each prerequisite steps one column right",
+                cell.apply("b").col() == cell.apply("a").col() + 1 && cell.apply("c").col() == cell.apply("b").col() + 1);
+        check("map: a chain runs straight across", cell.apply("a").row() == cell.apply("b").row() && cell.apply("b").row() == cell.apply("c").row());
+        check("map: a prerequisite from another chapter stands in on the left",
+                cell.apply("elsewhere:x").external() && cell.apply("elsewhere:x").col() == 0 && cell.apply("d").col() == 1);
+        check("map: no two quests share a cell", map.stream().map(m -> m.col() + "," + m.row()).distinct().count() == map.size());
+        check("map: a cycle is laid out, not recursed into for ever", QuestMap.layout(List.of(
+                new QuestMap.Node("p", List.of("q"), 0), new QuestMap.Node("q", List.of("p"), 1))).size() == 2);
 
         check("lang catalogue is non-trivial", Lang.catalogueSize() > 60);
         check("lang resolves terms", Lang.get("cmd.list.header").contains(Lang.term("quests")));
@@ -139,6 +155,57 @@ public final class SelfTest {
             Journal.giveToNewPlayer(solo);
             check("new-player give does not double up", count(solo) == 1);
 
+            // The journal panel: what a modded client is sent. The book's answers, in one payload.
+            var panel = JournalPanel.build(solo, true, "");
+            var prologueView = panel.chapters().stream().filter(c -> c.id().equals("chronicler:prologue")).findFirst().orElse(null);
+            check("panel lists the prologue", prologueView != null);
+            java.util.function.Function<String, JournalPayload.QuestView> view = qid -> prologueView == null ? null
+                    : prologueView.quests().stream().filter(q -> q.id().equals(qid)).findFirst().orElse(null);
+            var stepsView = view.apply(firstSteps.toString());
+            var thingsView = view.apply(things.toString());
+            var watchView = view.apply("chronicler:night_watch");
+            check("panel: first_steps is complete", stepsView != null && stepsView.status() == JournalPayload.COMPLETE);
+            check("panel: things_in_the_dark is under way", thingsView != null && thingsView.status() == JournalPayload.ACTIVE);
+            check("panel: night_watch is listed while locked", watchView != null && watchView.status() == JournalPayload.LOCKED);
+            check("panel: night_watch's map edge runs from things_in_the_dark", watchView != null && watchView.requires().contains(things.toString()));
+            check("panel: hot_foot (hidden) is not listed before it is found", view.apply("chronicler:hot_foot") == null);
+            check("panel: an active quest offers Abandon and never Accept", thingsView != null
+                    && thingsView.buttons().stream().anyMatch(b -> b.command().equals("quest abandon " + things))
+                    && thingsView.buttons().stream().noneMatch(b -> b.command().startsWith("quest accept")));
+            check("panel: an available quest's page is not a second Info button", panel.chapters().stream()
+                    .flatMap(c -> c.quests().stream()).flatMap(q -> q.buttons().stream()).noneMatch(b -> b.command().startsWith("quest info")));
+            // An unresolved Lang key comes back as the key itself, so a raw "panel.x" in the text is a missing def.
+            String rawKey = panelText(panel).stream()
+                    .filter(s -> s.contains("§") || s.contains("panel.") || s.contains("status.") || s.contains("cmd."))
+                    .findFirst().orElse(null);
+            check("panel text has no section signs or raw keys" + (rawKey == null ? "" : " (found: " + rawKey + ")"), rawKey == null);
+            var wire = new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(), server.registryAccess());
+            JournalPayload.CODEC.encode(wire, panel);
+            var back = JournalPayload.CODEC.decode(wire);
+            check("panel payload survives the wire", wire.readableBytes() == 0 && back.open()
+                    && panelText(back).equals(panelText(panel)) && back.labels().keySet().equals(panel.labels().keySet())
+                    && back.chapters().size() == panel.chapters().size());
+
+            // Visibility: always lists a locked quest, unlocked waits for the prerequisite, found waits to be started.
+            Identifier nightWatch = ChroniclerIds.of("night_watch");
+            Quest watch = quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, nightWatch)).get().value();
+            Quest watchUnlocked = new Quest(watch.name(), watch.description(), watch.chapter(), watch.requires(), watch.objectives(),
+                    watch.rewards(), watch.repeatable(), watch.hidden(), watch.order(), watch.scope(), watch.scale(), watch.giver(),
+                    watch.stages(), watch.availability(), watch.cooldown(), new Quest.Extras(watch.extras().counts(),
+                    watch.extras().locked(), java.util.Optional.of(com.sablednah.chronicler.core.QuestVisibility.UNLOCKED), watch.extras().icon()));
+            check("visibility always: a locked quest is listed", QuestEngine.visible(solo, nightWatch, watch));
+            check("visibility unlocked: not listed while its prerequisite is open", !QuestEngine.visible(solo, nightWatch, watchUnlocked));
+            Identifier hotFoot = ChroniclerIds.of("hot_foot");
+            check("visibility found: hot_foot is hidden until started", !QuestEngine.visible(solo, hotFoot,
+                    quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, hotFoot)).get().value()));
+
+            // The panel's buttons run as the player -- and only /quest ones.
+            QuestEngine.journal(solo).track(firstSteps);
+            JournalPanel.request(solo, com.sablednah.chronicler.network.JournalRequestPayload.RUN, "quests abandon " + things);
+            check("panel runs nothing that is not /quest (an abandon under /quests was refused)", QuestEngine.journal(solo).isActive(things));
+            JournalPanel.request(solo, com.sablednah.chronicler.network.JournalRequestPayload.RUN, "quest track " + things);
+            check("panel runs its own buttons as the player", QuestEngine.journal(solo).tracked().map(things::equals).orElse(false));
+
             Zombie zombie = new Zombie(server.overworld());
             Cow cow = new Cow(net.minecraft.world.entity.EntityType.COW, server.overworld());
             QuestEngine.onKill(solo, cow);
@@ -152,6 +219,7 @@ public final class SelfTest {
             QuestEngine.onKill(solo, zombie);
             check("fifth kill completes things_in_the_dark", QuestEngine.journal(solo).isComplete(things));
             check("iron sword reward landed", Trackers.count(solo, Identifier.parse("minecraft:iron_sword")) == 1);
+            check("visibility unlocked: listed once its prerequisite is done", QuestEngine.visible(solo, nightWatch, watchUnlocked));
 
             // Places: the world names them, we never spell coordinates.
             Identifier overworld = net.minecraft.world.level.Level.OVERWORLD.identifier();
@@ -730,6 +798,26 @@ public final class SelfTest {
         } catch (Exception e) {
             check("'" + cmd + "' executes (" + e.getMessage() + ")", false);
         }
+    }
+
+    /** Every string in a panel payload, in order: for the no-raw-keys sweep and the round trip. */
+    private static List<String> panelText(JournalPayload p) {
+        List<String> out = new ArrayList<>();
+        out.add(p.title().getString());
+        out.add(p.progress().getString());
+        p.labels().values().forEach(v -> out.add(v.getString())); // values only: the keys are named panel.* on purpose
+        for (var c : p.chapters()) {
+            out.add(c.id() + c.name().getString() + c.icon());
+            c.lines().forEach(l -> out.add(l.getString()));
+            c.buttons().forEach(b -> out.add(b.label().getString() + b.tip().getString() + b.command()));
+            for (var q : c.quests()) {
+                out.add(q.id() + q.name().getString() + q.status() + q.icon() + q.tracked() + q.requires());
+                q.lines().forEach(l -> out.add(l.getString()));
+                q.buttons().forEach(b -> out.add(b.label().getString() + b.tip().getString() + b.command()));
+            }
+            for (var e : c.externals()) out.add(e.id() + e.name().getString() + e.chapter().getString() + e.status() + e.icon());
+        }
+        return out;
     }
 
     private static void check(String what, boolean ok) {

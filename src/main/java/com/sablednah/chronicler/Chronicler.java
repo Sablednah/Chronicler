@@ -49,6 +49,7 @@ public class Chronicler {
         ChroniclerAttachments.register(modEventBus);
         modEventBus.addListener(this::onAddPackFinders);
         com.sablednah.chronicler.neoforge.QuestItemLoot.register(modEventBus);
+        modEventBus.addListener(com.sablednah.chronicler.network.ChroniclerNetwork::register);
 
         // Game bus: server lifecycle, commands, permissions.
         NeoForge.EVENT_BUS.register(ChroniclerServerEvents.class);

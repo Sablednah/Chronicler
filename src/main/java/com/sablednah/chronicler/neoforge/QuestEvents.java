@@ -99,6 +99,7 @@ public final class QuestEvents {
     static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         Givers.forget(event.getEntity().getUUID());
         Markers.forget(event.getEntity().getUUID());
+        JournalPanel.forget(event.getEntity().getUUID());
     }
 
     /** The client dropped every entity it had; the marks must be re-sent, so forget what it was sent. */

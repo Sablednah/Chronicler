@@ -25,8 +25,9 @@ bannerFile="chronicler.png"
 logoFile="chronicler.png"
 logoBlur=false
 
-# The mod is server-authoritative: vanilla clients can join and play. A future
-# optional client entrypoint may add a quest tracker HUD for modded clients.
+# The mod is server-authoritative: vanilla clients can join and play. The
+# client entrypoint (dist=CLIENT) adds the journal panel and its J key for
+# modded clients; the channels are optional, so either side may lack them.
 
 # The NeoForge SERIES this was built for, not the exact build -- a NeoForge
 # series tracks one Minecraft version, so the series is the honest unit.
