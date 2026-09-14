@@ -507,9 +507,11 @@ false unless set). Per chapter and overall: "Prologue 3/4 -- 75%".
 
 ### Modded-client sugar, as asked for so far (step 9)
 
-- A **keybind for the journal** (Sable, 2026-09-09). Default must not be the
-  backtick -- "the classic ` bind that fights with vein-mine". `J` is unbound
-  in vanilla and reads as journal. Client-only, optional, opens the same book
+- A **keybind for the journal** (Sable, 2026-09-09). First decided as `J`, not
+  the backtick ("the classic ` bind that fights with vein-mine"). **Reversed
+  2026-09-14:** J is JourneyMap's full-screen map, and Sable would rather avoid
+  a ubiquitous mod's key than compete with it (ZombieMod left J for the same
+  reason); the backtick is where he binds quest books anyway. Client-only, optional, opens the same book
   the item does; the server side already exists (`/quest journal`).
 
 ### The GUI Sable wants next (2026-09-10, after playing to the Nether)
@@ -523,10 +525,25 @@ Modded-client sugar, after the initial release of Cast and Chronicler:
   branches visible -- what you did, what you did not, endings found.
 - **Proper pop-up choice selectors** for decision beats, instead of chat
   buttons.
-- The journal keybind (`J`, never the backtick).
+- The journal keybind (the backtick; not `J`, which is JourneyMap's).
 
 Server side is already there for all four (`/quest`, the journal, choices via
 `/quest choose`); the client reads the same answers over a payload.
+
+**Built 2026-09-14: the journal panel** (Sable: "replace that quest book with a
+proper panel, much like LegendQuest's guide book ... FTB Quests gets this right").
+Chapters on the left with quests indented under them; the right pane is the
+chapter's quest map or a quest's page. The map lays out by prerequisite depth
+(`core/QuestMap`, loader-light so the self-test checks the layout the client
+draws); prerequisites from other chapters get the left column as stand-ins,
+because in ZARP nearly every chapter hangs off another's quest. Per-quest
+`visibility` (`always` / `unlocked` / `found`) came with it and applies to the
+book and `/quests` too. The payload is built by `neoforge/JournalPanel` with
+all text resolved there; the client runs the same `/quest` commands chat
+buttons run (only `quest ...`, as the player) and asks for a refresh every two
+seconds while open. The backtick opens it; the book is what every vanilla client gets.
+Still to come from the list above: the objectives box and pop-up choices
+(choices are buttons on the quest's page for now).
 
 ### Mini quests (2026-09-14, Sable) -- flagged, not scheduled
 

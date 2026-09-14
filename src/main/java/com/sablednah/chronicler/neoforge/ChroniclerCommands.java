@@ -209,12 +209,7 @@ public final class ChroniclerCommands {
         }
 
         // Main chapters first, then by order, then name.
-        Map<Identifier, List<Holder.Reference<Quest>>> byChapter = new TreeMap<>(Comparator
-                .comparing((Identifier c) -> !chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, c))
-                        .map(h -> h.value().main()).orElse(false))
-                .thenComparingInt(c -> chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, c))
-                        .map(h -> h.value().order()).orElse(Integer.MAX_VALUE))
-                .thenComparing(Identifier::toString));
+        Map<Identifier, List<Holder.Reference<Quest>>> byChapter = new TreeMap<>(QuestEngine.chapterOrder(source.getServer()));
         quests.listElements().forEach(h -> byChapter
                 .computeIfAbsent(h.value().chapter(), k -> new ArrayList<>()).add(h));
 
@@ -240,10 +235,13 @@ public final class ChroniclerCommands {
                     .thenComparing(h -> h.key().identifier().toString()));
             for (var h : entry.getValue()) {
                 Quest q = h.value();
-                if (q.hidden() && !seeHidden) continue;
                 Identifier id = h.key().identifier();
+                // The console has no journal, so it sees what a newcomer would.
+                boolean visible = player != null ? QuestEngine.visible(player, id, q)
+                        : q.visibility() == com.sablednah.chronicler.core.QuestVisibility.ALWAYS;
+                if (!visible && !seeHidden) continue;
                 String status = player == null ? statusOf(q, id, log) : statusOf(player, q, id);
-                if (q.hidden()) status = Lang.get("status.hidden") + " " + status;
+                if (!visible) status = Lang.get("status.hidden") + " " + status;
                 if (q.repeatable()) status = status + " " + Lang.get("status.repeatable");
                 if (QuestEngine.scopeOf(source.getServer(), q) == QuestScope.PARTY) status = status + " " + Lang.get("status.party");
                 if (log != null && log.tracked().map(id::equals).orElse(false)) status = status + " " + Lang.get("status.tracked");
@@ -262,18 +260,7 @@ public final class ChroniclerCommands {
 
     /** The buttons that make sense for this player's state -- never one that would be refused. */
     private static List<Component> buttonsFor(ServerPlayer player, Identifier id, Quest q) {
-        QuestLog log = QuestEngine.journal(player);
-        List<Component> out = new ArrayList<>();
-        if (log.isActive(id)) {
-            if (!log.tracked().map(id::equals).orElse(false)) {
-                out.add(Feedback.button(Lang.get("button.track"), "/quest track " + id, Lang.get("button.track.tip")));
-            }
-            out.add(Feedback.button(Lang.get("button.abandon"), "/quest abandon " + id, Lang.get("button.abandon.tip")));
-        } else if (QuestEngine.available(player, id, q)) {
-            out.add(Feedback.button(Lang.get("button.accept"), "/quest accept " + id, Lang.get("button.accept.tip")));
-            out.add(Feedback.button(Lang.get("button.info"), "/quest info " + id, Lang.get("button.info.tip")));
-        }
-        return out;
+        return QuestButtons.forQuest(player, id, q).stream().map(QuestButtons.Action::chat).toList();
     }
 
     private static String statusOf(Quest q, Identifier id, QuestLog log) {

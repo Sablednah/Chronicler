@@ -98,8 +98,17 @@ public final class Journal {
 
     // --- opening ---
 
-    /** Open the journal: the held item refreshed, or a fresh virtual copy. */
+    /** Open the journal: the panel for a client that has one, otherwise the book. */
     public static void open(ServerPlayer player) {
+        if (JournalPanel.wants(player)) {
+            JournalPanel.send(player, true, "");
+            return;
+        }
+        openBook(player);
+    }
+
+    /** The book: the held item refreshed, or a fresh virtual copy. */
+    public static void openBook(ServerPlayer player) {
         for (InteractionHand hand : InteractionHand.values()) {
             ItemStack held = player.getItemInHand(hand);
             if (is(held)) {
@@ -120,6 +129,10 @@ public final class Journal {
 
     /** Right-click on the item: fresh pages before vanilla opens it. */
     public static void onUse(ServerPlayer player, ItemStack held, InteractionHand hand) {
+        if (JournalPanel.wants(player)) {
+            JournalPanel.send(player, true, "");
+            return;
+        }
         refresh(player, held);
         player.containerMenu.broadcastChanges();
         player.openItemGui(held, hand);
@@ -140,7 +153,7 @@ public final class Journal {
             Identifier id = h.key().identifier();
             if (log.isActive(id)) return;
             if (log.isComplete(id) && !h.value().repeatable()) { done.add(h); return; }
-            if (h.value().hidden()) return;
+            if (!QuestEngine.visible(player, id, h.value())) return;
             if (QuestEngine.available(player, id, h.value())) available.add(h);
         });
 

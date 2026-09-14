@@ -6,6 +6,7 @@ import java.util.Optional;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.sablednah.chronicler.core.QuestScope;
+import com.sablednah.chronicler.core.QuestVisibility;
 
 import net.minecraft.resources.Identifier;
 
@@ -25,7 +26,7 @@ import net.minecraft.resources.Identifier;
  * @param objectives  what has to happen, all of them
  * @param rewards     what is handed over on completion
  * @param repeatable  may be completed more than once
- * @param hidden      not listed until it is unlocked
+ * @param hidden      not listed until started -- shorthand for {@code visibility: found}
  * @param order       sort key within the chapter
  * @param scope       solo or party; absent means the chapter's default
  * @param scale       for a party quest, multiply each target by party size
@@ -53,18 +54,29 @@ public record Quest(
         int cooldown,
         Extras extras) {
 
-    /** The fields past the sixteen a codec group can hold, inline in the same object. */
-    public record Extras(Optional<Boolean> counts, Optional<String> locked) {
+    /**
+     * The fields past the sixteen a codec group can hold, inline in the same object.
+     *
+     * @param visibility when the quest is listed; absent means {@code found} for a hidden quest, else {@code always}
+     * @param icon       an item id drawn for the quest in the journal panel
+     */
+    public record Extras(Optional<Boolean> counts, Optional<String> locked,
+            Optional<QuestVisibility> visibility, Optional<Identifier> icon) {
         public static final com.mojang.serialization.MapCodec<Extras> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.BOOL.optionalFieldOf("counts").forGetter(Extras::counts),
-                Codec.STRING.optionalFieldOf("locked").forGetter(Extras::locked))
+                Codec.STRING.optionalFieldOf("locked").forGetter(Extras::locked),
+                QuestVisibility.CODEC.optionalFieldOf("visibility").forGetter(Extras::visibility),
+                Identifier.CODEC.optionalFieldOf("icon").forGetter(Extras::icon))
                 .apply(i, Extras::new));
-        public static final Extras NONE = new Extras(Optional.empty(), Optional.empty());
+        public static final Extras NONE = new Extras(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     public Optional<Boolean> counts() { return extras.counts(); }
     /** The in-character line for a refusal. */
     public Optional<String> locked() { return extras.locked(); }
+    /** When this is listed to a player who has not started it. {@code hidden: true} is shorthand for {@code found}. */
+    public QuestVisibility visibility() { return extras.visibility().orElse(hidden ? QuestVisibility.FOUND : QuestVisibility.ALWAYS); }
+    public Optional<Identifier> icon() { return extras.icon(); }
 
     /** Does finishing this move the progress figure? Unsaid: main-chapter quests that are not repeatable. */
     public boolean countsToward(Chapter chapter) {
