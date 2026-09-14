@@ -186,6 +186,16 @@ public final class SelfTest {
                     && panelText(back).equals(panelText(panel)) && back.labels().keySet().equals(panel.labels().keySet())
                     && back.chapters().size() == panel.chapters().size());
 
+            // A giver that borrows another quest's NPC ("of") is described as that NPC, never its filler name.
+            // ZARP only: never_lived borrows the_camp's Dr Okafor with name "-" -- which printed "From: -".
+            quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, Identifier.parse("zarp:never_lived"))).ifPresent(nl -> {
+                String where = Givers.describe(server, nl.value());
+                String camp = quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, Identifier.parse("zarp:the_camp")))
+                        .map(c -> Givers.describe(server, c.value())).orElse("");
+                check("a borrowed NPC giver reads as the NPC it borrows (never_lived: '" + where + "', the_camp: '" + camp + "')",
+                        !camp.isEmpty() && where.equals(camp) && !where.equals(Lang.fmt("giver.npc", "name", "-")));
+            });
+
             // Visibility: always lists a locked quest, unlocked waits for the prerequisite, found waits to be started.
             Identifier nightWatch = ChroniclerIds.of("night_watch");
             Quest watch = quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, nightWatch)).get().value();

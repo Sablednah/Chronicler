@@ -205,7 +205,7 @@ public final class Journal {
             page.append(Feedback.colored(Lang.fmt("journal.available.quest", "name", h.value().name()))).append("\n");
             if (h.value().giver().isPresent()) {
                 page.append(Feedback.colored(Lang.fmt("journal.available.where",
-                        "where", h.value().giver().get().describe()))).append("\n");
+                        "where", Givers.describe(server, h.value())))).append("\n");
             }
             page.append(commandLink(Lang.get("journal.link.accept"), "/quest accept " + id, Lang.get("button.accept.tip")))
                     .append("  ")
