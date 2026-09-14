@@ -527,3 +527,56 @@ Modded-client sugar, after the initial release of Cast and Chronicler:
 
 Server side is already there for all four (`/quest`, the journal, choices via
 `/quest choose`); the client reads the same answers over a payload.
+
+### Mini quests (2026-09-14, Sable) -- flagged, not scheduled
+
+Prebuilt, reusable small quests -- **escort** and **fetch** first -- that
+StoryTeller can start by name or type on demand (a command, and its GUI
+buttons), and that can *optionally* spawn in the wild. Sable's examples, which
+chain naturally:
+
+- an **archaeologist** spawns at a temple and wants escorting to the nearest
+  village;
+- someone in **that village** needs a certain item brought back;
+- someone else needs escorting **to the bank** -- only where CityWorld is
+  present.
+
+What it would need, noted so the next session does not start cold:
+
+- **Templates, not quests.** Content is a frozen registry, so a mini quest is
+  a template with slots (the NPC, the destination, the item, the count) filled
+  when it is started. The journal keys entries by quest id; an instance needs
+  its own id (template + instance) and a way to be forgotten on completion so
+  the journal does not fill with one-off errands. Decide before building:
+  one active instance per template per player, or many.
+- **Destinations resolved at start**: nearest vanilla structure (village,
+  temple -- the same lookup `place` givers already make), a CityWorld lot kind
+  (`bank`) through `CityWorldLots`, or a position StoryTeller hands over. A
+  template whose destination cannot resolve is not offered, and says why to
+  the StoryTeller who asked.
+- **An `escort` objective** does not exist: the charge must reach the
+  destination alive and near the player. That wants a **follow / walk-to on
+  Cast** (Cast exposes no movement API today) -- raise it with the Cast side
+  rather than steering bodies from here. Failure on the charge's death is the
+  existing fail path.
+- **Fetch, kill and find already have objectives** (`collect`/`deliver`,
+  `kill`, `visit`), so those templates are only slot-filling over what exists:
+  the item from a pool the template names (or a `chronicler:item`), the genus
+  or mob and a count, the place to find. They can come first; escort is the
+  one genuinely new objective.
+- **The StoryTeller door**: `api.Quests` grows "start template X for these
+  players, with these slot values" and "list templates"; `/quest mini <type>
+  [player]` as the command twin. StoryTeller owns its buttons.
+- **Natural spawning is opt-in per template** (`spawn:` with where -- a
+  structure, biome, lot kind -- a chance and a cap), off unless configured,
+  since an unasked-for NPC in the wild is a surprise on someone's server.
+  Spawned givers despawn when the offer lapses unaccepted.
+- **The giver need not be a person.** A block or a place can start one too
+  (Sable: *"The temple door is jammed, bring back some slime balls to let it
+  move freely"*) -- the existing block and `place` givers, with the template
+  filling the slots from what was found: the block is the delivery target,
+  the offer is spoken by the scene rather than an NPC. Completion can then
+  *do* something to that block (open the door, clear the rubble), which
+  wants an on-complete block effect scoped to the found position.
+- Chains (temple -> village -> bank) fall out of a template's completion
+  starting another template near where it ended.
