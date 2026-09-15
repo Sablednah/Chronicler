@@ -33,7 +33,7 @@ public final class ChroniclerKeys {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         while (JOURNAL.consumeClick()) {
-            if (mc.screen == null) ClientJournal.open();
+            if (mc.gui.screen() == null) ClientJournal.open();
         }
     }
 

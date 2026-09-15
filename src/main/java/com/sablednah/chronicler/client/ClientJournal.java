@@ -20,10 +20,10 @@ public final class ClientJournal {
         last = payload;
         if (!payload.open()) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof JournalScreen open) {
+        if (mc.gui.screen() instanceof JournalScreen open) {
             open.focus(payload.focus());
         } else {
-            mc.setScreen(new JournalScreen(payload.focus()));
+            mc.gui.setScreen(new JournalScreen(payload.focus()));
         }
     }
 
