@@ -374,6 +374,22 @@ public final class SelfTest {
                             && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));
                     GiverStore.get(server).removeNpc(npc);
                     check("npc giver: an NPC with no quest is idle, not an error", Givers.onUseNpc(solo, npc));
+                    // npc_remove with leave: what is left of them stands where they did, and gives a quest.
+                    Identifier leaveQuest = ChroniclerIds.of("selftest_leave");
+                    var standing = cast.byId(server, npc).map(p -> net.minecraft.core.BlockPos.containing(p.pos()));
+                    GiverStore.get(server).setPlacedFor(leaveQuest, npc);
+                    Rewards.grant(solo, new com.sablednah.chronicler.data.RewardTypes.NpcRemove(java.util.Optional.empty(), java.util.Optional.empty(),
+                            java.util.Optional.of("minecraft:smithing_table"), java.util.Optional.of(firstSteps)),
+                            leaveQuest, quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, firstSteps)).get().value());
+                    boolean benchStands = standing.map(b -> server.overworld().getBlockState(b).is(net.minecraft.world.level.block.Blocks.SMITHING_TABLE)).orElse(false);
+                    boolean benchGives = standing.flatMap(b -> Givers.questAt(server.overworld(), b)).map(firstSteps::equals).orElse(false);
+                    check("npc_remove leave: the NPC is gone, the bench stands where they were and gives the quest (known "
+                            + standing.isPresent() + ", bench " + benchStands + ", gives " + benchGives + ")",
+                            standing.isPresent() && benchStands && benchGives && cast.byId(server, npc).isEmpty());
+                    standing.ifPresent(b -> {
+                        GiverStore.get(server).remove(server.overworld(), b);
+                        server.overworld().setBlockAndUpdate(b, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                    });
                 } finally {
                     cast.remove(server, npc);
                 }
@@ -659,7 +675,7 @@ public final class SelfTest {
         if (zarp) {
             int zq = 0;
             for (var h : QuestEngine.quests(server).listElements().toList()) if (h.key().identifier().getNamespace().equals("zarp")) zq++;
-            check("zarp: all 20 quests loaded (" + zq + ")", zq == 20);
+            check("zarp: all 21 quests loaded (" + zq + ")", zq == 21); // 21 since Wrench's Notes (2026-09-15)
             check("zarp: the finale has two endings, survivors two, beyond one",
                     QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "finale")).size() == 2
                     && QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "survivors")).size() == 2

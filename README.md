@@ -196,7 +196,8 @@ override `scope`. Every word a player sees lives in
 - **NPC givers** can stand `near_spawn: [dx, dz]` instead of `at`, dropped onto
   the surface on any seed, and `of: zarp:the_camp` makes one person give
   several quests (their mark shows whichever matters now). `npc_say` and
-  `npc_remove` effects make them speak or leave (`quest:` picks whose NPC).
+  `npc_remove` effects make them speak or leave (`quest:` picks whose NPC); `leave: <block>` puts
+  what is left of them where they last stood, and `giver_for: <quest>` makes that block its giver.
   `equipment: { mainhand: "minecraft:potion[potion_contents={potion:'minecraft:healing'}]", head: minecraft:iron_helmet }`
   dresses them (slots mainhand, offhand, head, chest, legs, feet; items as
   `/give` takes them), applied on placement and re-applied on restart if the

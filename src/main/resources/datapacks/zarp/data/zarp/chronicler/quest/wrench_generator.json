@@ -173,7 +173,9 @@
       "on_complete": [
         {
           "type": "npc_remove",
-          "text": "&7There is nothing of Wrench to bury. The generator is still on the bench, half built."
+          "text": "&7There is nothing of Wrench to bury. The generator is still on the bench, half built.",
+          "leave": "minecraft:smithing_table",
+          "giver_for": "zarp:wrench_notes"
         },
         {
           "type": "flag",

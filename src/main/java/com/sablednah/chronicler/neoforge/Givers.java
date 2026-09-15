@@ -149,7 +149,8 @@ public final class Givers {
         return here;
     }
 
-    private static void placeBlock(ServerLevel level, BlockPos pos, String block, Identifier questId) {
+    /** Package-visible: {@code npc_remove}'s {@code leave} places what is left of an NPC with it. */
+    static void placeBlock(ServerLevel level, BlockPos pos, String block, Identifier questId) {
         Identifier id = Identifier.tryParse(block.contains(":") ? block : "minecraft:" + block);
         var holder = id == null ? Optional.<net.minecraft.core.Holder.Reference<net.minecraft.world.level.block.Block>>empty()
                 : net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(id);
