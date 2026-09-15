@@ -21,7 +21,7 @@ import com.sablednah.chronicler.network.JournalPayload.External;
 import com.sablednah.chronicler.network.JournalPayload.QuestView;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -268,8 +268,8 @@ public final class JournalScreen extends Screen {
     // --- rendering ---
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
         hotspots.clear();
         JournalPayload p = ClientJournal.get();
         if (p == null) {
@@ -295,14 +295,14 @@ public final class JournalScreen extends Screen {
 
         chip(g, x + 7, y + 7, 14, label("panel.back"), !history.isEmpty(), mouseX, mouseY, this::goBack);
         chip(g, x + w - 21, y + 7, 14, label("panel.close"), true, mouseX, mouseY, this::onClose);
-        g.drawCenteredString(font, p.title(), x + w / 2, y + 10, GOLD);
-        g.drawString(font, p.progress(), x + w - 27 - font.width(p.progress()), y + 10, TEXT);
+        g.centeredText(font, p.title(), x + w / 2, y + 10, GOLD);
+        g.text(font, p.progress(), x + w - 27 - font.width(p.progress()), y + 10, TEXT);
         g.fill(x + 7, y + HEADER_H - 5, x + w - 7, y + HEADER_H - 4, DIVIDER);
 
         if (p.chapters().isEmpty()) {
             int ly = top() + 6;
             for (FormattedCharSequence s : font.split(label("panel.empty"), w - 28)) {
-                g.drawString(font, s, x + 14, ly, TEXT);
+                g.text(font, s, x + 14, ly, TEXT);
                 ly += 10;
             }
             return;
@@ -318,7 +318,7 @@ public final class JournalScreen extends Screen {
         }
     }
 
-    private void renderList(GuiGraphics g, JournalPayload p, int mouseX, int mouseY) {
+    private void renderList(GuiGraphicsExtractor g, JournalPayload p, int mouseX, int mouseY) {
         int lx = listX(), lw = listW(), top = top(), bottom = bottom();
         g.fill(lx, top, lx + lw, bottom, INSET);
         List<Row> rows = rows(p);
@@ -337,7 +337,7 @@ public final class JournalScreen extends Screen {
                     if (selected) g.fill(lx + 1, ry - 2, lx + lw - 1, ry + ROW_H - 2, SELECTED);
                     else if (hover) g.fill(lx + 1, ry - 2, lx + lw - 1, ry + ROW_H - 2, HOVER);
                     boolean folded = collapsed.contains(c.id());
-                    g.drawString(font, label(folded ? "panel.glyph.closed" : "panel.glyph.open"), lx + 3, ry, TEXT);
+                    g.text(font, label(folded ? "panel.glyph.closed" : "panel.glyph.open"), lx + 3, ry, TEXT);
                     drawName(g, bold(c.name()), lx + 12, ry, lw - 16, GOLD, hover || selected);
                     String id = c.id();
                     // The arrow folds; the name opens the chapter's map (and folds it on a second click).
@@ -352,7 +352,7 @@ public final class JournalScreen extends Screen {
                     if (selected) g.fill(lx + 1, ry - 2, lx + lw - 1, ry + ROW_H - 2, SELECTED);
                     else if (hover) g.fill(lx + 1, ry - 2, lx + lw - 1, ry + ROW_H - 2, HOVER);
                     int gx = lx + 3 + INDENT;
-                    g.drawString(font, glyph(q.status()), gx, ry, TEXT);
+                    g.text(font, glyph(q.status()), gx, ry, TEXT);
                     Component name = q.tracked() ? q.name().copy().append(" ").append(label("panel.glyph.tracked")) : q.name();
                     drawName(g, name, gx + 9, ry, lx + lw - 4 - (gx + 9), nameColour(q.status()), hover || selected);
                     String chapter = row.chapter().id(), id = q.id();
@@ -369,25 +369,25 @@ public final class JournalScreen extends Screen {
         if (!collapsed.remove(chapter)) collapsed.add(chapter);
     }
 
-    private void renderMap(GuiGraphics g, ChapterView ch, int mouseX, int mouseY) {
+    private void renderMap(GuiGraphicsExtractor g, ChapterView ch, int mouseX, int mouseY) {
         int px = paneX(), pw = paneW(), y = top();
         int nameX = px;
         if (!ch.icon().isEmpty()) {
-            g.renderItem(icon(ch.icon()), px, y);
+            g.item(icon(ch.icon()), px, y);
             nameX += 19;
         }
-        g.drawString(font, bold(ch.name()), nameX, y + 4, GOLD);
+        g.text(font, bold(ch.name()), nameX, y + 4, GOLD);
         y += 18;
         int shown = 0;
         for (Component line : ch.lines()) {
             for (FormattedCharSequence s : font.split(line, pw)) {
                 if (shown++ >= 4) break; // the map is the point; a long blurb must not push it off the page
-                g.drawString(font, s, px, y, TEXT);
+                g.text(font, s, px, y, TEXT);
                 y += 10;
             }
         }
         if (!ch.buttons().isEmpty()) y = buttonRow(g, ch.buttons(), px, y + 1, pw, mouseX, mouseY, top(), bottom()) + 2;
-        g.drawString(font, label("panel.map.hint"), px, y + 1, TEXT);
+        g.text(font, label("panel.map.hint"), px, y + 1, TEXT);
         y += 12;
 
         int cx0 = px, cy0 = y, cx1 = px + pw, cy1 = bottom();
@@ -395,7 +395,7 @@ public final class JournalScreen extends Screen {
         g.fill(cx0, cy0, cx1, cy1, INSET);
         frame(g, cx0, cy0, cx1, cy1, BRASS_DIM, 1);
         if (ch.quests().isEmpty() || cy1 - cy0 < 20) {
-            g.drawString(font, label("panel.map.none"), cx0 + 6, cy0 + 6, TEXT);
+            g.text(font, label("panel.map.none"), cx0 + 6, cy0 + 6, TEXT);
             return;
         }
 
@@ -456,7 +456,7 @@ public final class JournalScreen extends Screen {
             boolean hover = mouseInCanvas && mouseX >= bx0 && mouseX < bx1 && mouseY >= c.y() - 2 && mouseY < c.y() + NODE + 12;
             node(g, c.x(), c.y(), iconId, status, pl.external(), hover);
             FormattedCharSequence label = ellipsis(pl.external() ? name.copy().withStyle(ChatFormatting.ITALIC) : name, CELL_W - 8);
-            g.drawString(font, label, c.x() + NODE / 2 - font.width(label) / 2, c.y() + NODE + 3,
+            g.text(font, label, c.x() + NODE / 2 - font.width(label) / 2, c.y() + NODE + 3,
                     pl.external() ? 0xFF8A837A : nameColour(status));
             if (hover) tooltip = List.of(name, second);
             if (targetChapter != null) {
@@ -469,7 +469,7 @@ public final class JournalScreen extends Screen {
         if (tooltip != null) g.setTooltipForNextFrame(font, tooltip, Optional.empty(), mouseX, mouseY);
     }
 
-    private void renderPage(GuiGraphics g, ChapterView ch, QuestView q, int mouseX, int mouseY) {
+    private void renderPage(GuiGraphicsExtractor g, ChapterView ch, QuestView q, int mouseX, int mouseY) {
         if (q == null) return;
         int px = paneX(), pw = paneW() - 6, top = top(), bottom = bottom();
         g.enableScissor(px, top, px + pw, bottom);
@@ -477,11 +477,11 @@ public final class JournalScreen extends Screen {
 
         link(g, label("panel.to_map"), px, y, pw, mouseX, mouseY, top, bottom, () -> goTo(ch.id(), "", true));
         y += 14;
-        g.renderItem(icon(q.icon()), px, y);
-        g.drawString(font, glyph(q.status()), px + 13, y - 3, TEXT);
+        g.item(icon(q.icon()), px, y);
+        g.text(font, glyph(q.status()), px + 13, y - 3, TEXT);
         int nameY = y + 4;
         for (FormattedCharSequence s : font.split(bold(q.name()), pw - 22)) {
-            g.drawString(font, s, px + 21, nameY, nameColour(q.status()));
+            g.text(font, s, px + 21, nameY, nameColour(q.status()));
             nameY += 10;
         }
         y = Math.max(y + 20, nameY + 4);
@@ -489,13 +489,13 @@ public final class JournalScreen extends Screen {
 
         for (Component line : q.lines()) {
             for (FormattedCharSequence s : font.split(line, pw)) {
-                g.drawString(font, s, px, y, TEXT);
+                g.text(font, s, px, y, TEXT);
                 y += 10;
             }
         }
         if (!q.requires().isEmpty()) {
             y += 4;
-            g.drawString(font, label("panel.requires"), px, y, TEXT);
+            g.text(font, label("panel.requires"), px, y, TEXT);
             y += 11;
             for (String r : q.requires()) {
                 QuestView rq = findQuest(r);
@@ -516,16 +516,16 @@ public final class JournalScreen extends Screen {
 
     // --- pieces ---
 
-    private void node(GuiGraphics g, int x, int y, String iconId, byte status, boolean external, boolean hover) {
+    private void node(GuiGraphicsExtractor g, int x, int y, String iconId, byte status, boolean external, boolean hover) {
         g.fill(x, y, x + NODE, y + NODE, NODE_BG);
         int colour = hover ? 0xFFFFFFFF : external ? BRASS_DIM : frameColour(status);
         frame(g, x, y, x + NODE, y + NODE, colour, status == JournalPayload.ACTIVE && !external ? 2 : 1);
-        g.renderItem(icon(iconId), x + 3, y + 3);
+        g.item(icon(iconId), x + 3, y + 3);
         if (external || status == JournalPayload.LOCKED) g.fill(x + 1, y + 1, x + NODE - 1, y + NODE - 1, 0x80000000);
-        g.drawString(font, glyph(status), x + NODE - 4, y - 4, TEXT);
+        g.text(font, glyph(status), x + NODE - 4, y - 4, TEXT);
     }
 
-    private static void edge(GuiGraphics g, Cell from, Cell to, int colour) {
+    private static void edge(GuiGraphicsExtractor g, Cell from, Cell to, int colour) {
         int x0 = from.x() + NODE, y0 = from.y() + NODE / 2;
         int x1 = to.x() - 1, y1 = to.y() + NODE / 2;
         if (x1 <= x0) return; // only a cycle points backwards; the page still lists it
@@ -536,7 +536,7 @@ public final class JournalScreen extends Screen {
     }
 
     /** A row of buttons that wraps; returns the y below it. Hover shows the button's tip. */
-    private int buttonRow(GuiGraphics g, List<Button> buttons, int x, int y, int maxW, int mouseX, int mouseY, int clipTop, int clipBottom) {
+    private int buttonRow(GuiGraphicsExtractor g, List<Button> buttons, int x, int y, int maxW, int mouseX, int mouseY, int clipTop, int clipBottom) {
         int bx = x;
         for (Button b : buttons) {
             int w = font.width(b.label()) + 10;
@@ -548,7 +548,7 @@ public final class JournalScreen extends Screen {
                     && mouseY >= clipTop && mouseY < clipBottom;
             g.fill(bx, y, bx + w, y + 14, hover ? 0xFF33291E : 0xFF221A12);
             frame(g, bx, y, bx + w, y + 14, hover ? GOLD : BRASS, 1);
-            g.drawString(font, b.label(), bx + 5, y + 3, TEXT);
+            g.text(font, b.label(), bx + 5, y + 3, TEXT);
             if (hover) g.setTooltipForNextFrame(font, b.tip(), mouseX, mouseY);
             String command = b.command();
             addClipped(bx, y, bx + w, y + 14, clipTop, clipBottom, () -> ClientJournal.run(command));
@@ -557,11 +557,11 @@ public final class JournalScreen extends Screen {
         return y + 14;
     }
 
-    private void link(GuiGraphics g, Component text, int x, int y, int w, int mouseX, int mouseY, int clipTop, int clipBottom, Runnable action) {
+    private void link(GuiGraphicsExtractor g, Component text, int x, int y, int w, int mouseX, int mouseY, int clipTop, int clipBottom, Runnable action) {
         boolean hover = mouseX >= x && mouseX < x + w && mouseY >= y - 1 && mouseY < y + 10
                 && mouseY >= clipTop && mouseY < clipBottom;
         if (hover) g.fill(x - 1, y - 1, x + w, y + 10, HOVER);
-        g.drawString(font, ellipsis(hover ? text.copy().withStyle(ChatFormatting.UNDERLINE) : text, w), x, y, 0xFF8FC8E8);
+        g.text(font, ellipsis(hover ? text.copy().withStyle(ChatFormatting.UNDERLINE) : text, w), x, y, 0xFF8FC8E8);
         addClipped(x, y - 1, x + w, y + 10, clipTop, clipBottom, action);
     }
 
@@ -570,12 +570,12 @@ public final class JournalScreen extends Screen {
         if (bottom > top) hotspots.add(new Hot(x0, top, x1, bottom, action, false));
     }
 
-    private void chip(GuiGraphics g, int x, int y, int w, Component label, boolean enabled, int mouseX, int mouseY, Runnable action) {
+    private void chip(GuiGraphicsExtractor g, int x, int y, int w, Component label, boolean enabled, int mouseX, int mouseY, Runnable action) {
         int h = 14;
         boolean hover = enabled && mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
         g.fill(x, y, x + w, y + h, hover ? 0xFF33291E : 0xFF221A12);
         frame(g, x, y, x + w, y + h, hover ? GOLD : BRASS, 1);
-        g.drawString(font, label, x + (w - font.width(label)) / 2, y + 3, enabled ? TEXT : 0xFF5A534B);
+        g.text(font, label, x + (w - font.width(label)) / 2, y + 3, enabled ? TEXT : 0xFF5A534B);
         if (enabled) hotspots.add(new Hot(x, y, x + w, y + h, action, false));
     }
 
@@ -583,14 +583,14 @@ public final class JournalScreen extends Screen {
      * A name in the list: trimmed to an ellipsis, except under the cursor or the
      * selection, where it slides so the whole of it can be read (the handbook's trick).
      */
-    private void drawName(GuiGraphics g, Component text, int x, int y, int avail, int colour, boolean live) {
+    private void drawName(GuiGraphicsExtractor g, Component text, int x, int y, int avail, int colour, boolean live) {
         int over = font.width(text) - avail;
         if (over <= 0) {
-            g.drawString(font, text, x, y, colour);
+            g.text(font, text, x, y, colour);
             return;
         }
         if (!live) {
-            g.drawString(font, ellipsis(text, avail), x, y, colour);
+            g.text(font, ellipsis(text, avail), x, y, colour);
             return;
         }
         long travel = Math.max(1L, over * 22L);
@@ -601,7 +601,7 @@ public final class JournalScreen extends Screen {
                 : t < 2 * dwell + travel ? over
                 : over - (int) ((t - 2 * dwell - travel) * over / travel);
         g.enableScissor(x, y - 1, x + avail, y + 9);
-        g.drawString(font, text, x - offset, y, colour);
+        g.text(font, text, x - offset, y, colour);
         g.disableScissor();
     }
 
@@ -611,7 +611,7 @@ public final class JournalScreen extends Screen {
         return Language.getInstance().getVisualOrder(FormattedText.composite(cut, FormattedText.of("…")));
     }
 
-    private void scrollbar(GuiGraphics g, int x, int top, int bottom, double scroll, double max, int contentH) {
+    private void scrollbar(GuiGraphicsExtractor g, int x, int top, int bottom, double scroll, double max, int contentH) {
         if (max <= 0) return;
         int h = bottom - top;
         g.fill(x, top, x + 2, bottom, 0x50000000);
@@ -620,7 +620,7 @@ public final class JournalScreen extends Screen {
         g.fill(x, thumbY, x + 2, thumbY + thumb, 0xC0D9A441);
     }
 
-    private static void frame(GuiGraphics g, int x0, int y0, int x1, int y1, int colour, int t) {
+    private static void frame(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, int colour, int t) {
         g.fill(x0, y0, x1, y0 + t, colour);
         g.fill(x0, y1 - t, x1, y1, colour);
         g.fill(x0, y0, x0 + t, y1, colour);
