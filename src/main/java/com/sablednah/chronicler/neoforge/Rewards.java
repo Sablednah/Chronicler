@@ -141,6 +141,18 @@ public final class Rewards {
             r.text().ifPresent(t -> Feedback.chat(player, t));
             if (npc.isEmpty()) return;
             var server = player.level().getServer();
+            // What is left of them goes where they last stood -- asked before they are gone.
+            if (r.leave().isPresent()) {
+                Npcs.provider().get().byId(server, npc.get()).ifPresent(p -> {
+                    var level = server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, p.dimension()));
+                    if (level == null) return;
+                    var at = net.minecraft.core.BlockPos.containing(p.pos());
+                    Givers.placeBlock(level, at, r.leave().get(), questId);
+                    r.giverFor().ifPresent(q -> GiverStore.get(server).set(level, at, q));
+                    Chronicler.LOGGER.info("Chronicler: {} left {} at {}{}", r.quest().orElse(questId), r.leave().get(), at,
+                            r.giverFor().map(q -> ", giving " + q).orElse(""));
+                });
+            }
             Npcs.provider().get().remove(server, npc.get());
             GiverStore.get(server).removeNpc(npc.get());
             Chronicler.LOGGER.info("Chronicler: quest {} removed the NPC of {} ({})", questId, r.quest().orElse(questId), npc.get());

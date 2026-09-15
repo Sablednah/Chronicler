@@ -7,6 +7,9 @@
     "zarp:the_camp"
   ],
   "availability": {
+    "flags": {
+      "zarp_garage_fell": false
+    },
     "race": [
       "mechanic"
     ],

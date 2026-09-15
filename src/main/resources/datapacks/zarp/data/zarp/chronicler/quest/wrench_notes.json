@@ -1,0 +1,116 @@
+{
+  "name": "Wrench's Notes",
+  "description": "His bench is where the garage was. His notes are still on it, in the hand of a man who expected to finish the job. Somebody told him it was not their problem.",
+  "chapter": "zarp:survivors",
+  "order": 2,
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "hidden": true,
+  "availability": {
+    "flags": {
+      "zarp_garage_fell": true
+    },
+    "race": [
+      "mechanic"
+    ],
+    "class": [
+      "builder",
+      "miner",
+      "labourer"
+    ]
+  },
+  "stages": [
+    {
+      "text": "Four copper ingots, two redstone. The last line says 'ask the new one what they think'. You were the new one.",
+      "objectives": [
+        {
+          "type": "collect",
+          "item": "minecraft:copper_ingot",
+          "count": 4,
+          "consume": true
+        },
+        {
+          "type": "collect",
+          "item": "minecraft:redstone",
+          "count": 2,
+          "consume": true
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "message",
+          "text": "&7It turns over. He would have grinned. You will have to imagine it.",
+          "action_bar": false
+        }
+      ]
+    },
+    {
+      "text": "Something comes out of what is left of the garage, still wearing his gloves. It knows the way to the bench.",
+      "objectives": [
+        {
+          "type": "kill",
+          "target": [
+            "zombiemod:tank",
+            "minecraft:zombie"
+          ],
+          "count": 1,
+          "tag": "wrench",
+          "own_kill": true
+        }
+      ],
+      "on_enter": [
+        {
+          "type": "spawn",
+          "count": 1,
+          "radius": 6,
+          "genus": "zombiemod:tank",
+          "entity": "minecraft:zombie",
+          "name": "&4Wrench",
+          "tag": "wrench",
+          "health": 60,
+          "equipment": {
+            "mainhand": "minecraft:iron_axe"
+          }
+        },
+        {
+          "type": "title",
+          "title": "&4&lWrench",
+          "subtitle": "&7Not your problem. Again."
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "message",
+          "text": "&7That is twice he has died on your watch. This time you did it yourself.",
+          "action_bar": false
+        },
+        {
+          "type": "reputation",
+          "standing": "camp",
+          "delta": 5
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "money",
+      "amount": 30
+    },
+    {
+      "type": "xp",
+      "amount": 50
+    },
+    {
+      "type": "class_xp",
+      "amount": 40
+    },
+    {
+      "type": "item",
+      "item": "minecraft:shears",
+      "count": 1
+    }
+  ],
+  "locked": "&7Wrench's shorthand. Without the trade, it is just grease and arrows."
+}

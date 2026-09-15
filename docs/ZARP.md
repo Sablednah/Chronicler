@@ -71,8 +71,14 @@ Three endings across the last two chapters: truce, cure, mercy.
 - **Fence Power** -- Wrench asks for a redstone block and eight iron within
   fifteen minutes. Say *not my problem* (or run out of time) and, five minutes
   later, the garage is a nest: a Broodmother and six others, and Wrench is
-  gone for good. Two endings: *fence_up*, *fence_down*.
-- **Grease Monkey** -- Mechanic race, or Builder / Miner / Labourer class.
+  gone for good. Two endings: *fence_up*, *fence_down*. He leaves his bench (a
+  smithing table) where he last stood.
+- **Grease Monkey** -- Mechanic race, or Builder / Miner / Labourer class. Wrench
+  gives it while he lives; once the garage falls it locks, and his bench offers
+  **Wrench's Notes** instead (hidden until found, same trades): the same copper
+  and redstone job read off his notes, then zombie Wrench comes back for his bench
+  and you kill him yourself. A world whose Wrench died before 2026-09-15 has no
+  bench: look at a block where the garage was and `/quest giver set zarp:wrench_notes`.
 - **Triage** -- Paramedic race, or Doc / Combat Medic / Chemist class.
 - **Blood Ties** -- Immune race only. Kit's scarf, the ward, three zombies.
 - **The Armoury** -- level 3 and Ex-Military / Prepper race or Enforcer /
