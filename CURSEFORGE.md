@@ -10,8 +10,10 @@ Quests a checklist and wanted a story.
 
 **Your players do not need to install anything.** Offers arrive on the action bar and in chat
 with clickable buttons, progress is tracked on the action bar, the journal is a written book
-handed to every new player, choices are buttons, and completions are a title card. Everything a
-modded client might add later is sugar; nothing is required.
+handed to every new player, choices are buttons, and completions are a title card. A player who
+does install Chronicler gets the journal as a **panel** on the backtick key: chapters with their
+quests under them, a quest map of what leads to what, and a page per quest with its buttons. That
+is sugar; nothing is required.
 
 ---
 
@@ -75,7 +77,7 @@ stages:
 ```
 
 Restart the server and it is there. `/quests` lists what is loaded, `/quest` alone says what you
-are doing now, the journal book does the rest.
+are doing now, and the journal (a book, or a panel on a client with Chronicler) does the rest.
 
 ## Plays well with others
 

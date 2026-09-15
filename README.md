@@ -12,7 +12,7 @@ Built to sit beside [LegendQuest ReForged](https://github.com/Sablednah/LegendQu
 [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) and
 [Cast](https://github.com/Sablednah/Cast). Standards and Cast are required; the rest are optional.
 
-**Status: 1.0.0.** The engine, the journal, givers
+**Status: 1.0.1.** The engine, the journal, givers
 (blocks, places, NPCs), stages, choices, deadlines, endings and replay, quest
 items, rituals, deliveries, party quests, reputation, progress, and the shipped
 **ZARP** questline, all self-tested headlessly and played through to the Nether.

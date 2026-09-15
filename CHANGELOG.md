@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.1 — 2026-09-15
 
 - **The journal panel.** A player whose client has Chronicler gets the journal as a panel instead of the book: chapters down the left with their quests under them, a quest map for the selected chapter (a column per step of prerequisites, prerequisites from other chapters as stand-ins, green lines along the path already walked; drag to look around), and a page per quest with its buttons. Open it with the **backtick** key (`` ` ``, rebindable under Controls > Chronicler), the journal item or `/quest journal`. The text is the server's own (`panel.*` in `messages.yml`), every button runs the `/quest` command a chat button would, and it refreshes while open. Vanilla clients get the book as before; `journal.panel = false` gives everyone the book.
 - `visibility` on a quest: `always` (listed from the start, locked or not), `unlocked` (listed once every quest it `requires` is done) or `found` (listed once started). `hidden: true` still means `found`. The panel, the book and `/quests` all follow it.
