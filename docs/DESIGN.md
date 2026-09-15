@@ -597,3 +597,64 @@ What it would need, noted so the next session does not start cold:
   wants an on-complete block effect scoped to the found position.
 - Chains (temple -> village -> bank) fall out of a template's completion
   starting another template near where it ended.
+
+### The ZARP modpack (2026-09-15, Sable) -- planning, nothing built
+
+ZARP ships as a modpack, not only as an add-on. Before it: every outstanding fix
+released across the family, and mini quests done. Branding is Sable's: splash
+quotes from zombie films, games, TV and comics; an apocalypse cityscape panorama;
+a LegendQuest:ZARP logo. Menu and loading screen via FancyMenu / Drippy; Default
+Options for keybinds (backtick journal, Z dex, J JourneyMap -- and LegendQuest's
+party key B clashes with JourneyMap's and Xaero's waypoint key, so one moves).
+
+**World generation** (CityWorld's side, Sable taking it to that session):
+
+- **Apocalypse by default.** Vanilla's Create World screen always opens on
+  `minecraft:normal` (`CreateWorldScreen`, hardcoded); the `#minecraft:normal`
+  tag only fills the cycle list, and NeoForge has no default-preset hook. A
+  client handler that selects `cityworld:apocalypse` when the screen opens does
+  it -- as a CityWorld config option or a pack mod. Dedicated servers already
+  can: `level-type=cityworld:apocalypse`.
+- **Nether and End variants.** Every CityWorld preset uses vanilla's nether and
+  End today; the generator hardcodes `Environment.NORMAL`, and the Bukkit-era
+  nether paths are present but unwired.
+- **1:1 nether is data.** `coordinate_scale` (8.0) lives in the
+  `minecraft:the_nether` dimension type, and portal linking is one scale over
+  the other, so a datapack override to 1.0 makes it 1:1. Ship it from world
+  creation: an existing world's portal pairs stop lining up. Confirm in game.
+- **An End city and the dragon.** The fight is created only when the dimension
+  is `minecraft:the_end` AND its type is `the_end` (`ServerLevel`), and it needs
+  the central island's obsidian spikes (the island biome's decoration); it
+  builds the exit portal itself. So a city End leaves a radius around the origin
+  vanilla and builds beyond it. ZARP's Never Lived needs dragon's breath and
+  **end rods** (vanilla End cities), and elytra come from there too: a city End
+  must still provide them.
+
+**The base camp: a site, not a seed.** A fixed seed guarantees places and costs
+replays and every server's own map. Instead, the camp is an authored build
+(structure blocks, `.nbt`), placed once per world:
+
+1. Find the nearest vault door. CityWorld's `lotAt` answers for ungenerated
+   chunks, so probing outward is cheap; a `nearest(level, pos, lotClass, radius)`
+   in its API would be the clean version. Prefer a vault with a
+   `RoadThroughVaultLot` tunnel: its road is most of the path already.
+2. **Vaults are under mountains, the camp is not.** Pick lowland nearby, never
+   far: nature or park lots, flat over the camp's footprint, dry, not a building
+   lot. Sable, 2026-09-15.
+3. Place the camp template there. Marker blocks inside it (structure-block data
+   markers) name where each NPC, the campfire and Wrench's bench stand, so the
+   givers follow the build rather than spawn offsets.
+4. **Trace a path from the camp gate to the vault door**: a walk over the
+   heightmap (no step over one block, no water), laid as path blocks with posts
+   and lanterns, ending at a boarded-up door. The chunks along it are generated
+   once, at world start, before anyone joins.
+5. Set the world spawn inside the camp: that also settles `/spawn` for good.
+
+Fallbacks: no vault within range -> the camp at spawn; no pack (ZARP as an
+add-on) -> today's campfire and decor. Where it lives: a data-driven "site"
+feature in Chronicler (template, markers, placed once and remembered -- mini
+quests want placed sites too), reaching CityWorld through `compat/CityWorldLots`.
+
+Open: default preset in CityWorld config or a pack mod; what a city End gives in
+place of End cities; how common a vault near spawn really is on apocalypse
+worlds (CityWorld calls them rare) and how far "nearby" may stretch.
