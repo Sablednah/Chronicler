@@ -17,11 +17,17 @@ giver store, so they stay put on restart):
 
 | Who | Offset | Gives |
 |---|---|---|
-| **Dr Amara Okafor** | +6, 0 | The Camp, Before Dark, House Calls, Living Fire, Never Lived, Patient Zero, Triage |
-| **Sarge Kowalski** | -3, -6 | The Signal, Hold the Line (party), The Armoury, The Rig, Deep Cold |
-| **Wrench** | 0, +8 | Fence Power, Grease Monkey |
-| **Kit** | +3, -6 | Blood Ties (Immune only) -- and she is the finale's price |
-| **Mags** | -6, 0 | The Board: Cull, Scrap Run, Medicine Run, Night Shift (repeatable) |
+| **Dr Amara Okafor** | +6, +3 | The Camp, Before Dark, House Calls, Living Fire, Never Lived, Patient Zero, Triage |
+| **Sarge Kowalski** | -3, -3 | The Signal, Hold the Line (party), The Armoury, The Rig, Deep Cold |
+| **Wrench** | 0, +11 | Fence Power, Grease Monkey |
+| **Kit** | +3, -3 | Blood Ties (Immune only) -- and she is the finale's price |
+| **Mags** | -6, +3 | The Board: Cull, Scrap Run, Medicine Run, Night Shift (repeatable) |
+
+The campfire is at 0, +3, and the spawn block itself is kept clear of the fire,
+its decor and the people: vanilla scatters a new player around spawn, but
+`/spawn` (Standards) lands on the exact block, and until 2026-09-15 that block
+was the campfire. The offsets only apply the first time a world places the camp;
+a world that already has one keeps it (move `/spawn` off the fire with `/setspawn`).
 
 The camp is not nailed down: a Storyteller can walk any of the five
 anywhere (`/st cast behave`, or by possessing them), and releasing re-anchors

@@ -696,6 +696,19 @@ public final class SelfTest {
             });
             check("quest item insulin is not drinkable", !com.sablednah.chronicler.data.QuestItem.build(registries, Identifier.fromNamespaceAndPath("zarp", "insulin"), 1).has(net.minecraft.core.component.DataComponents.CONSUMABLE));
             var fireAt = GiverStore.get(server).placedBlock(Identifier.fromNamespaceAndPath("zarp", "wake_up"));
+            // The spawn block stays clear. /spawn (Standards) lands on it exactly, and ZARP's campfire once
+            // sat on it. Checked on the DATA, since the dev world keeps whatever camp it placed first.
+            List<String> onSpawn = new ArrayList<>();
+            QuestEngine.quests(server).listElements().forEach(h -> h.value().giver().ifPresent(g -> {
+                if (g instanceof com.sablednah.chronicler.data.GiverTypes.Position p && p.nearSpawn().isPresent()) {
+                    int ox = p.nearSpawn().get().get(0), oz = p.nearSpawn().get().get(1);
+                    if (p.block().isPresent() && ox == 0 && oz == 0) onSpawn.add(h.key().identifier() + " block");
+                    for (var d : p.decor()) if (ox + d.offset().get(0) == 0 && oz + d.offset().get(2) == 0) onSpawn.add(h.key().identifier() + " " + d.block());
+                }
+                if (g instanceof com.sablednah.chronicler.data.GiverTypes.NpcGiver n && n.nearSpawn().isPresent()
+                        && n.nearSpawn().get().get(0) == 0 && n.nearSpawn().get().get(1) == 0) onSpawn.add(h.key().identifier() + " npc");
+            }));
+            check("near-spawn givers keep the spawn block clear" + (onSpawn.isEmpty() ? "" : " (on it: " + onSpawn + ")"), onSpawn.isEmpty());
             check("zarp: the campfire was dropped near spawn", fireAt.isPresent()
                     && fireAt.get().distManhattan(spawn) < 8 && level.getBlockState(fireAt.get()).is(net.minecraft.world.level.block.Blocks.CAMPFIRE));
             // Dry ground: a column whose surface is water resolves to the nearest column that is not.
