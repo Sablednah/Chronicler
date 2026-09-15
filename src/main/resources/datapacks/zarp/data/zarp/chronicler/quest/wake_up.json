@@ -100,7 +100,7 @@
     "type": "position",
     "near_spawn": [
       0,
-      0
+      3
     ],
     "block": "minecraft:campfire",
     "radius": 6.0,
