@@ -15,6 +15,7 @@ import com.sablednah.chronicler.data.Quest;
 import com.sablednah.chronicler.network.JournalPayload;
 
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -730,16 +731,28 @@ public final class SelfTest {
             // Dry ground: a column whose surface is water resolves to the nearest column that is not.
             {
                 var wet = spawn.offset(-14, 0, -14);
-                var g = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wet);
+                // Flood each column of the 3x3 at ITS OWN surface, and put back exactly what was there. Flooding every
+                // column at the centre's height only wets the ones level with it: on the 26.1 dev world this corner is
+                // a pit ten blocks deep, the neighbours kept dry grass on top, the finder rightly took one a block
+                // away, and the check read "moved false" on ground that was never wet.
+                List<BlockPos> tops = new ArrayList<>();
                 for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
-                    level.setBlockAndUpdate(g.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
-                    level.setBlockAndUpdate(g.offset(dx, 0, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                    tops.add(level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wet.offset(dx, 0, dz)));
+                }
+                java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> before = new java.util.LinkedHashMap<>();
+                for (BlockPos top : tops) {
+                    before.putIfAbsent(top.below(), level.getBlockState(top.below()));
+                    before.putIfAbsent(top, level.getBlockState(top));
+                }
+                for (BlockPos top : tops) {
+                    level.setBlockAndUpdate(top.below(), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+                    level.setBlockAndUpdate(top, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
                 }
                 var found = Givers.dryColumn(level, wet.getX(), wet.getZ());
                 boolean moved = Math.max(Math.abs(found.getX() - wet.getX()), Math.abs(found.getZ() - wet.getZ())) >= 2;
                 boolean isDry = level.getFluidState(found.below()).isEmpty() && level.getFluidState(found).isEmpty();
                 check("placement: a wet column resolves to nearby dry ground (moved " + moved + ", dry " + isDry + ")", moved && isDry);
-                for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) level.setBlockAndUpdate(g.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+                before.forEach(level::setBlockAndUpdate);
             }
             // Decor on a cleared patch (the dev world keeps older camps): a post on the ground, its lantern ON it, no gap.
             {
