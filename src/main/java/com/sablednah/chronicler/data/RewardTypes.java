@@ -155,10 +155,19 @@ public final class RewardTypes {
     }
 
     /** A placed NPC is gone -- dead, left, taken. The quest it gave stays; its giver is no longer there. */
-    public record NpcRemove(Optional<Identifier> quest, Optional<String> text) implements RewardSpec {
+    /**
+     * Take an NPC out of the world. {@code leave} puts a block where they stood -- what is left of
+     * them -- and {@code giver_for} makes that block the giver of a quest, so a dead mechanic's
+     * bench can go on handing out his work. Placed at the NPC's last position, not their data
+     * offset, so it lands right even after a Storyteller walked them somewhere else.
+     */
+    public record NpcRemove(Optional<Identifier> quest, Optional<String> text,
+            Optional<String> leave, Optional<Identifier> giverFor) implements RewardSpec {
         public static final MapCodec<NpcRemove> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(NpcRemove::quest),
-                Codec.STRING.optionalFieldOf("text").forGetter(NpcRemove::text))
+                Codec.STRING.optionalFieldOf("text").forGetter(NpcRemove::text),
+                Codec.STRING.optionalFieldOf("leave").forGetter(NpcRemove::leave),
+                ChroniclerIds.CODEC.optionalFieldOf("giver_for").forGetter(NpcRemove::giverFor))
                 .apply(i, NpcRemove::new));
         @Override public MapCodec<NpcRemove> codec() { return MAP_CODEC; }
         @Override public String describe() { return Lang.get("rew.npc_remove"); }
