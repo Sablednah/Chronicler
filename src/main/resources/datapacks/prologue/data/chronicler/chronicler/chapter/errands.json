@@ -1,0 +1,6 @@
+{
+  "name": "Errands",
+  "description": "Small jobs for strangers. They find you.",
+  "order": 90,
+  "main": false
+}

@@ -121,7 +121,7 @@ kill <the JVM whose cmdline has Chronicler/build/classes>; rm run/mods/*.jar
   `build.gradle` for the same reason.
 - **Boot with every sibling AND with only the required two** (Standards and Cast; without
   them NeoForge refuses to start). The compat classes only link when the mod is present, and
-  both counts matter (192 and 166 at 1.0.0).
+  both counts matter (192 and 166 at 1.0.0; 265 and 237 with mini quests).
 - **`libs/` (gitignored) holds a sibling jar that has no `build/libs` for this
   line** -- ZombieMod's 26.1.2 jar is copied there from the CurseForge `26.1.2`
   instance (its 1.21.11 jar does build in `../ZombieMod/ZombieMod/build/libs`
@@ -206,6 +206,10 @@ neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEc
 api/Quests           the door for other mods (StoryTeller): offer / accept / flags / registries
 yaml/                YAML -> JSON pack
 data/QuestItem       chronicler:item registry; marked stacks built at use time; QuestItemLoot function
+data/Mini, Slots     mini quests: a quest file with a mini: block is a template whose {slot} holes are filled at
+                     start; Quest.CODEC checks it filled with stand-ins and keeps the raw JSON (Extras.template)
+neoforge/Minis       slot resolution (structure/lot/block/npc/...), the filled instance (cached: objectives are
+                     found by identity), pending offers, wild spawns, and sending placed people away when it ends
 datapacks/prologue/  the sample prologue, a built-in pack (content.prologue: auto = on unless ZARP is on;
                      -Pselftest forces it because the self-test drives it)
 datapacks/zarp/      the ZARP questline, a built-in pack (AddPackFindersEvent; path is from the JAR ROOT,
@@ -278,7 +282,7 @@ and said so; no CityWorld → `lot` objective never completes and the file is
 rejected at load with a clear message).
 
 **Floors are what is consumed, not what is newest.** Standards' floor is `[1.5.0,)` because
-reputation (1.5.0) is consumed; Cast's is `[1.0.0,)` because `equip` and `setDefyGravity` are.
+reputation (1.5.0) is consumed; Cast's is `[1.1.0,)` because `follow` (the escort objective) is.
 NeoForge refuses to start when a dependency is present but below its floor, so raise a floor only
 when a seam genuinely needs the newer build.
 
@@ -355,6 +359,12 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
   `ClientboundAddEntityPacket` + `ClientboundSetEntityDataPacket(getNonDefaultValues())`.
   FakePlayers are not in the player list; the self-test adds them to `Markers.EXTRA_VIEWERS`.
 
+- **A mini quest's holes are filled per player, so read a quest through `QuestEngine.questFor(player, id)`,**
+  never `quest(server, id)`, wherever a player is in hand: the registry copy holds stand-in values
+  ("Bread for Aldous" in every list). The filled copy is cached per slot set because `wait` and
+  `escort` find their journal entry by the objective object's identity.
+- An escort template's `radius` is the size of "there": a test that hands over a village 40 blocks
+  away finishes a 64-block escort on its first poll.
 - A `static final` collection declared after the fields that fill it is null
   when they initialise. Declare collections first. (Same trap, other spelling:
   a static counter declared after the static block that bumps it is an

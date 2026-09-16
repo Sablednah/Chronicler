@@ -1,0 +1,78 @@
+{
+  "name": "The Stuck Door",
+  "description": "{door} has rusted solid. A few slime balls in the hinges would free it.",
+  "chapter": "chronicler:errands",
+  "order": 3,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:slime_ball",
+  "mini": {
+    "slots": {
+      "door": {
+        "type": "block",
+        "block": "#minecraft:wooden_doors",
+        "label": "a door here",
+        "radius": 12
+      },
+      "count": {
+        "type": "number",
+        "min": 2,
+        "max": 4
+      }
+    },
+    "spawn": {
+      "place": {
+        "structure": "#minecraft:village"
+      },
+      "chance": 0.04,
+      "every": 90,
+      "cap": 1,
+      "block": "door",
+      "lapse": 180,
+      "say": "A door nearby will not budge. Its hinges are rusted solid; something slippery might free them."
+    }
+  },
+  "stages": [
+    {
+      "text": "Bring {count} slime balls to the door at {door.x}, {door.y}, {door.z} and use it.",
+      "on_enter": [
+        {
+          "type": "block",
+          "at": "{door.pos}",
+          "dimension": "{door.dim}",
+          "properties": {
+            "open": "false"
+          }
+        }
+      ],
+      "objectives": [
+        {
+          "type": "deliver",
+          "item": "minecraft:slime_ball",
+          "count": "{count}",
+          "at": "{door.pos}",
+          "label": "Work {count} slime balls into the stuck door"
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "block",
+      "at": "{door.pos}",
+      "dimension": "{door.dim}",
+      "properties": {
+        "open": "true"
+      }
+    },
+    {
+      "type": "xp",
+      "amount": 15
+    },
+    {
+      "type": "item",
+      "item": "minecraft:emerald",
+      "count": 1
+    }
+  ]
+}

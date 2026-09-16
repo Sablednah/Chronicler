@@ -41,7 +41,7 @@ in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
 | 26.1.2 | 26.1.2.95+ | 25 | `mc26.1` |
 | 26.2 | 26.2.0.72+ | 25 | `mc26.2` |
 
-Install on the server; players need nothing. **Requires [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) and [Cast](https://github.com/Sablednah/Cast)** (the economy, groups and reputation the quests pay through, and the people who give them); LegendQuest, ZombieMod and CityWorld are optional.
+Install on the server; players need nothing. **Requires [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) and [Cast](https://github.com/Sablednah/Cast) 1.1.0+** (the economy, groups and reputation the quests pay through, and the people who give them); LegendQuest, ZombieMod and CityWorld are optional.
 
 ## Writing content
 
@@ -218,6 +218,62 @@ override `scope`. Every word a player sees lives in
   count move it: `counts: true|false`, unsaid means "main chapter and not
   repeatable", so bounties and side lines never hold anyone short of 100%.
 
+### Mini quests
+
+Small errands that happen a hundred times -- walk this stranger to the nearest
+village, bring that villager five of something, free a stuck door -- written once
+as a **template**. Any value in a quest file may be a `{slot}` hole, and a `mini:`
+block says how each slot is filled when the quest starts:
+
+```yaml
+name: "{wants.name} for {asker}"
+chapter: errands
+repeatable: true
+hidden: true
+mini:
+  slots:
+    first:   { type: pick, pool: [Aldous, Wen, Marisol] }
+    asker:   { type: npc, name: "&f{first}", entity: minecraft:villager, min: 4, max: 8 }
+    wants:   { type: pick, pool: [minecraft:bread, minecraft:wheat, minecraft:leather] }
+    count:   { type: number, min: 3, max: 8 }
+  spawn:     # optional: offered unasked, while a player is in the place
+    place: { structure: "#minecraft:village" }
+    chance: 0.05
+    every: 120        # seconds between rolls, per player
+    cap: 2            # standing wild offers of this template
+    giver: asker      # the npc slot that makes the offer (or block: a block slot)
+    lapse: 300        # seconds before an ignored offer goes, and its person with it
+    say: "&7Have you got {count} {wants.name} going spare?"
+objectives:
+  - { type: deliver, item: "{wants}", count: "{count}", npc: "{asker.id}" }
+rewards:
+  - { type: xp, amount: 20 }
+```
+
+Slot types: `pick` (one of a `pool`), `number` (`min`..`max`), `here` (where it
+starts), `around` (a dry spot `min`..`max` blocks off), `structure` (the nearest, an
+id or `#tag`, within `radius`), `lot` (the nearest CityWorld lot whose words contain
+`lot`), `block` (the nearest, id or `#tag`), `giver` (where another quest's giver
+stands), `given` (a position whoever starts it hands over), `npc` (a person Cast
+places: `name`, `skin` or `entity`, `equipment`, `min`/`max` distance, `keep`). A place
+gives `{s}` (its `label`), `{s.x}`, `{s.y}`, `{s.z}`, `{s.pos}` and `{s.dim}`; a person
+also `{s.id}`; a pick `{s.name}`, prettified. `near: <slot>` searches from an earlier
+slot. A hole that is the whole value becomes a number or a list where one is wanted
+(`count: "{count}"`, `to: "{village.pos}"`). A template is checked at load by filling
+it with stand-in values, so a mistake is refused at boot like any other bad file.
+
+What minis use: `escort` (`who: "{scholar.id}"`, `to`, `radius`, `near`: the person
+follows whoever leads them, on foot along the way they walk, and it is done when they
+stand at `to` with the player beside them; wander off and they wait), `deliver` to
+`npc` (a person by id) or `at` (a block, which will not open until it has what it
+wants), `npc_say` / `npc_remove` with `npc`, the `block` effect (`at`, `block` and/or
+`properties`: `open: "true"`), and the `mini` effect (`template`, `near`, `slots`,
+`offer`), which starts the next errand where this one ended. One copy of each
+template runs per player; people placed for one leave when it ends unless `keep`.
+The built-in packs carry eleven: the archaeologist, the village errand, the stuck
+door, pests, the lost satchel and a town-hall escort (CityWorld) in the prologue;
+bring a survivor in, medicine, the nest, the rusted door and a warehouse run in ZARP.
+
 ### ZARP
 
 The Zombie Apocalypse Roleplay questline ships in the jar as a datapack and is
@@ -243,6 +299,8 @@ ZARP world is not offered two kinds of log run.
 | `/quest journal` | everyone — open the journal (the panel on a modded client, else the book), no item needed |
 | `/quest journal give` | everyone — a (replacement) journal item |
 | `/quest giver set <quest>` / `remove` / `list` | `chronicler.admin` or op 2 — the block you are looking at offers a quest |
+| `/quest mini` | `chronicler.admin` or op 2 — list the mini quest templates |
+| `/quest mini <template> [players] [offer]` | `chronicler.admin` or op 2 — start one (or offer it) for each player, filled where they stand |
 | `/chronicler reload` | `chronicler.admin` or op 2 — messages only |
 | `/chronicler status` | `chronicler.admin` or op 2 |
 | `/chronicler journal <player>` | `chronicler.admin` or op 2 — hand someone a journal |

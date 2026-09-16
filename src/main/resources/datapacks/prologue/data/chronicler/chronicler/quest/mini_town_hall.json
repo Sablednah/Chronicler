@@ -1,0 +1,80 @@
+{
+  "name": "Papers for {client}",
+  "description": "{client} has papers to file at {hall} and a city full of reasons not to walk there alone.",
+  "chapter": "chronicler:errands",
+  "order": 6,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:writable_book",
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Aldous",
+          "Wen",
+          "Marisol",
+          "Tobiah",
+          "Ines",
+          "Cormac",
+          "Hester",
+          "Ravi",
+          "Odile",
+          "Bram"
+        ]
+      },
+      "client": {
+        "type": "npc",
+        "name": "&f{first}, with a briefcase",
+        "min": 3,
+        "max": 6
+      },
+      "hall": {
+        "type": "lot",
+        "lot": "government",
+        "label": "the town hall",
+        "radius": 480
+      }
+    }
+  },
+  "stages": [
+    {
+      "text": "{client} follows you. {hall} is at {hall.x}, {hall.z}.",
+      "objectives": [
+        {
+          "type": "escort",
+          "who": "{client.id}",
+          "name": "{client}",
+          "to": "{hall.pos}",
+          "dimension": "{hall.dim}",
+          "radius": 24,
+          "near": 10,
+          "label": "{hall}"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{client.id}",
+          "text": "&7Stamped, filed, done. You have my thanks, and a fee.",
+          "radius": 24
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 35
+    },
+    {
+      "type": "money",
+      "amount": 20
+    },
+    {
+      "type": "item",
+      "item": "minecraft:emerald",
+      "count": 2
+    }
+  ]
+}

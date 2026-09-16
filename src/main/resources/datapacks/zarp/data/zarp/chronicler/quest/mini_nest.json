@@ -1,0 +1,121 @@
+{
+  "name": "The Nest by {asker}",
+  "description": "{asker} has watched them gather at {nest} for days. Someone has to clear it before it spills over.",
+  "chapter": "zarp:errands",
+  "order": 3,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:rotten_flesh",
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Dee",
+          "Marcus",
+          "Kofi",
+          "Lena",
+          "Petrov",
+          "Sunny",
+          "Hal",
+          "Rosa",
+          "Tomasz",
+          "Jin",
+          "Abby",
+          "Nate"
+        ]
+      },
+      "asker": {
+        "type": "npc",
+        "name": "&f{first}",
+        "min": 6,
+        "max": 12,
+        "equipment": {
+          "mainhand": "minecraft:spyglass"
+        }
+      },
+      "nest": {
+        "type": "around",
+        "min": 30,
+        "max": 60,
+        "near": "asker",
+        "label": "the nest"
+      },
+      "count": {
+        "type": "number",
+        "min": 4,
+        "max": 7
+      }
+    },
+    "spawn": {
+      "place": {
+        "dimension": "minecraft:overworld"
+      },
+      "chance": 0.015,
+      "every": 120,
+      "cap": 1,
+      "giver": "asker",
+      "lapse": 240,
+      "say": "&7Keep your voice down. There's a nest just over there. I've counted at least {count}."
+    }
+  },
+  "stages": [
+    {
+      "text": "The nest is at {nest.x}, {nest.z}. Go quietly.",
+      "objectives": [
+        {
+          "type": "visit",
+          "x": "{nest.x}",
+          "z": "{nest.z}",
+          "radius": 8,
+          "label": "{nest}"
+        }
+      ]
+    },
+    {
+      "text": "They have noticed you. Clear the nest.",
+      "on_enter": [
+        {
+          "type": "spawn",
+          "genus": "zombiemod:walker",
+          "entity": "minecraft:zombie",
+          "count": "{count}",
+          "radius": 10,
+          "tag": "nest",
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          }
+        }
+      ],
+      "objectives": [
+        {
+          "type": "kill",
+          "tag": "nest",
+          "target": [
+            "minecraft:zombie",
+            "zombiemod:walker"
+          ],
+          "count": "{count}"
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 3
+    },
+    {
+      "type": "xp",
+      "amount": 40
+    },
+    {
+      "type": "money",
+      "amount": 20
+    }
+  ]
+}

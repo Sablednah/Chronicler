@@ -130,6 +130,29 @@ public final class GiverStore extends SavedData {
         setDirty();
     }
 
+    /**
+     * A person placed for a mini quest: {@code pending} while an offer stands (such a one is removed
+     * on the next start, since offers do not survive a restart), then active until the quest ends.
+     */
+    public void setMini(java.util.UUID npcId, Identifier quest, boolean pending) {
+        placed.put("mini:" + npcId, (pending ? "pending|" : "active|") + quest);
+        setDirty();
+    }
+
+    public void clearMini(java.util.UUID npcId) {
+        if (placed.remove("mini:" + npcId) != null) setDirty();
+    }
+
+    /** npcId -> "pending|quest" or "active|quest". */
+    public Map<java.util.UUID, String> minis() {
+        Map<java.util.UUID, String> out = new LinkedHashMap<>();
+        placed.forEach((k, v) -> {
+            if (!k.startsWith("mini:")) return;
+            try { out.put(java.util.UUID.fromString(k.substring(5)), v); } catch (IllegalArgumentException ignored) {}
+        });
+        return out;
+    }
+
     public Optional<Identifier> at(ServerLevel level, BlockPos pos) {
         return Optional.ofNullable(byKey.get(key(level, pos)));
     }

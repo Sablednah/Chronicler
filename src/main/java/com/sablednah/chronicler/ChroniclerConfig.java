@@ -30,6 +30,9 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_ACTIVE;
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_COMPLETE;
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_LOCKED;
+    public static final ModConfigSpec.BooleanValue MINI_WILD;
+    public static final ModConfigSpec.IntValue MINI_OFFER_SECONDS;
+    public static final ModConfigSpec.DoubleValue ESCORT_PICKUP;
 
     static {
         BUILDER.comment("Announcements").push("announce");
@@ -104,6 +107,22 @@ public final class ChroniclerConfig {
                 .comment("The mark while the quest is locked for the player (prerequisites, conditions,",
                         "cooldown). Empty, the default, shows nothing.")
                 .define("markerLocked", "");
+        BUILDER.pop();
+
+        BUILDER.comment("Mini quests -- small errands filled in where they start (docs/DESIGN.md)").push("minis");
+        MINI_WILD = BUILDER
+                .comment("Offer mini quests that have a 'spawn' in the wild: an archaeologist at a temple, a jammed door",
+                        "in a village. Each template says where, how often and how many. Off, they start only when",
+                        "something asks (a quest, StoryTeller, /quest mini).")
+                .define("wild", true);
+        MINI_OFFER_SECONDS = BUILDER
+                .comment("How long a mini quest offered by another quest's ending stands before it lapses and anyone",
+                        "placed for it leaves. Wild offers carry their own 'lapse'.")
+                .defineInRange("offerSeconds", 300, 10, 86400);
+        ESCORT_PICKUP = BUILDER
+                .comment("An escorted person follows whoever is within this many blocks of them. Further, they stop",
+                        "and wait where they are until someone comes back for them.")
+                .defineInRange("escortPickup", 16.0D, 2.0D, 128.0D);
         BUILDER.pop();
 
         BUILDER.comment("Shipped content").push("content");

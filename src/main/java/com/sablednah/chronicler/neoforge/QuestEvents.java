@@ -45,6 +45,7 @@ public final class QuestEvents {
             QuestEngine.poll(player);
             Givers.tick(player);
         }
+        Minis.tick(event.getServer());
     }
 
     /** Remind a returning player what they were doing; hand a new one the book. */
@@ -93,6 +94,7 @@ public final class QuestEvents {
     @SubscribeEvent
     static void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
         Markers.clear(event.getServer());
+        Minis.clear();
     }
 
     @SubscribeEvent

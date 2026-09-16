@@ -1,0 +1,104 @@
+{
+  "name": "{guide}'s Warehouse",
+  "description": "{guide} swears {warehouse} still has tinned food in the back. {guide} also swears they know the way. Walk them there.",
+  "chapter": "zarp:errands",
+  "order": 5,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:barrel",
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Dee",
+          "Marcus",
+          "Kofi",
+          "Lena",
+          "Petrov",
+          "Sunny",
+          "Hal",
+          "Rosa",
+          "Tomasz",
+          "Jin",
+          "Abby",
+          "Nate"
+        ]
+      },
+      "guide": {
+        "type": "npc",
+        "name": "&f{first}",
+        "min": 6,
+        "max": 12,
+        "equipment": {
+          "mainhand": "minecraft:iron_shovel"
+        }
+      },
+      "warehouse": {
+        "type": "lot",
+        "lot": "warehouse",
+        "label": "the warehouse",
+        "radius": 480
+      }
+    },
+    "spawn": {
+      "place": {
+        "dimension": "minecraft:overworld"
+      },
+      "chance": 0.015,
+      "every": 180,
+      "cap": 1,
+      "giver": "guide",
+      "lapse": 240,
+      "say": "&7You look like you can swing that. There's a warehouse not far off with food in it. I just need someone at my back."
+    }
+  },
+  "stages": [
+    {
+      "text": "{guide} follows you to {warehouse} at {warehouse.x}, {warehouse.z}.",
+      "objectives": [
+        {
+          "type": "escort",
+          "who": "{guide.id}",
+          "name": "{guide}",
+          "to": "{warehouse.pos}",
+          "dimension": "{warehouse.dim}",
+          "radius": 24,
+          "near": 12,
+          "label": "{warehouse}"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{guide.id}",
+          "text": "&7Told you. Grab what you can carry, I'll take the rest back.",
+          "radius": 24
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 2
+    },
+    {
+      "type": "xp",
+      "amount": 35
+    },
+    {
+      "type": "item",
+      "item": "minecraft:bread",
+      "count": 8
+    },
+    {
+      "type": "money",
+      "amount": 15
+    }
+  ]
+}

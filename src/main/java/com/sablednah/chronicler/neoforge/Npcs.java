@@ -39,6 +39,13 @@ public final class Npcs {
         /** What the NPC wears, by slot name. */
         default java.util.Map<String, String> equipment(MinecraftServer server, UUID id) { return java.util.Map.of(); }
         boolean remove(MinecraftServer server, UUID id);
+        /** Follow a player on foot for {@code leaseTicks}; renew to keep it going. False when nothing can (Cast older than 1.1.0 never reaches here: the floor refuses it). */
+        default boolean follow(MinecraftServer server, UUID id, ServerPlayer leader, int leaseTicks) { return false; }
+        default void stopFollowing(MinecraftServer server, UUID id) {}
+        /** Who the NPC is following now. */
+        default Optional<UUID> leaderOf(UUID id) { return Optional.empty(); }
+        /** Put the NPC somewhere, at once. */
+        default void teleport(MinecraftServer server, UUID id, Vec3 pos) {}
     }
 
     private static volatile Provider provider = null;

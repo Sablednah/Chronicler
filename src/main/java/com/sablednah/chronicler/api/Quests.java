@@ -26,7 +26,7 @@ import net.minecraft.server.level.ServerPlayer;
 public final class Quests {
 
     /** Why an accept was refused. Mirrors the engine's. */
-    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS, COOLDOWN }
+    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS, COOLDOWN, UNRESOLVED }
 
     /** Offer a quest to a player as if a giver had: action bar + chat with Accept/Info. Cooldown applies. */
     public static boolean offer(ServerPlayer player, Identifier quest, String where) {
@@ -64,7 +64,42 @@ public final class Quests {
     }
 
     public static Optional<Quest> quest(ServerPlayer player, Identifier quest) {
-        return QuestEngine.quest(player.level().getServer(), quest).map(h -> h.value());
+        return QuestEngine.questFor(player, quest);
+    }
+
+    // --- mini quests: small errands filled in where they start ---
+
+    /** Every mini quest template loaded. */
+    public static java.util.List<Identifier> minis(net.minecraft.server.MinecraftServer server) {
+        return com.sablednah.chronicler.neoforge.Minis.templates(server);
+    }
+
+    public static boolean isMini(ServerPlayer player, Identifier quest) {
+        return QuestEngine.quest(player.level().getServer(), quest).map(h -> h.value().mini().isPresent()).orElse(false);
+    }
+
+    /**
+     * Start mini quest {@code template} for a player now, filled where they stand. {@code slots} hands
+     * over values by slot name: a place as "x y z" or "dimension x y z", a person as a Cast NPC id
+     * (your own NPC becomes the one who asks), a pick or a number as text. Empty means started;
+     * otherwise the reason, which the player has already been told.
+     */
+    public static Optional<String> startMini(ServerPlayer player, Identifier template, java.util.Map<String, String> slots) {
+        return com.sablednah.chronicler.neoforge.Minis.start(player, template, slots,
+                com.sablednah.chronicler.neoforge.Minis.Anchor.of(player), false);
+    }
+
+    /** As {@link #startMini}, anchored somewhere else: its {@code here} and its searches start at {@code near}. */
+    public static Optional<String> startMini(ServerPlayer player, Identifier template, java.util.Map<String, String> slots,
+            net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos near) {
+        return com.sablednah.chronicler.neoforge.Minis.start(player, template, slots,
+                new com.sablednah.chronicler.neoforge.Minis.Anchor(level, near), false);
+    }
+
+    /** Put it to the player with Accept and Info instead; it stands for {@code minis.offerSeconds}. */
+    public static Optional<String> offerMini(ServerPlayer player, Identifier template, java.util.Map<String, String> slots) {
+        return com.sablednah.chronicler.neoforge.Minis.start(player, template, slots,
+                com.sablednah.chronicler.neoforge.Minis.Anchor.of(player), true);
     }
 
     // --- registries: add your own kinds, during mod construction ---

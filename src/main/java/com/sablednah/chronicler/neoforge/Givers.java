@@ -133,7 +133,7 @@ public final class Givers {
      * eight blocks; past that, the wet spot is returned and the placement says so in the log.
      * Package-visible for the self-test.
      */
-    static BlockPos dryColumn(ServerLevel level, int x, int z) {
+    public static BlockPos dryColumn(ServerLevel level, int x, int z) {
         BlockPos here = rawSurface(level, x, z);
         if (dry(level, here)) return here;
         for (int r = 1; r <= 8; r++) {
@@ -216,7 +216,14 @@ public final class Givers {
     /** A right-click on a Cast NPC carrying the giver role. */
     public static boolean onUseNpc(ServerPlayer player, UUID npcId) {
         MinecraftServer server = player.level().getServer();
+        // A mini quest's person takes deliveries addressed to them by id, whoever else they give for.
+        if (QuestEngine.onDeliver(player, d -> d.npc().map(npcId.toString()::equals).orElse(false))) return true;
         List<Identifier> quests = GiverStore.get(server).questsAtNpc(npcId);
+        Optional<Identifier> spokenFor = Minis.activeQuestOf(server, npcId);
+        if (spokenFor.isPresent() && !Minis.isMine(player, spokenFor.get(), npcId)) {
+            Feedback.chat(player, Lang.fmt("msg.mini.spoken_for", "name", npcName(npcId.toString())));
+            return true;
+        }
         if (quests.isEmpty()) {
             Feedback.chat(player, Lang.get("msg.giver.npc_idle"));
             return true;
@@ -236,7 +243,10 @@ public final class Givers {
             Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));
             return true;
         }
-        Quest quest = holder.get().value();
+        // A mini quest shows its filled-in self: this person's offer if they stand for one, else the player's own.
+        final Identifier chosen = id.get();
+        final Quest registered = holder.get().value();
+        Quest quest = Minis.pendingQuestAtNpc(server, npcId, chosen).orElseGet(() -> QuestEngine.questFor(player, chosen).orElse(registered));
         // A greeting from the data, spoken as the NPC, before the offer.
         if (quest.giver().orElse(null) instanceof GiverTypes.NpcGiver n && n.greeting().isPresent()
                 && QuestEngine.available(player, id.get(), quest)) {
@@ -307,6 +317,17 @@ public final class Givers {
 
     /** How far {@code of} is followed before giving up: a chain that long is a loop in the data. */
     private static final int OF_HOPS = 8;
+
+    /** A person's name by Cast id, as text; "the one who asked" when they are not (or no longer) there. */
+    public static String npcName(String npcId) {
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null || !Npcs.available()) return Lang.get("giver.someone");
+        try {
+            return Npcs.provider().get().byId(server, UUID.fromString(npcId)).map(p -> Feedback.colored(p.name()).getString()).orElse(Lang.get("giver.someone"));
+        } catch (IllegalArgumentException e) {
+            return Lang.get("giver.someone");
+        }
+    }
 
     /** What to call a giver in text: the NPC's name, a block's label, or "the one who asked". */
     public static String nameOf(Identifier questId) {
@@ -389,6 +410,11 @@ public final class Givers {
         Long last = mine.get(id);
         if (last != null && now - last < cooldown) return;
         mine.put(id, now);
+        offerNow(player, id, quest, where);
+    }
+
+    /** The offer, now, whatever the cooldown: a mini quest found in the wild is offered once, when it is found. */
+    public static void offerNow(ServerPlayer player, Identifier id, Quest quest, String where) {
         Feedback.actionBar(player, Lang.fmt("msg.offer.bar", "name", quest.name()));
         Feedback.chatWithButtons(player, Lang.fmt("msg.offer", "name", quest.name(), "where", where),
                 Feedback.button(Lang.get("button.accept"), "/quest accept " + id, Lang.get("button.accept.tip")),
@@ -397,6 +423,13 @@ public final class Givers {
 
     /** A right-click on a giver block. Returns true if this was one. */
     public static boolean onUseBlock(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        // A mini quest's block (the jammed door) takes its delivery -- and refuses to be used until then.
+        if (QuestEngine.onDeliver(player, d -> d.at().map(pos::equals).orElse(false))) return true;
+        Optional<Identifier> wild = Minis.pendingAtBlock(level, pos);
+        if (wild.isPresent()) {
+            var q = Minis.pendingQuestAtBlock(level, pos);
+            if (q.isPresent()) return useGiver(player, wild.get(), q.get());
+        }
         Optional<Identifier> id = questAt(level, pos);
         if (id.isEmpty()) return false;
         if (QuestEngine.onDeliver(player, id.get())) return true;
@@ -405,7 +438,7 @@ public final class Givers {
             Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));
             return true;
         }
-        return useGiver(player, id.get(), holder.get().value());
+        return useGiver(player, id.get(), QuestEngine.questFor(player, id.get()).orElse(holder.get().value()));
     }
 
     /** Per player: quest -> game time the giver last made its offer, so a second click accepts. */

@@ -100,7 +100,7 @@ public final class Trackers {
             @Override
             public OptionalInt poll(ServerPlayer player, ObjectiveTypes.Deliver spec) {
                 if (spec.radius() <= 0) return OptionalInt.empty(); // click-only: the engine counts the hand-over
-                var at = Givers.positionOf(player.level().getServer(), spec.to());
+                var at = deliveryPoint(player, spec);
                 if (at.isEmpty() || !at.get().level().equals(player.level().dimension().identifier())
                         || player.position().distanceToSqr(at.get().pos()) > spec.radius() * spec.radius()) return OptionalInt.of(0);
                 int held = count(player, matcher(spec));
@@ -111,6 +111,39 @@ public final class Trackers {
                 if (amount <= 0) return 0;
                 return player.getInventory().clearOrCountMatchingItems(matcher(spec), amount, player.inventoryMenu.getCraftSlots());
             }
+        });
+
+        register(ObjectiveTypes.Escort.class, new Tracker<ObjectiveTypes.Escort>() {
+            @Override
+            public OptionalInt poll(ServerPlayer player, ObjectiveTypes.Escort spec) {
+                if (!Npcs.available()) return OptionalInt.of(0);
+                java.util.UUID who;
+                try { who = java.util.UUID.fromString(spec.who()); } catch (IllegalArgumentException e) { return OptionalInt.of(0); }
+                var server = player.level().getServer();
+                var cast = Npcs.provider().get();
+                var charge = cast.byId(server, who);
+                if (charge.isEmpty() || !charge.get().dimension().equals(player.level().dimension().identifier())) return OptionalInt.of(0);
+                var at = charge.get().pos();
+                double toPlayer = at.distanceTo(player.position());
+                boolean rightWorld = spec.dimension().map(d -> d.equals(player.level().dimension().identifier())).orElse(true);
+                double dx = at.x - (spec.to().getX() + 0.5), dz = at.z - (spec.to().getZ() + 0.5);
+                if (rightWorld && dx * dx + dz * dz <= spec.radius() * spec.radius() && toPlayer <= spec.near()) {
+                    cast.stopFollowing(server, who);
+                    return OptionalInt.of(1);
+                }
+                // Lead them, unless someone nearer already is (a party escorting together).
+                if (toPlayer <= com.sablednah.chronicler.ChroniclerConfig.ESCORT_PICKUP.get()) {
+                    var leader = cast.leaderOf(who);
+                    boolean mine = leader.isEmpty() || leader.get().equals(player.getUUID());
+                    if (!mine) {
+                        ServerPlayer other = server.getPlayerList().getPlayer(leader.get());
+                        mine = other == null || other.level() != player.level() || other.position().distanceTo(at) > toPlayer + 4.0D;
+                    }
+                    if (mine) cast.follow(server, who, player, ESCORT_LEASE);
+                }
+                return OptionalInt.of(0);
+            }
+            @Override public boolean latching(ObjectiveTypes.Escort spec) { return true; }
         });
 
         // A ritual is an event (the click), counted by the engine; nothing to poll.
@@ -210,6 +243,23 @@ public final class Trackers {
         if (spec.questItem().isPresent()) return st -> QuestItem.is(st, spec.questItem().get());
         if (spec.tag().isPresent()) { var key = TagKey.create(Registries.ITEM, spec.tag().get()); return st -> !st.isEmpty() && st.is(key); }
         return st -> !st.isEmpty() && spec.item().equals(BuiltInRegistries.ITEM.getKey(st.getItem()));
+    }
+
+    /** Ticks a follow lasts without renewal: three polls' worth, so one slow tick does not drop the charge. */
+    static final int ESCORT_LEASE = 60;
+
+    /** Where a "stand near" delivery goes: a quest's giver, a person by id, or a block. */
+    static java.util.Optional<Givers.Where> deliveryPoint(ServerPlayer player, ObjectiveTypes.Deliver spec) {
+        var server = player.level().getServer();
+        if (spec.to().isPresent()) return Givers.positionOf(server, spec.to().get());
+        if (spec.npc().isPresent() && Npcs.available()) {
+            try {
+                return Npcs.provider().get().byId(server, java.util.UUID.fromString(spec.npc().get())).map(p -> new Givers.Where(p.dimension(), p.pos()));
+            } catch (IllegalArgumentException e) {
+                return java.util.Optional.empty();
+            }
+        }
+        return spec.at().map(b -> new Givers.Where(player.level().dimension().identifier(), net.minecraft.world.phys.Vec3.atCenterOf(b)));
     }
 
     /** Entity tags a {@code spawn} effect writes and a {@code kill} objective's {@code tag} reads. */
