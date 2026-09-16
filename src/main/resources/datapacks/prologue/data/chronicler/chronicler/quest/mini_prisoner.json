@@ -1,0 +1,149 @@
+{
+  "name": "Taken to the Outpost",
+  "description": "Pillagers took {prisoner} on the road. {asker} knows where they went: {outpost}, at {outpost.x}, {outpost.z}.",
+  "chapter": "chronicler:errands",
+  "order": 7,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:crossbow",
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Aldous",
+          "Wen",
+          "Marisol",
+          "Tobiah",
+          "Ines",
+          "Cormac",
+          "Hester",
+          "Ravi",
+          "Odile",
+          "Bram"
+        ]
+      },
+      "kin": {
+        "type": "pick",
+        "pool": [
+          "Pell",
+          "Joss",
+          "Ansel",
+          "Mira",
+          "Tamsin",
+          "Oswin"
+        ]
+      },
+      "asker": {
+        "type": "npc",
+        "name": "&f{first}",
+        "entity": "minecraft:villager",
+        "min": 4,
+        "max": 8
+      },
+      "home": {
+        "type": "here",
+        "near": "asker",
+        "label": "{first}"
+      },
+      "outpost": {
+        "type": "structure",
+        "structure": "minecraft:pillager_outpost",
+        "label": "the pillager outpost",
+        "radius": 2400
+      },
+      "prisoner": {
+        "type": "npc",
+        "name": "&f{kin}",
+        "entity": "minecraft:villager",
+        "near": "outpost"
+      }
+    },
+    "spawn": {
+      "place": {
+        "structure": "#minecraft:village"
+      },
+      "chance": 0.03,
+      "every": 180,
+      "cap": 1,
+      "giver": "asker",
+      "lapse": 300,
+      "say": "&7They took {kin}. Pillagers, on the road. You look like you could get someone back."
+    }
+  },
+  "stages": [
+    {
+      "text": "{outpost} is at {outpost.x}, {outpost.z}. {prisoner} is somewhere near it.",
+      "objectives": [
+        {
+          "type": "visit",
+          "x": "{outpost.x}",
+          "z": "{outpost.z}",
+          "radius": 40,
+          "label": "{outpost}"
+        }
+      ]
+    },
+    {
+      "text": "They have seen you. Clear the guards.",
+      "on_enter": [
+        {
+          "type": "spawn",
+          "entity": "minecraft:pillager",
+          "count": 3,
+          "radius": 12,
+          "tag": "outpost_guard"
+        }
+      ],
+      "objectives": [
+        {
+          "type": "kill",
+          "target": "minecraft:pillager",
+          "tag": "outpost_guard",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "text": "Get {prisoner} home to {asker}. Crossbows do not care who they hit.",
+      "objectives": [
+        {
+          "type": "escort",
+          "who": "{prisoner.id}",
+          "name": "{prisoner}",
+          "to": "{home.pos}",
+          "dimension": "{home.dim}",
+          "radius": 16,
+          "near": 12,
+          "hits": 6,
+          "label": "{asker}"
+        }
+      ],
+      "on_fail": [
+        {
+          "type": "message",
+          "text": "&7The pillagers have {prisoner} again. It will not be you who gets them back."
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{asker.id}",
+          "text": "&7{kin}! You're whole! I don't know how to thank you. Emeralds. I know how to thank you with emeralds.",
+          "radius": 24
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 60
+    },
+    {
+      "type": "item",
+      "item": "minecraft:emerald",
+      "count": 5
+    }
+  ]
+}

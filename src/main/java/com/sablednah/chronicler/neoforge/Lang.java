@@ -250,6 +250,10 @@ public final class Lang {
         def("msg.deliver.short", "&7{who} wants {count} x {item}; you have {held}.");
         def("obj.escort", "Take {who} to {where}");
         def("obj.escort.coords", "{x}, {z}");
+        def("obj.escort.hits", " (they can take {hits} hits)");
+        def("msg.escort.hit", "&c{who} was hit &7({taken}/{hits})");
+        def("msg.escort.last", "{prefix}&c{who} cannot take another hit.");
+        def("msg.escort.failed", "{prefix}&c{who} took one hit too many: &f{name}&c has failed.");
         def("msg.mini.unresolved", "{prefix}&7Not now: &f{name}&7 -- {why}.");
         def("msg.mini.refused", "{prefix}&7Not now: &f{name}&7 -- {why}.");
         def("msg.mini.refusal.unknown", "no such quest");

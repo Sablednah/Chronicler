@@ -121,7 +121,7 @@ kill <the JVM whose cmdline has Chronicler/build/classes>; rm run/mods/*.jar
   `build.gradle` for the same reason.
 - **Boot with every sibling AND with only the required two** (Standards and Cast; without
   them NeoForge refuses to start). The compat classes only link when the mod is present, and
-  both counts matter (192 and 166 at 1.0.0; 265 and 237 with mini quests).
+  both counts matter (192 and 166 at 1.0.0; 280 and 252 with mini quests).
 - **`libs/` (gitignored) holds a sibling jar that has no `build/libs` for this
   line** -- ZombieMod's 26.1.2 jar is copied there from the CurseForge `26.1.2`
   instance (its 1.21.11 jar does build in `../ZombieMod/ZombieMod/build/libs`

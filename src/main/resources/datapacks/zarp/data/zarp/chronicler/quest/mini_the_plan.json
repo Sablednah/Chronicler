@@ -1,0 +1,235 @@
+{
+  "name": "The Plan",
+  "description": "Take a car. Go round Mum's. Kill Phil. Grab Liz. Go to the Winchester, have a nice cold pint, and wait for all of this to blow over.",
+  "chapter": "zarp:errands",
+  "order": 10,
+  "hidden": true,
+  "icon": "minecraft:minecart",
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "mini": {
+    "slots": {
+      "ed": {
+        "type": "npc",
+        "name": "&fEd",
+        "min": 4,
+        "max": 8,
+        "equipment": {
+          "mainhand": "minecraft:wooden_sword",
+          "chest": "minecraft:leather_chestplate[dyed_color=3355443]"
+        }
+      },
+      "mums": {
+        "type": "lot",
+        "lot": "HouseLot",
+        "label": "Mum's",
+        "radius": 480
+      },
+      "mum": {
+        "type": "npc",
+        "name": "&fMum",
+        "near": "mums",
+        "equipment": {
+          "chest": "minecraft:leather_chestplate[dyed_color=11546150]"
+        }
+      },
+      "flat": {
+        "type": "around",
+        "near": "mums",
+        "min": 40,
+        "max": 80,
+        "label": "Liz's flat"
+      },
+      "liz": {
+        "type": "npc",
+        "name": "&fLiz",
+        "near": "flat"
+      },
+      "pub": {
+        "type": "lot",
+        "schematic": "winchester",
+        "near": "flat",
+        "label": "the Winchester",
+        "radius": 1200
+      }
+    },
+    "spawn": {
+      "place": {
+        "dimension": "minecraft:overworld"
+      },
+      "chance": 0.01,
+      "every": 300,
+      "cap": 1,
+      "giver": "ed",
+      "lapse": 300,
+      "say": "&7Right. I've got a plan. Take a car, go round Mum's, kill Phil -- sorry, Phil -- grab Liz, go to the Winchester, have a nice cold pint, and wait for all of this to blow over. How's that for a slice of fried gold?"
+    }
+  },
+  "stages": [
+    {
+      "text": "Take a car. A minecart will have to do; nobody said it had to be a good car.",
+      "objectives": [
+        {
+          "type": "collect",
+          "item": "minecraft:minecart",
+          "count": 1,
+          "consume": false
+        }
+      ]
+    },
+    {
+      "text": "Go round Mum's: {mums.x}, {mums.z}.",
+      "objectives": [
+        {
+          "type": "visit",
+          "x": "{mums.x}",
+          "z": "{mums.z}",
+          "radius": 12,
+          "label": "Mum's"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{mum.id}",
+          "text": "&7Oh, hello love. Phil's not been well. Somebody bit him at the garage.",
+          "radius": 32
+        },
+        {
+          "type": "spawn",
+          "genus": "zombiemod:walker",
+          "entity": "minecraft:zombie",
+          "count": 1,
+          "radius": 6,
+          "name": "&7Phil",
+          "tag": "phil",
+          "health": 30,
+          "equipment": {
+            "head": "minecraft:leather_helmet",
+            "chest": "minecraft:leather_chestplate[dyed_color=4673362]"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Kill Phil.",
+      "objectives": [
+        {
+          "type": "kill",
+          "tag": "phil",
+          "count": 1
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{mum.id}",
+          "text": "&7He was never very good with the car anyway.",
+          "radius": 32
+        }
+      ]
+    },
+    {
+      "text": "Grab Liz ({flat.x}, {flat.z}) and get her and Mum to the Winchester ({pub.x}, {pub.z}). Keep the dead off them.",
+      "objectives": [
+        {
+          "type": "escort",
+          "who": "{mum.id}",
+          "name": "Mum",
+          "to": "{pub.pos}",
+          "dimension": "{pub.dim}",
+          "radius": 20,
+          "near": 14,
+          "hits": 8,
+          "label": "the Winchester"
+        },
+        {
+          "type": "escort",
+          "who": "{liz.id}",
+          "name": "Liz",
+          "to": "{pub.pos}",
+          "dimension": "{pub.dim}",
+          "radius": 20,
+          "near": 14,
+          "hits": 8,
+          "label": "the Winchester"
+        }
+      ],
+      "on_fail": [
+        {
+          "type": "message",
+          "text": "&7That was not the plan."
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{liz.id}",
+          "text": "&7The Winchester. Of course it's the Winchester.",
+          "radius": 32
+        }
+      ]
+    },
+    {
+      "text": "Have a nice cold pint, and wait for all of this to blow over.",
+      "on_enter": [
+        {
+          "type": "item",
+          "item": "minecraft:honey_bottle",
+          "count": 1
+        },
+        {
+          "type": "message",
+          "text": "&7The jukebox is broken. The dead are at the windows."
+        },
+        {
+          "type": "spawn",
+          "genus": "zombiemod:walker",
+          "entity": "minecraft:zombie",
+          "count": 8,
+          "radius": 16,
+          "tag": "winchester",
+          "equipment": {
+            "head": "minecraft:leather_helmet"
+          }
+        }
+      ],
+      "objectives": [
+        {
+          "type": "wait",
+          "seconds": 180,
+          "label": "Wait for it all to blow over"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "title",
+          "title": "&6Cheers.",
+          "subtitle": "&7It blew over. Mostly."
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 5
+    },
+    {
+      "type": "xp",
+      "amount": 100
+    },
+    {
+      "type": "money",
+      "amount": 50
+    },
+    {
+      "type": "flag",
+      "name": "zarp_blew_over",
+      "player": true,
+      "value": true
+    }
+  ]
+}

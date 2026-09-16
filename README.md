@@ -253,7 +253,7 @@ rewards:
 Slot types: `pick` (one of a `pool`), `number` (`min`..`max`), `here` (where it
 starts), `around` (a dry spot `min`..`max` blocks off), `structure` (the nearest, an
 id or `#tag`, within `radius`), `lot` (the nearest CityWorld lot whose words contain
-`lot`), `block` (the nearest, id or `#tag`), `giver` (where another quest's giver
+`lot`, or a CityWorld schematic by name with `schematic: chayats-bank`), `block` (the nearest, id or `#tag`), `giver` (where another quest's giver
 stands), `given` (a position whoever starts it hands over), `npc` (a person Cast
 places: `name`, `skin` or `entity`, `equipment`, `min`/`max` distance, `keep`). A place
 gives `{s}` (its `label`), `{s.x}`, `{s.y}`, `{s.z}`, `{s.pos}` and `{s.dim}`; a person
@@ -264,15 +264,21 @@ it with stand-in values, so a mistake is refused at boot like any other bad file
 
 What minis use: `escort` (`who: "{scholar.id}"`, `to`, `radius`, `near`: the person
 follows whoever leads them, on foot along the way they walk, and it is done when they
-stand at `to` with the player beside them; wander off and they wait), `deliver` to
+stand at `to` with the player beside them; wander off and they wait. `hits: 6` makes it
+dangerous: monsters nearby go for them, every blow is counted -- never damage -- and the
+sixth fails the beat like a deadline; unsaid, they are untouchable), `deliver` to
 `npc` (a person by id) or `at` (a block, which will not open until it has what it
 wants), `npc_say` / `npc_remove` with `npc`, the `block` effect (`at`, `block` and/or
 `properties`: `open: "true"`), and the `mini` effect (`template`, `near`, `slots`,
 `offer`), which starts the next errand where this one ended. One copy of each
 template runs per player; people placed for one leave when it ends unless `keep`.
-The built-in packs carry eleven: the archaeologist, the village errand, the stuck
-door, pests, the lost satchel and a town-hall escort (CityWorld) in the prologue;
-bring a survivor in, medicine, the nest, the rusted door and a warehouse run in ZARP.
+A `place` (for wild spawns, givers and the `place` objective) takes `schematic` too, so
+standing in Chayat's Bank or the Winchester can offer a quest. A `kill` with a `tag` and
+no `target` counts only the tagged mob (Phil). The built-in packs carry fifteen: the
+archaeologist, the village errand, the stuck door, pests, the lost satchel, a rescue
+from a pillager outpost, and in a CityWorld city a town-hall escort and a run to
+Chayat's Bank in the prologue; bring a survivor in, medicine, the nest, the rusted
+door, a warehouse run, a bank job and The Plan in ZARP.
 
 ### ZARP
 

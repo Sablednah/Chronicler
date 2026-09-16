@@ -153,7 +153,9 @@ public final class Minis {
                 }
                 case "lot" -> {
                     if (Lots.describe(level, from.pos()).isEmpty()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.no_city", "what", label)); }
-                    Optional<BlockPos> at = nearestLot(level, from.pos(), slot.find().lot().get(), slot.searchRadius());
+                    Optional<BlockPos> at = slot.find().schematic().isPresent()
+                            ? nearestLot(level, from.pos(), words -> Places.schematicMatches(words, slot.find().schematic().get()), slot.searchRadius())
+                            : nearestLot(level, from.pos(), words -> Places.lotMatches(words, slot.find().lot().get()), slot.searchRadius());
                     if (at.isEmpty()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.lot", "what", label, "radius", slot.searchRadius())); }
                     Slots.putPlace(v, name, label, dim, at.get().getX(), at.get().getY(), at.get().getZ());
                 }
@@ -185,7 +187,9 @@ public final class Minis {
                     }
                     String npcName = Slots.text(slot.person().name().get(), v, mini);
                     if (!Npcs.available()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.npc", "name", npcName)); }
-                    BlockPos at = slot.max() > 0 ? around(level, from.pos(), slot.min(), slot.max()) : from.pos();
+                    // A person placed at a found place (an outpost, a house) stands on its ground: a far search only knows x and z.
+                    BlockPos at = slot.max() > 0 ? around(level, from.pos(), slot.min(), slot.max())
+                            : slot.near().isPresent() ? Givers.dryColumn(level, from.pos().getX(), from.pos().getZ()) : from.pos();
                     Vec3 pos = new Vec3(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
                     float yaw = rng.nextFloat() * 360F;
                     UUID uid;
@@ -215,7 +219,7 @@ public final class Minis {
     private static String defaultLabel(Mini.Slot slot) {
         return switch (slot.type()) {
             case "structure" -> Lang.pretty(slot.find().structure().orElse("").replace("#", ""));
-            case "lot" -> Lang.pretty(slot.find().lot().orElse(""));
+            case "lot" -> Lang.pretty(slot.find().schematic().orElse(slot.find().lot().orElse("")).replace('-', '_').replace(' ', '_'));
             case "block" -> Lang.pretty(slot.find().block().orElse("").replace("#", ""));
             case "around" -> Lang.get("mini.label.around");
             case "given" -> Lang.get("mini.label.given");
@@ -293,8 +297,7 @@ public final class Minis {
     }
 
     /** The nearest CityWorld lot whose words contain {@code want}, chunk by chunk outward. CityWorld answers for chunks never generated. */
-    static Optional<BlockPos> nearestLot(ServerLevel level, BlockPos from, String want, int radius) {
-        String w = want.toLowerCase(Locale.ROOT);
+    static Optional<BlockPos> nearestLot(ServerLevel level, BlockPos from, java.util.function.Predicate<List<String>> matches, int radius) {
         int cx = from.getX() >> 4, cz = from.getZ() >> 4;
         int rings = Math.max(1, radius / 16);
         for (int r = 0; r <= rings; r++) {
@@ -304,7 +307,7 @@ public final class Minis {
                     int x = ((cx + dx) << 4) + 8, z = ((cz + dz) << 4) + 8;
                     BlockPos probe = new BlockPos(x, from.getY(), z);
                     var words = Lots.describe(level, probe);
-                    if (words.isPresent() && words.get().stream().anyMatch(t -> t != null && t.toLowerCase(Locale.ROOT).contains(w))) {
+                    if (words.isPresent() && matches.test(words.get())) {
                         return Optional.of(new BlockPos(x, heightAt(level, x, z), z));
                     }
                 }

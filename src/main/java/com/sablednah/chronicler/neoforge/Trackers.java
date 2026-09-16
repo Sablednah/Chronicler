@@ -69,6 +69,7 @@ public final class Trackers {
             @Override
             public boolean countsKill(ServerPlayer killer, LivingEntity victim, ObjectiveTypes.Kill spec) {
                 if (spec.tag().isPresent() && victim.getTags().contains(TAG_PREFIX + spec.tag().get())) return true;
+                if (spec.targets().isEmpty()) return spec.tag().isEmpty() && matchesTarget(victim, "any");
                 for (String t : spec.targets()) if (matchesTarget(victim, t)) return true;
                 return false;
             }
@@ -141,6 +142,7 @@ public final class Trackers {
                     }
                     if (mine) cast.follow(server, who, player, ESCORT_LEASE);
                 }
+                if (spec.hits() > 0) cast.expose(server, who, ESCORT_LEASE); // dangerous company: monsters go for them
                 return OptionalInt.of(0);
             }
             @Override public boolean latching(ObjectiveTypes.Escort spec) { return true; }
