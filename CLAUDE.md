@@ -335,6 +335,14 @@ publication; the changelog sanitiser 500s on blockquotes and autolinks;
 Modrinth rejects AI-looking artwork and icons over 256 KiB. Never handle the
 tokens.
 
+**A CurseForge project's file list is its identity to every other mod.** The app
+resolves a required dependency to the dependency project's newest APPROVED file
+for that Minecraft version and does not care what it is named, so a companion jar
+uploaded beside the mod is what dependents install -- most likely right after a
+release, while the mod's own file is still in moderation. LegendQuest shipped its
+example pack to StoryTeller users that way (2026-09-15). Both workflows here now
+upload `chronicler-*.jar` only; attach anything else to the GitHub release alone.
+
 ## Known traps (paid for next door, and some here)
 
 - **Resolving a cherry-pick conflict with `git add -A` resurrects files the commit deleted.**

@@ -69,7 +69,12 @@ jobs:
           TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           mkdir -p dist
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.jar' --dir dist
+          # This mod's own jars only. Anything uploaded here joins THIS project's file list, and the
+          # CurseForge app resolves a required dependency to the dependency project's newest APPROVED
+          # file for that Minecraft version, whatever it is called -- so a companion jar riding along
+          # on the release gets installed in place of the mod. (LegendQuest shipped its example pack
+          # to dependents that way, 2026-09-15, while its own release sat in moderation.)
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'chronicler-*.jar' --dir dist
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq '.body' > dist/changelog.md
           ls -la dist
 
@@ -84,9 +89,9 @@ jobs:
           ONLY: ${{ inputs.only }}
         run: |
           shopt -s nullglob
-          jars=(dist/*.jar)
+          jars=(dist/chronicler-*.jar)
           if [ ${#jars[@]} -eq 0 ]; then
-            echo "::error::No jars attached to the release — nothing to upload."
+            echo "::error::No chronicler-*.jar attached to the release — nothing to upload."
             exit 1
           fi
           failed=0
