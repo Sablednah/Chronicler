@@ -88,6 +88,22 @@ Three endings across the last two chapters: truce, cure, mercy.
   Diver, a Fuel Cell.
 - **Deep Cold** -- level 8: an ancient city, and the Warden.
 
+## Errands (mini quests, 2026-09-16)
+
+Hidden until found, repeatable, and none count toward progress. All need The Camp
+done. Each is offered in the wild while you are out in the overworld, by a person
+placed a few blocks off (or, for the door, by the door itself), and lapses if ignored.
+
+- **Bring Someone In** -- a survivor asks to come to the camp; escort them to Dr Okafor.
+- **Medicine** -- a sick survivor wants one to three of honey, glistering melon, milk,
+  golden carrots or berries.
+- **The Nest** -- a lookout points 30-60 blocks off; go there and clear four to seven.
+- **The Rusted Door** -- a door nearby is rusted shut: two to four slime balls into it,
+  and it opens.
+- **The Warehouse** -- walk a scavenger to the nearest CityWorld warehouse.
+
+`/quest mini zarp:mini_survivor` starts one where you stand (admin).
+
 ## Testing it quickly
 
 ```

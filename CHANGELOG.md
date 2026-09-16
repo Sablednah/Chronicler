@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Mini quests.** A quest file with a `mini:` block is a template: any value may be a `{slot}` hole, filled when it starts -- a pick from a pool, a number, the nearest structure, CityWorld lot or block, a spot nearby, another quest's giver, a position handed over, or a person Cast places. The values are saved on the journal entry, so the journal, the panel, `/quest` and parties show and measure the filled-in quest. Templates are checked at load with stand-in values. One copy per template per player.
+- **Found in the wild**: a template's `spawn` offers it while a player is in a place (a structure, biome, dimension or lot), on a chance and a cap, through a person placed for it or a block found for it; ignored, the offer lapses and the person leaves (`minis.wild`).
+- **`escort`**: bring a person somewhere with you. They follow whoever leads them, on foot along the way they walk (Cast 1.1.0), wait when left behind (`minis.escortPickup`), and it is done when they stand there with you.
+- `deliver` takes `npc` (a person by id) or `at` (a block -- which then will not be used any other way until it gets what it wants); `npc_say` and `npc_remove` take `npc`.
+- Effects: `block` (set a block, or properties on one: `open: "true"` opens a door) and `mini` (start or offer the next errand, anchored where this one ended).
+- `/quest mini` (list) and `/quest mini <template> [players] [offer]`, admin. API: `Quests.minis`, `isMini`, `startMini`, `offerMini`.
+- Content: six errands in the prologue (the archaeologist and the village chain, the stuck door, pests, the lost satchel, a town-hall escort in a CityWorld city) and five in ZARP (bring a survivor in to the camp, medicine, the nest, the rusted door, the warehouse run), all in an Errands chapter, hidden until found.
+- Requires Cast 1.1.0 (follow).
+
 ## 1.0.1 — 2026-09-15
 
 - **The journal panel.** A player whose client has Chronicler gets the journal as a panel instead of the book: chapters down the left with their quests under them, a quest map for the selected chapter (a column per step of prerequisites, prerequisites from other chapters as stand-ins, green lines along the path already walked; drag to look around), and a page per quest with its buttons. Open it with the **backtick** key (`` ` ``, rebindable under Controls > Chronicler), the journal item or `/quest journal`. The text is the server's own (`panel.*` in `messages.yml`), every button runs the `/quest` command a chat button would, and it refreshes while open. Vanilla clients get the book as before; `journal.panel = false` gives everyone the book.

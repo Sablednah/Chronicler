@@ -1,0 +1,105 @@
+{
+  "name": "{asker}'s Satchel",
+  "description": "{asker} dropped a satchel somewhere out there, about {spot.x}, {spot.z}, and is not going back for it.",
+  "chapter": "chronicler:errands",
+  "order": 5,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:bundle",
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Aldous",
+          "Wen",
+          "Marisol",
+          "Tobiah",
+          "Ines",
+          "Cormac",
+          "Hester",
+          "Ravi",
+          "Odile",
+          "Bram"
+        ]
+      },
+      "asker": {
+        "type": "npc",
+        "name": "&f{first}",
+        "min": 4,
+        "max": 8
+      },
+      "spot": {
+        "type": "around",
+        "min": 40,
+        "max": 90,
+        "near": "asker",
+        "label": "where {first} dropped it"
+      }
+    },
+    "spawn": {
+      "place": {
+        "structure": "#minecraft:village"
+      },
+      "chance": 0.03,
+      "every": 120,
+      "cap": 1,
+      "giver": "asker",
+      "lapse": 300,
+      "say": "&7I dropped my satchel running from something. It is still out there. So is the something."
+    }
+  },
+  "stages": [
+    {
+      "text": "Find the spot: {spot.x}, {spot.z}.",
+      "objectives": [
+        {
+          "type": "visit",
+          "x": "{spot.x}",
+          "z": "{spot.z}",
+          "radius": 6,
+          "label": "{spot}"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "item",
+          "item": "minecraft:bundle",
+          "count": 1
+        },
+        {
+          "type": "message",
+          "text": "&7A battered satchel, half buried. Still latched."
+        }
+      ]
+    },
+    {
+      "text": "Take it back to {asker}.",
+      "objectives": [
+        {
+          "type": "deliver",
+          "item": "minecraft:bundle",
+          "count": 1,
+          "npc": "{asker.id}"
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 25
+    },
+    {
+      "type": "item",
+      "item": "minecraft:emerald",
+      "count": 2
+    },
+    {
+      "type": "npc_say",
+      "npc": "{asker.id}",
+      "text": "&7My notes! And my lunch. Mostly my lunch.",
+      "radius": 16
+    }
+  ]
+}

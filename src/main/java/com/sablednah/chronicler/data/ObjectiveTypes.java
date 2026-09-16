@@ -102,24 +102,68 @@ public final class ObjectiveTypes {
      * holding them, or -- with a {@code radius} -- just stand near. Nothing
      * counts until the hand-over, and the items go on completion. This is what
      * "bring it back" means; a bare {@code collect} is satisfied in your pack.
+     *
+     * <p>A mini quest hands over to what its slots found instead: {@code npc} (a person's
+     * id, {@code "{elder.id}"}) or {@code at} (a block, {@code "{door.pos}"}). One of the
+     * three is required. A delivery to a block also stops that block being used any other
+     * way until it is done -- the jammed door stays jammed.</p>
      */
-    public record Deliver(Optional<Identifier> questItem, Identifier item, Optional<Identifier> tag, int count, Identifier to, double radius,
-            Optional<String> label) implements ObjectiveSpec {
-        public static final MapCodec<Deliver> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    public record Deliver(Optional<Identifier> questItem, Identifier item, Optional<Identifier> tag, int count, Optional<Identifier> to, double radius,
+            Optional<String> label, Optional<String> npc, Optional<net.minecraft.core.BlockPos> at) implements ObjectiveSpec {
+        public Deliver(Optional<Identifier> questItem, Identifier item, Optional<Identifier> tag, int count, Identifier to, double radius, Optional<String> label) {
+            this(questItem, item, tag, count, Optional.of(to), radius, label, Optional.empty(), Optional.empty());
+        }
+        public static final MapCodec<Deliver> MAP_CODEC = RecordCodecBuilder.<Deliver>mapCodec(i -> i.group(
                 ChroniclerIds.CODEC.optionalFieldOf("quest_item").forGetter(Deliver::questItem),
                 Identifier.CODEC.optionalFieldOf("item", Identifier.withDefaultNamespace("air")).forGetter(Deliver::item),
                 Identifier.CODEC.optionalFieldOf("tag").forGetter(Deliver::tag),
                 Codec.INT.optionalFieldOf("count", 1).forGetter(Deliver::count),
-                ChroniclerIds.CODEC.fieldOf("to").forGetter(Deliver::to),
+                ChroniclerIds.CODEC.optionalFieldOf("to").forGetter(Deliver::to),
                 Codec.DOUBLE.optionalFieldOf("radius", 0D).forGetter(Deliver::radius),
-                Codec.STRING.optionalFieldOf("label").forGetter(Deliver::label))
-                .apply(i, Deliver::new));
+                Codec.STRING.optionalFieldOf("label").forGetter(Deliver::label),
+                Codec.STRING.optionalFieldOf("npc").forGetter(Deliver::npc),
+                net.minecraft.core.BlockPos.CODEC.optionalFieldOf("at").forGetter(Deliver::at))
+                .apply(i, Deliver::new)).validate(d -> d.to.isEmpty() && d.npc.isEmpty() && d.at.isEmpty()
+                        ? com.mojang.serialization.DataResult.error(() -> "a deliver objective needs 'to' (a quest whose giver takes it), 'npc' or 'at'")
+                        : com.mojang.serialization.DataResult.success(d));
         @Override public MapCodec<Deliver> codec() { return MAP_CODEC; }
         @Override public int required() { return count; }
         @Override public String describe() {
             return label.orElseGet(() -> Lang.fmt("obj.deliver", "count", count,
                     "item", questItem.map(QuestItem::displayName).orElseGet(() -> Lang.pretty(tag.map(Identifier::getPath).orElse(item.getPath()))),
-                    "who", com.sablednah.chronicler.neoforge.Givers.nameOf(to)));
+                    "who", recipient()));
+        }
+        /** Who or what takes it, in words. */
+        public String recipient() {
+            if (to.isPresent()) return com.sablednah.chronicler.neoforge.Givers.nameOf(to.get());
+            if (npc.isPresent()) return com.sablednah.chronicler.neoforge.Givers.npcName(npc.get());
+            return Lang.get("giver.someone");
+        }
+    }
+
+    /**
+     * Bring a person somewhere alive and with you: {@code who} (a Cast NPC's id, usually
+     * {@code "{charge.id}"}) must stand within {@code radius} of {@code to} while the player is
+     * within {@code near} of them. The charge follows whoever is escorting it, on foot, along the
+     * way they walk (Cast's follow); wander more than {@code escort.pickup} blocks off and it
+     * stops and waits where it is until someone comes back for it. Latching.
+     */
+    public record Escort(String who, Optional<String> name, net.minecraft.core.BlockPos to, Optional<Identifier> dimension,
+            double radius, double near, Optional<String> label) implements ObjectiveSpec {
+        public static final MapCodec<Escort> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.STRING.fieldOf("who").forGetter(Escort::who),
+                Codec.STRING.optionalFieldOf("name").forGetter(Escort::name),
+                net.minecraft.core.BlockPos.CODEC.fieldOf("to").forGetter(Escort::to),
+                Identifier.CODEC.optionalFieldOf("dimension").forGetter(Escort::dimension),
+                Codec.DOUBLE.optionalFieldOf("radius", 12.0D).forGetter(Escort::radius),
+                Codec.DOUBLE.optionalFieldOf("near", 10.0D).forGetter(Escort::near),
+                Codec.STRING.optionalFieldOf("label").forGetter(Escort::label))
+                .apply(i, Escort::new));
+        @Override public MapCodec<Escort> codec() { return MAP_CODEC; }
+        @Override public int required() { return 1; }
+        @Override public String describe() {
+            String whom = name.orElseGet(() -> com.sablednah.chronicler.neoforge.Givers.npcName(who));
+            return Lang.fmt("obj.escort", "who", whom, "where", label.orElseGet(() -> Lang.fmt("obj.escort.coords", "x", to.getX(), "z", to.getZ())));
         }
     }
 
@@ -228,6 +272,7 @@ public final class ObjectiveTypes {
         TYPES.register("ritual", Ritual.MAP_CODEC);
         TYPES.register("wait", Wait.MAP_CODEC);
         TYPES.register("deliver", Deliver.MAP_CODEC);
+        TYPES.register("escort", Escort.MAP_CODEC);
     }
 
     /** Touch the class so the static block has run before a codec is asked for. */

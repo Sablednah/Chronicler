@@ -111,11 +111,56 @@ public final class ChroniclerCommands {
                 .then(Commands.literal("replay")
                         .then(Commands.argument("chapter", ResourceKeyArgument.key(ChroniclerRegistries.CHAPTER))
                                 .executes(ChroniclerCommands::replay)))
+                .then(Commands.literal("mini")
+                        .requires(ChroniclerPermissions::isAdmin)
+                        .executes(ChroniclerCommands::miniList)
+                        .then(questArg()
+                                .executes(ctx -> miniStart(ctx, List.of(ctx.getSource().getPlayerOrException()), false))
+                                .then(Commands.argument("players", EntityArgument.players())
+                                        .executes(ctx -> miniStart(ctx, EntityArgument.getPlayers(ctx, "players"), false))
+                                        .then(Commands.literal("offer")
+                                                .executes(ctx -> miniStart(ctx, EntityArgument.getPlayers(ctx, "players"), true))))))
                 .then(Commands.literal("giver")
                         .requires(ChroniclerPermissions::isAdmin)
                         .then(Commands.literal("set").then(questArg().executes(ChroniclerCommands::giverSet)))
                         .then(Commands.literal("remove").executes(ChroniclerCommands::giverRemove))
                         .then(Commands.literal("list").executes(ChroniclerCommands::giverList)));
+    }
+
+    // --- /quest mini ---
+
+    private static int miniList(CommandContext<CommandSourceStack> ctx) {
+        var server = ctx.getSource().getServer();
+        List<String> entries = new ArrayList<>();
+        for (Identifier id : Minis.templates(server)) {
+            Quest q = QuestEngine.quest(server, id).get().value();
+            entries.add(Lang.fmt("cmd.mini.entry", "name", q.name(), "id", id,
+                    "wild", q.mini().flatMap(m -> m.spawn()).isPresent() ? Lang.get("cmd.mini.wild") : ""));
+        }
+        String text = entries.isEmpty() ? Lang.get("cmd.mini.none") : Lang.fmt("cmd.mini.list", "list", "\n  " + String.join("\n  ", entries));
+        ctx.getSource().sendSuccess(() -> Feedback.colored(text), false);
+        return entries.size();
+    }
+
+    /** Start (or offer) a mini quest for each player, filled where each of them stands. */
+    private static int miniStart(CommandContext<CommandSourceStack> ctx, java.util.Collection<ServerPlayer> players, boolean offer) throws CommandSyntaxException {
+        Holder.Reference<Quest> holder = resolveQuest(ctx);
+        Identifier id = holder.key().identifier();
+        int started = 0;
+        for (ServerPlayer p : players) {
+            var why = Minis.start(p, id, java.util.Map.of(), Minis.Anchor.of(p), offer);
+            if (why.isEmpty()) {
+                started++;
+                if (ctx.getSource().getEntity() != p) {
+                    String line = Lang.fmt(offer ? "cmd.mini.offered" : "cmd.mini.started", "name", holder.value().name(), "player", p.getName().getString());
+                    ctx.getSource().sendSuccess(() -> Feedback.colored(line), true);
+                }
+            } else if (ctx.getSource().getEntity() != p) {
+                String line = Lang.fmt("cmd.mini.failed", "name", holder.value().name(), "player", p.getName().getString(), "why", why.get());
+                ctx.getSource().sendFailure(Feedback.colored(line));
+            }
+        }
+        return started;
     }
 
     private static int replay(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -291,11 +336,11 @@ public final class ChroniclerCommands {
     private static int info(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Holder.Reference<Quest> holder = resolveQuest(ctx);
-        Quest q = holder.value();
         Identifier id = holder.key().identifier();
         Registry<Chapter> chapters = source.registryAccess().lookupOrThrow(ChroniclerRegistries.CHAPTER);
         Registry<Quest> quests = source.registryAccess().lookupOrThrow(ChroniclerRegistries.QUEST);
         ServerPlayer player = source.getEntity() instanceof ServerPlayer p ? p : null;
+        Quest q = player == null ? holder.value() : QuestEngine.questFor(player, id).orElse(holder.value());
         QuestLog.Entry entry = player == null ? null : QuestEngine.journal(player).entry(id);
 
         List<String> lines = new ArrayList<>();
@@ -360,6 +405,7 @@ public final class ChroniclerCommands {
             Feedback.chat(player, Lang.fmt("msg.refuse.cooldown", "time", QuestEngine.clock(left / 50L)));
             return 0;
         }
+        if (refusal.get() == QuestEngine.Refusal.UNRESOLVED) return 0; // the reason was already said, with the missing place named
         Feedback.chat(player, Lang.get(switch (refusal.get()) {
             case UNKNOWN -> "msg.refuse.unknown";
             case ALREADY_ACTIVE -> "msg.refuse.active";
@@ -480,10 +526,10 @@ public final class ChroniclerCommands {
         QuestLog log = QuestEngine.journal(player);
         Identifier id = log.tracked().filter(log::isActive).orElseGet(() -> log.activeView().keySet().stream().findFirst().orElse(null));
         if (id == null) { Feedback.chat(player, Lang.get("cmd.now.none")); return 0; }
-        var holder = QuestEngine.quest(player.level().getServer(), id);
+        var holder = QuestEngine.questFor(player, id);
         QuestLog.Entry e = log.entry(id);
         if (holder.isEmpty() || e == null) { Feedback.chat(player, Lang.get("cmd.now.none")); return 0; }
-        Quest q = holder.get().value();
+        Quest q = holder.get();
         var beat = q.beats().get(Math.min(e.stage, q.beats().size() - 1));
         MutableComponent out = Feedback.colored(Lang.fmt("cmd.now.header", "name", q.name(), "stage", beat.text().orElse(q.description().orElse("")))).copy();
         var objectives = QuestEngine.currentObjectives(q, e);
@@ -513,19 +559,19 @@ public final class ChroniclerCommands {
         MutableComponent out = Feedback.colored(Lang.fmt("cmd.log.header",
                 "active", log.activeCount(), "completed", log.completedCount())).copy();
         for (var e : log.activeView().entrySet()) {
-            var holder = QuestEngine.quest(player.level().getServer(), e.getKey());
-            String name = holder.map(h -> h.value().name()).orElse(e.getKey().toString());
+            var holder = QuestEngine.questFor(player, e.getKey());
+            String name = holder.map(Quest::name).orElse(e.getKey().toString());
             String tracked = log.tracked().map(e.getKey()::equals).orElse(false) ? Lang.get("status.tracked") : "";
             out.append("\n").append(Feedback.colored(Lang.fmt("cmd.log.quest", "name", name, "progress", tracked)));
             holder.ifPresent(h -> {
-                var objectives = QuestEngine.currentObjectives(h.value(), e.getValue());
+                var objectives = QuestEngine.currentObjectives(h, e.getValue());
                 for (int n = 0; n < objectives.size() && n < e.getValue().targets.size(); n++) {
                     out.append("\n").append(Feedback.colored(Lang.fmt("cmd.log.objective",
                             "line", objectives.get(n).describe(),
                             "done", e.getValue().progress.get(n), "target", e.getValue().targets.get(n))));
                 }
             });
-            for (Component b : holder.map(h -> buttonsFor(player, e.getKey(), h.value())).orElse(List.of())) {
+            for (Component b : holder.map(h -> buttonsFor(player, e.getKey(), h)).orElse(List.of())) {
                 out.append(" ").append(b);
             }
         }

@@ -1,0 +1,97 @@
+{
+  "name": "Medicine for {asker}",
+  "description": "{asker} is not well and knows it. {count} {wants.name} might buy a few more days.",
+  "chapter": "zarp:errands",
+  "order": 2,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:golden_apple",
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Dee",
+          "Marcus",
+          "Kofi",
+          "Lena",
+          "Petrov",
+          "Sunny",
+          "Hal",
+          "Rosa",
+          "Tomasz",
+          "Jin",
+          "Abby",
+          "Nate"
+        ]
+      },
+      "asker": {
+        "type": "npc",
+        "name": "&f{first}",
+        "min": 6,
+        "max": 12,
+        "equipment": {
+          "head": "minecraft:leather_helmet"
+        }
+      },
+      "wants": {
+        "type": "pick",
+        "pool": [
+          "minecraft:honey_bottle",
+          "minecraft:glistering_melon_slice",
+          "minecraft:milk_bucket",
+          "minecraft:golden_carrot",
+          "minecraft:sweet_berries"
+        ]
+      },
+      "count": {
+        "type": "number",
+        "min": 1,
+        "max": 3
+      }
+    },
+    "spawn": {
+      "place": {
+        "dimension": "minecraft:overworld"
+      },
+      "chance": 0.02,
+      "every": 120,
+      "cap": 2,
+      "giver": "asker",
+      "lapse": 240,
+      "say": "&7Hey. Hey! I'm not bitten, I swear. Just sick. Have you got any {wants.name}?"
+    }
+  },
+  "objectives": [
+    {
+      "type": "deliver",
+      "item": "{wants}",
+      "count": "{count}",
+      "npc": "{asker.id}"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 2
+    },
+    {
+      "type": "xp",
+      "amount": 20
+    },
+    {
+      "type": "money",
+      "amount": 10
+    },
+    {
+      "type": "npc_say",
+      "npc": "{asker.id}",
+      "text": "&7Thank you. I'll make for the camp when I can stand.",
+      "radius": 16
+    }
+  ]
+}

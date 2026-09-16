@@ -1,0 +1,108 @@
+{
+  "name": "Pests",
+  "description": "Something has been at {asker}'s crops. {count} somethings, by the look of it.",
+  "chapter": "chronicler:errands",
+  "order": 4,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:iron_sword",
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Aldous",
+          "Wen",
+          "Marisol",
+          "Tobiah",
+          "Ines",
+          "Cormac",
+          "Hester",
+          "Ravi",
+          "Odile",
+          "Bram"
+        ]
+      },
+      "asker": {
+        "type": "npc",
+        "name": "&f{first} the Farmer",
+        "entity": "minecraft:villager",
+        "min": 4,
+        "max": 8,
+        "equipment": {
+          "mainhand": "minecraft:iron_hoe"
+        }
+      },
+      "pest": {
+        "type": "pick",
+        "pool": [
+          "minecraft:zombie",
+          "minecraft:skeleton",
+          "minecraft:spider"
+        ]
+      },
+      "count": {
+        "type": "number",
+        "min": 3,
+        "max": 5
+      }
+    },
+    "spawn": {
+      "place": {
+        "structure": "#minecraft:village"
+      },
+      "chance": 0.04,
+      "every": 120,
+      "cap": 1,
+      "giver": "asker",
+      "lapse": 300,
+      "say": "&7They come up out of the dark every night and trample the lot. Deal with them?"
+    }
+  },
+  "stages": [
+    {
+      "text": "They are here now. Kill {count} {pest.name}.",
+      "on_enter": [
+        {
+          "type": "spawn",
+          "entity": "{pest}",
+          "count": "{count}",
+          "radius": 14,
+          "tag": "pests"
+        }
+      ],
+      "objectives": [
+        {
+          "type": "kill",
+          "target": "{pest}",
+          "tag": "pests",
+          "count": "{count}"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{asker.id}",
+          "text": "&7Quiet at last. Here, for your trouble.",
+          "radius": 24
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 30
+    },
+    {
+      "type": "item",
+      "item": "minecraft:bread",
+      "count": 6
+    },
+    {
+      "type": "item",
+      "item": "minecraft:emerald",
+      "count": 2
+    }
+  ]
+}
