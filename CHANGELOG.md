@@ -9,7 +9,11 @@
 - Effects: `block` (set a block, or properties on one: `open: "true"` opens a door) and `mini` (start or offer the next errand, anchored where this one ended).
 - `/quest mini` (list) and `/quest mini <template> [players] [offer]`, admin. API: `Quests.minis`, `isMini`, `startMini`, `offerMini`.
 - Content: six errands in the prologue (the archaeologist and the village chain, the stuck door, pests, the lost satchel, a town-hall escort in a CityWorld city) and five in ZARP (bring a survivor in to the camp, medicine, the nest, the rusted door, the warehouse run), all in an Errands chapter, hidden until found.
-- Requires Cast 1.1.0 (follow).
+- **Dangerous escorts**: `hits: N` on an escort sets nearby monsters on the charge (Cast's expose), counts every blow -- still no damage -- and fails the beat at N. Unsaid, escorts are as safe as before.
+- **CityWorld schematics**: `schematic: chayats-bank` in a `place` (wild spawns, `place` givers and objectives) and in a `lot` slot, matched by name whatever the case, spaces or dashes.
+- A `kill` with a `tag` and no `target` counts only the tagged mob; with neither, anything, as before.
+- Content: a rescue from a pillager outpost and a run to Chayat's Bank (prologue); a bank job and **The Plan** (ZARP) -- take a car, go round Mum's, kill Phil, grab Liz, get to the Winchester, have a nice cold pint and wait for it all to blow over.
+- Requires Cast 1.1.0 (follow, expose, hits).
 
 ## 1.0.1 — 2026-09-15
 

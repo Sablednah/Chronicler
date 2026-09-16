@@ -677,7 +677,7 @@ public final class SelfTest {
         if (zarp) {
             int zq = 0;
             for (var h : QuestEngine.quests(server).listElements().toList()) if (h.key().identifier().getNamespace().equals("zarp")) zq++;
-            check("zarp: all 26 quests loaded (" + zq + ")", zq == 26); // 21 since Wrench's Notes (2026-09-15), 26 with the five errands (2026-09-16)
+            check("zarp: all 28 quests loaded (" + zq + ")", zq == 28); // 21 since Wrench's Notes (2026-09-15), 26 with the errands, 28 with The Plan and the bank job
             check("zarp: the finale has two endings, survivors two, beyond one",
                     QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "finale")).size() == 2
                     && QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "survivors")).size() == 2
@@ -970,6 +970,60 @@ public final class SelfTest {
         } else {
             check("around: the satchel errand started (" + s.orElse("") + ")", false);
         }
+
+        // --- schematics: a CityWorld lot by the name of what was pasted there ---
+        check("schematic: 'Chayats Bank' is chayats-bank", Places.schematicMatches(List.of("Lowrise", "ClipboardLot", "chayats-bank", "schematic=chayats-bank"), "Chayats Bank"));
+        check("schematic: the Winchester is not the bank", !Places.schematicMatches(List.of("schematic=chayats-bank"), "winchester"));
+        check("schematic: a lot word naming a schematic is not the schematic", !Places.schematicMatches(List.of("chayats-bank"), "chayats-bank"));
+        check("lot: HouseLot is a house, and not a warehouse", Places.lotMatches(List.of("FloodedHouseLot"), "HouseLot") && !Places.lotMatches(List.of("WarehouseBuildingLot"), "HouseLot"));
+        var noBank = Minis.start(solo, ChroniclerIds.of("mini_bank_run"), java.util.Map.of(), Minis.Anchor.of(solo), false);
+        check("schematic: a bank run with no city to find the bank in is refused (" + noBank.orElse("") + ")", noBank.isPresent());
+
+        // --- a kill of one tagged mob and nothing else (Phil) ---
+        var philOnly = new com.sablednah.chronicler.data.ObjectiveTypes.Kill(List.of(), 1, java.util.Optional.of("phil"), java.util.Optional.empty(), false);
+        Zombie notPhil = new Zombie(net.minecraft.world.entity.EntityTypes.ZOMBIE, level);
+        Zombie phil = new Zombie(net.minecraft.world.entity.EntityTypes.ZOMBIE, level);
+        phil.addTag(Trackers.TAG_PREFIX + "phil");
+        check("kill: a tag with no target counts only the tagged one", Trackers.of(philOnly).countsKill(solo, phil, philOnly) && !Trackers.of(philOnly).countsKill(solo, notPhil, philOnly));
+        check("kill: neither tag nor target still counts anything", Trackers.of((com.sablednah.chronicler.data.ObjectiveSpec) new com.sablednah.chronicler.data.ObjectiveTypes.Kill(List.of(), 1, java.util.Optional.empty(), java.util.Optional.empty(), false))
+                .countsKill(solo, notPhil, new com.sablednah.chronicler.data.ObjectiveTypes.Kill(List.of(), 1, java.util.Optional.empty(), java.util.Optional.empty(), false)));
+        phil.discard();
+        notPhil.discard();
+
+        // --- the prisoner: an outpost handed over, the guards, then an escort that fails on its sixth hit ---
+        Identifier prisonerQuest = ChroniclerIds.of("mini_prisoner");
+        var outpostAt = spawnAt.offset(0, 0, 300);
+        var taken = Minis.start(solo, prisonerQuest, java.util.Map.of("outpost", outpostAt.getX() + " " + outpostAt.getY() + " " + outpostAt.getZ()), Minis.Anchor.of(solo), false);
+        QuestLog.Entry pe = log.entry(prisonerQuest);
+        check("prisoner: started, the prisoner placed at the outpost (" + taken.orElse("") + ")", taken.isEmpty() && pe != null
+                && Math.abs(Integer.parseInt(pe.slots.getOrDefault("prisoner.z", "0")) - outpostAt.getZ()) <= 1);
+        if (pe != null) {
+            java.util.UUID prisoner = java.util.UUID.fromString(pe.slots.get("prisoner.id"));
+            java.util.UUID pAsker = java.util.UUID.fromString(pe.slots.get("asker.id"));
+            solo.snapTo(outpostAt.getX() + 0.5, outpostAt.getY(), outpostAt.getZ() + 0.5, 0F, 0F);
+            QuestEngine.poll(solo);
+            check("prisoner: at the outpost, the guards come", log.entry(prisonerQuest) != null && log.entry(prisonerQuest).stage == 1 && Rewards.lastSpawned() == 3);
+            for (int n = 0; n < 3; n++) {
+                var guard = new net.minecraft.world.entity.monster.illager.Pillager(net.minecraft.world.entity.EntityTypes.PILLAGER, level);
+                guard.addTag(Trackers.TAG_PREFIX + "outpost_guard");
+                QuestEngine.onKill(solo, guard);
+                guard.discard();
+            }
+            check("prisoner: guards down, the escort begins", log.entry(prisonerQuest) != null && log.entry(prisonerQuest).stage == 2);
+            QuestEngine.onNpcHit(List.of(solo), pAsker);
+            check("hits: a blow on somebody else is not counted", log.entry(prisonerQuest).tallies.isEmpty());
+            for (int n = 0; n < 5; n++) QuestEngine.onNpcHit(List.of(solo), prisoner);
+            check("hits: five blows are counted, and five is not six", log.isActive(prisonerQuest) && log.entry(prisonerQuest).tallies.getOrDefault("hits:" + prisoner, 0) == 5);
+            QuestLog saveHits = new QuestLog();
+            saveHits.startFrom(prisonerQuest, log.entry(prisonerQuest));
+            var reread = QuestLog.MAP_CODEC.codec().parse(com.mojang.serialization.JsonOps.INSTANCE,
+                    QuestLog.MAP_CODEC.codec().encodeStart(com.mojang.serialization.JsonOps.INSTANCE, saveHits).getOrThrow()).getOrThrow();
+            check("hits: the count survives a save", reread.entry(prisonerQuest) != null && reread.entry(prisonerQuest).tallies.getOrDefault("hits:" + prisoner, 0) == 5);
+            QuestEngine.onNpcHit(List.of(solo), prisoner);
+            check("hits: the sixth fails the escort", !log.isActive(prisonerQuest) && !log.isComplete(prisonerQuest));
+            check("hits: and everyone placed for it has gone", cast.byId(server, prisoner).isEmpty() && cast.byId(server, pAsker).isEmpty());
+        }
+        solo.snapTo(spawnAt.getX() + 0.5, spawnAt.getY(), spawnAt.getZ() + 0.5, 0F, 0F);
 
         // --- the wild: an offer made, standing, and lapsing with its person ---
         int standing = Minis.pendingCount();

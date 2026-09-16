@@ -21,30 +21,38 @@ import net.minecraft.resources.Identifier;
  * @param structure a structure id or {@code #tag} (a stronghold, an outpost)
  * @param dimension a dimension id
  * @param lot       a CityWorld lot word ("hospital", "industrial"); needs CityWorld
+ * @param schematic a CityWorld schematic lot by name ("chayats-bank", "winchester"); spaces, dashes,
+ *                  underscores and case do not matter. Needs CityWorld
  */
 public record Place(Optional<String> biome, Optional<String> structure,
-        Optional<Identifier> dimension, Optional<String> lot, List<Place> any) {
+        Optional<Identifier> dimension, Optional<String> lot, Optional<String> schematic, List<Place> any) {
 
     /** The four conditions AND together; {@code any} is a list of alternatives, one of which must hold (each with its own four). */
+
+    public Place(Optional<String> biome, Optional<String> structure, Optional<Identifier> dimension, Optional<String> lot, List<Place> any) {
+        this(biome, structure, dimension, lot, Optional.empty(), any);
+    }
 
     public static final MapCodec<Place> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.optionalFieldOf("biome").forGetter(Place::biome),
             Codec.STRING.optionalFieldOf("structure").forGetter(Place::structure),
             Identifier.CODEC.optionalFieldOf("dimension").forGetter(Place::dimension),
             Codec.STRING.optionalFieldOf("lot").forGetter(Place::lot),
+            Codec.STRING.optionalFieldOf("schematic").forGetter(Place::schematic),
             Codec.lazyInitialized(() -> Place.CODEC).listOf().optionalFieldOf("any", List.of()).forGetter(Place::any))
             .apply(i, Place::new));
 
     public static final Codec<Place> CODEC = MAP_CODEC.codec();
 
     public boolean isEmpty() {
-        return biome.isEmpty() && structure.isEmpty() && dimension.isEmpty() && lot.isEmpty() && any.isEmpty();
+        return biome.isEmpty() && structure.isEmpty() && dimension.isEmpty() && lot.isEmpty() && schematic.isEmpty() && any.isEmpty();
     }
 
     /** "the Nether", "a village", "a hospital" -- from the fields, for prose. */
     public String describe() {
         List<String> parts = new ArrayList<>();
         lot.ifPresent(l -> parts.add(Lang.fmt("place.lot", "lot", Lang.pretty(l))));
+        schematic.ifPresent(s -> parts.add(Lang.fmt("place.lot", "lot", Lang.pretty(s.replace('-', '_').replace(' ', '_')))));
         structure.ifPresent(s -> parts.add(Lang.fmt("place.structure", "structure", Lang.pretty(s))));
         biome.ifPresent(b -> parts.add(Lang.fmt("place.biome", "biome", Lang.pretty(b))));
         dimension.ifPresent(d -> parts.add(Lang.fmt("place.dimension", "dimension", Lang.pretty(d.getPath()))));

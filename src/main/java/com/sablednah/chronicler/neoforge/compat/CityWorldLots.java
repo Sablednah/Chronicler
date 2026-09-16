@@ -30,7 +30,10 @@ public final class CityWorldLots {
         out.add(String.valueOf(lot.lotStyle()));
         out.add(lot.lotClass());
         if (lot.interior() != null) out.add(lot.interior());
-        if (lot.schematicName() != null) out.add(lot.schematicName());
+        if (lot.schematicName() != null) {
+            out.add(lot.schematicName());
+            out.add(com.sablednah.chronicler.neoforge.Places.SCHEMATIC + lot.schematicName());
+        }
         if (lot.shop() != null) out.add(lot.shop().describe());
         return out;
     }

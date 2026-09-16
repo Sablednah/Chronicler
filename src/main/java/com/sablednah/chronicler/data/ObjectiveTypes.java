@@ -34,7 +34,8 @@ public final class ObjectiveTypes {
      * whether or not a loot table exists. A mob this quest spawned that dies
      * to anything else -- a fall, sunlight, its own explosion -- still counts,
      * unless {@code own_kill} is set, in which case it is spawned again so the
-     * player can keep trying (the Bloater you must kill before it blows).
+     * player can keep trying (the Bloater you must kill before it blows). With a {@code tag}
+     * and no {@code target}, only the tagged one counts; with neither, anything does.
      */
     public record Kill(List<String> targets, int count, Optional<String> tag, Optional<Drop> drop, boolean ownKill) implements ObjectiveSpec {
         public Kill(List<String> targets, int count, Optional<String> tag, Optional<Drop> drop) { this(targets, count, tag, drop, false); }
@@ -48,7 +49,7 @@ public final class ObjectiveTypes {
         private static final Codec<List<String>> TARGETS = Codec.either(Codec.STRING, Codec.STRING.listOf())
                 .xmap(e -> e.map(List::of, l -> l), l -> l.size() == 1 ? com.mojang.datafixers.util.Either.left(l.getFirst()) : com.mojang.datafixers.util.Either.right(l));
         public static final MapCodec<Kill> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-                TARGETS.optionalFieldOf("target", List.of("any")).forGetter(Kill::targets),
+                TARGETS.optionalFieldOf("target", List.of()).forGetter(Kill::targets),
                 Codec.INT.optionalFieldOf("count", 1).forGetter(Kill::count),
                 Codec.STRING.optionalFieldOf("tag").forGetter(Kill::tag),
                 Drop.CODEC.optionalFieldOf("drop").forGetter(Kill::drop),
@@ -56,8 +57,8 @@ public final class ObjectiveTypes {
                 .apply(i, Kill::new));
 
         public Kill(String target, int count) { this(List.of(target), count, Optional.empty(), Optional.empty(), false); }
-        /** The first named target, for text. */
-        public String target() { return targets.isEmpty() ? "any" : targets.getFirst(); }
+        /** The first named target, for text: the tag when only a tag was given (Phil), "any" when neither. */
+        public String target() { return !targets.isEmpty() ? targets.getFirst() : tag.orElse("any"); }
 
         @Override public MapCodec<Kill> codec() { return MAP_CODEC; }
         @Override public int required() { return count; }
@@ -147,9 +148,13 @@ public final class ObjectiveTypes {
      * within {@code near} of them. The charge follows whoever is escorting it, on foot, along the
      * way they walk (Cast's follow); wander more than {@code escort.pickup} blocks off and it
      * stops and waits where it is until someone comes back for it. Latching.
+     *
+     * <p>{@code hits} (0, the default: off) makes the trip dangerous: monsters nearby go for the
+     * charge, every blow is counted -- never damage -- and at that many the beat fails, as a
+     * deadline does ({@code on_fail}, then {@code fail} or abandon).</p>
      */
     public record Escort(String who, Optional<String> name, net.minecraft.core.BlockPos to, Optional<Identifier> dimension,
-            double radius, double near, Optional<String> label) implements ObjectiveSpec {
+            double radius, double near, Optional<String> label, int hits) implements ObjectiveSpec {
         public static final MapCodec<Escort> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.STRING.fieldOf("who").forGetter(Escort::who),
                 Codec.STRING.optionalFieldOf("name").forGetter(Escort::name),
@@ -157,13 +162,15 @@ public final class ObjectiveTypes {
                 Identifier.CODEC.optionalFieldOf("dimension").forGetter(Escort::dimension),
                 Codec.DOUBLE.optionalFieldOf("radius", 12.0D).forGetter(Escort::radius),
                 Codec.DOUBLE.optionalFieldOf("near", 10.0D).forGetter(Escort::near),
-                Codec.STRING.optionalFieldOf("label").forGetter(Escort::label))
+                Codec.STRING.optionalFieldOf("label").forGetter(Escort::label),
+                Codec.intRange(0, 1000).optionalFieldOf("hits", 0).forGetter(Escort::hits))
                 .apply(i, Escort::new));
         @Override public MapCodec<Escort> codec() { return MAP_CODEC; }
         @Override public int required() { return 1; }
         @Override public String describe() {
             String whom = name.orElseGet(() -> com.sablednah.chronicler.neoforge.Givers.npcName(who));
-            return Lang.fmt("obj.escort", "who", whom, "where", label.orElseGet(() -> Lang.fmt("obj.escort.coords", "x", to.getX(), "z", to.getZ())));
+            String line = Lang.fmt("obj.escort", "who", whom, "where", label.orElseGet(() -> Lang.fmt("obj.escort.coords", "x", to.getX(), "z", to.getZ())));
+            return hits > 0 ? line + Lang.fmt("obj.escort.hits", "hits", hits) : line;
         }
     }
 

@@ -1,0 +1,111 @@
+{
+  "name": "{first}'s Bank Job",
+  "description": "{first} was a cashier at {bank} and still remembers the vault code. The street between here and there has other ideas.",
+  "chapter": "zarp:errands",
+  "order": 6,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:gold_ingot",
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Dee",
+          "Marcus",
+          "Kofi",
+          "Lena",
+          "Petrov",
+          "Sunny",
+          "Hal",
+          "Rosa",
+          "Tomasz",
+          "Jin",
+          "Abby",
+          "Nate"
+        ]
+      },
+      "cashier": {
+        "type": "npc",
+        "name": "&f{first}",
+        "min": 6,
+        "max": 12,
+        "equipment": {
+          "chest": "minecraft:leather_chestplate[dyed_color=1908001]"
+        }
+      },
+      "bank": {
+        "type": "lot",
+        "schematic": "chayats-bank",
+        "label": "Chayat's Bank",
+        "radius": 640
+      }
+    },
+    "spawn": {
+      "place": {
+        "dimension": "minecraft:overworld"
+      },
+      "chance": 0.01,
+      "every": 180,
+      "cap": 1,
+      "giver": "cashier",
+      "lapse": 240,
+      "say": "&7I know the vault code at Chayat's. I just can't get there alive on my own."
+    }
+  },
+  "stages": [
+    {
+      "text": "{bank} is at {bank.x}, {bank.z}. The dead will go for {cashier}; they can take six blows.",
+      "objectives": [
+        {
+          "type": "escort",
+          "who": "{cashier.id}",
+          "name": "{cashier}",
+          "to": "{bank.pos}",
+          "dimension": "{bank.dim}",
+          "radius": 24,
+          "near": 12,
+          "hits": 6,
+          "label": "{bank}"
+        }
+      ],
+      "on_fail": [
+        {
+          "type": "message",
+          "text": "&7{first} is gone. So is the code."
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{cashier.id}",
+          "text": "&7Four, one, one, nine. Take what you can carry.",
+          "radius": 24
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 2
+    },
+    {
+      "type": "xp",
+      "amount": 40
+    },
+    {
+      "type": "money",
+      "amount": 60
+    },
+    {
+      "type": "item",
+      "item": "minecraft:gold_ingot",
+      "count": 6
+    }
+  ]
+}

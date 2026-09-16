@@ -582,10 +582,15 @@ including wild spawns in the first pass; ZARP-flavoured content as well):
 - **The StoryTeller door**: `Quests.minis`, `isMini`, `startMini(player, template,
   slots[, level, near])`, `offerMini`; `/quest mini <template> [players] [offer]`.
 
-**Not as planned:** CityWorld has **no bank lot** (its lots are hospitals, offices,
-government buildings, warehouses, shops by trade...), so the city escorts go to a
-town hall (`government`) and a warehouse. A bank is CityWorld's to add. The temple
-door became a village door: jungle and desert temples have no doors.
+**Not as planned:** the temple door became a village door (jungle and desert temples
+have no doors). A first pass said CityWorld had no bank lot; it has one as a
+**schematic** (`chayats-bank`, a clipboard lot), so `place` and `lot` slots take
+`schematic` by name (2026-09-17). **Dangerous escorts** came the same day (Sable: log
+hits, not damage; X hits fails; invulnerable by default): Cast's leased `expose` sets
+monsters on the charge and reports every blow as `NpcHitEvent`, Chronicler tallies them
+on the journal entry (`Entry.tallies`, cleared with the beat) and fails the beat at `hits`.
+A phantom is in no level, so nothing would ever notice it without the lure; its blows
+arrive at `hurtServer` directly from the monster's attack.
 
 **The original note**, kept for the reasoning:
 

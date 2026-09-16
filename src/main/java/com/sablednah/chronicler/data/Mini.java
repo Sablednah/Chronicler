@@ -54,10 +54,11 @@ public record Mini(Map<String, Slot> slots, Optional<Wild> spawn) {
     }
 
     /** Where to look for a place: at most one of these, by slot type. */
-    public record Find(Optional<String> structure, Optional<String> lot, Optional<String> block, Optional<Identifier> quest) {
+    public record Find(Optional<String> structure, Optional<String> lot, Optional<String> schematic, Optional<String> block, Optional<Identifier> quest) {
         public static final MapCodec<Find> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.STRING.optionalFieldOf("structure").forGetter(Find::structure),
                 Codec.STRING.optionalFieldOf("lot").forGetter(Find::lot),
+                Codec.STRING.optionalFieldOf("schematic").forGetter(Find::schematic),
                 Codec.STRING.optionalFieldOf("block").forGetter(Find::block),
                 ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(Find::quest))
                 .apply(i, Find::new));
@@ -84,7 +85,7 @@ public record Mini(Map<String, Slot> slots, Optional<Wild> spawn) {
      * <li>{@code here} -- where the quest starts (the player, the wild giver, a chained quest's {@code near}).</li>
      * <li>{@code around} -- a dry surface spot {@code min}..{@code max} blocks from the anchor.</li>
      * <li>{@code structure} -- the nearest {@code structure} (an id or {@code #tag}) within {@code radius}.</li>
-     * <li>{@code lot} -- the nearest CityWorld lot matching {@code lot} ("bank") within {@code radius}.</li>
+     * <li>{@code lot} -- the nearest CityWorld lot matching {@code lot} (a word, "HouseLot") or {@code schematic} ("chayats-bank") within {@code radius}.</li>
      * <li>{@code block} -- the nearest {@code block} (an id or {@code #tag}) within {@code radius}.</li>
      * <li>{@code giver} -- where the giver of {@code quest} stands (Okafor, the camp).</li>
      * <li>{@code given} -- a position handed over by whoever starts it (StoryTeller, the command).</li>
@@ -97,7 +98,7 @@ public record Mini(Map<String, Slot> slots, Optional<Wild> spawn) {
     public record Slot(String type, List<String> pool, int min, int max, Find find, int radius,
             Optional<String> near, Optional<String> label, Person person) {
 
-        static final Slot NONE = new Slot("", List.of(), 0, 0, new Find(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()),
+        static final Slot NONE = new Slot("", List.of(), 0, 0, new Find(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()),
                 0, Optional.empty(), Optional.empty(), new Person(Optional.empty(), Optional.empty(), Optional.empty(), Map.of(), Optional.empty(), false));
 
         public static final List<String> TYPES = List.of("pick", "number", "here", "around", "structure", "lot", "block", "giver", "given", "npc");
@@ -122,7 +123,7 @@ public record Mini(Map<String, Slot> slots, Optional<Wild> spawn) {
                 case "pick" -> s.pool.isEmpty() ? DataResult.error(() -> "a pick slot needs a pool") : DataResult.success(s);
                 case "number", "around" -> s.max < s.min ? DataResult.error(() -> "a " + s.type + " slot needs max >= min") : DataResult.success(s);
                 case "structure" -> s.find.structure().isEmpty() ? DataResult.error(() -> "a structure slot needs 'structure'") : DataResult.success(s);
-                case "lot" -> s.find.lot().isEmpty() ? DataResult.error(() -> "a lot slot needs 'lot'") : DataResult.success(s);
+                case "lot" -> s.find.lot().isEmpty() && s.find.schematic().isEmpty() ? DataResult.error(() -> "a lot slot needs 'lot' (a lot word) or 'schematic' (a schematic's name)") : DataResult.success(s);
                 case "block" -> s.find.block().isEmpty() ? DataResult.error(() -> "a block slot needs 'block'") : DataResult.success(s);
                 case "giver" -> s.find.quest().isEmpty() ? DataResult.error(() -> "a giver slot needs 'quest'") : DataResult.success(s);
                 case "npc" -> s.person.name().isEmpty() ? DataResult.error(() -> "an npc slot needs 'name'") : DataResult.success(s);

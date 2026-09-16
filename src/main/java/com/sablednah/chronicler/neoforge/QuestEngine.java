@@ -363,6 +363,49 @@ public final class QuestEngine {
 
     /** The clock ran out on this beat for everyone sharing it. */
     private static void failStage(ServerPlayer player, Identifier id, Quest quest) {
+        failStage(player, id, quest, Lang.fmt("msg.deadline.failed", "name", quest.name()));
+    }
+
+    /**
+     * A blow landed on an NPC. Every escort under way whose charge it is, and which counts hits,
+     * counts this one -- once per party, told to everyone sharing it -- and fails the beat at its limit.
+     */
+    public static void onNpcHit(List<ServerPlayer> players, java.util.UUID npc) {
+        String key = "hits:" + npc;
+        java.util.Set<String> counted = new java.util.HashSet<>();
+        for (ServerPlayer player : players) {
+            QuestLog log = journal(player);
+            for (Identifier id : List.copyOf(log.activeView().keySet())) {
+                QuestLog.Entry e = log.entry(id);
+                var holder = questFor(player, id);
+                if (e == null || holder.isEmpty()) continue;
+                Quest quest = holder.get();
+                List<ObjectiveSpec> objectives = currentObjectives(quest, e);
+                for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
+                    if (!(objectives.get(n) instanceof ObjectiveTypes.Escort esc) || esc.hits() <= 0 || e.objectiveDone(n)) continue;
+                    if (!esc.who().equals(npc.toString())) continue;
+                    if (!counted.add(id + "|" + e.slots)) break; // a party member already counted this blow
+                    int taken = e.tallies.getOrDefault(key, 0) + 1;
+                    String whom = esc.name().orElseGet(() -> Givers.npcName(esc.who()));
+                    for (ServerPlayer m : sharers(player, quest)) {
+                        QuestLog.Entry me = journal(m).entry(id);
+                        if (me == null) continue;
+                        me.tallies.put(key, taken);
+                        Feedback.actionBar(m, Lang.fmt("msg.escort.hit", "who", whom, "taken", taken, "hits", esc.hits()));
+                    }
+                    Chronicler.LOGGER.info("Chronicler: escort {} of {}: {} hit ({}/{})", id, player.getName().getString(), whom, taken, esc.hits());
+                    if (taken >= esc.hits()) {
+                        failStage(player, id, quest, Lang.fmt("msg.escort.failed", "who", whom, "name", quest.name()));
+                    } else if (taken == esc.hits() - 1) {
+                        for (ServerPlayer m : sharers(player, quest)) if (journal(m).isActive(id)) Feedback.chat(m, Lang.fmt("msg.escort.last", "who", whom));
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    private static void failStage(ServerPlayer player, Identifier id, Quest quest, String why) {
         List<ServerPlayer> members = new ArrayList<>();
         for (ServerPlayer m : sharers(player, quest)) {
             if (journal(m).isActive(id)) members.add(m);
@@ -371,7 +414,7 @@ public final class QuestEngine {
         QuestLog.Entry lead = journal(members.getFirst()).entry(id);
         Stage stage = quest.beats().get(Math.min(lead.stage, quest.beats().size() - 1));
         for (ServerPlayer m : members) {
-            Feedback.chat(m, Lang.fmt("msg.deadline.failed", "name", quest.name()));
+            Feedback.chat(m, why);
             effects(m, stage.onFail(), id, quest);
         }
         if (stage.fail().isPresent()) {

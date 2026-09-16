@@ -77,10 +77,15 @@ public final class CastGivers {
             @Override public Optional<UUID> leaderOf(UUID id) {
                 return Cast.leaderOf(id);
             }
+            @Override public boolean expose(MinecraftServer server, UUID id, int leaseTicks) {
+                return Cast.expose(server, id, leaseTicks);
+            }
             @Override public void teleport(MinecraftServer server, UUID id, Vec3 pos) {
                 Cast.drive(server, id, pos, 0F, 0F);
             }
         });
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((com.sablednah.cast.api.NpcHitEvent ev) ->
+                { var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer(); if (server != null) Npcs.hit(server, ev.npcId()); });
         Chronicler.LOGGER.info("Chronicler: NPC givers via Cast (role chronicler:giver)");
     }
 
