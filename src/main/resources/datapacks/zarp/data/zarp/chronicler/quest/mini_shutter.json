@@ -1,0 +1,80 @@
+{
+  "name": "The Rusted Door",
+  "description": "{door} is rusted shut, and whatever is behind it has been left alone for a year. Grease might do it.",
+  "chapter": "zarp:errands",
+  "order": 4,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:iron_door",
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "mini": {
+    "slots": {
+      "door": {
+        "type": "block",
+        "block": "#minecraft:doors",
+        "label": "a door here",
+        "radius": 12
+      },
+      "count": {
+        "type": "number",
+        "min": 2,
+        "max": 4
+      }
+    },
+    "spawn": {
+      "place": {
+        "dimension": "minecraft:overworld"
+      },
+      "chance": 0.03,
+      "every": 90,
+      "cap": 1,
+      "block": "door",
+      "lapse": 180,
+      "say": "A door nearby is rusted fast. Nobody has been through it since it all started. A little grease might change that."
+    }
+  },
+  "stages": [
+    {
+      "text": "{count} slime balls into the hinges of the door at {door.x}, {door.y}, {door.z}.",
+      "on_enter": [
+        {
+          "type": "block",
+          "at": "{door.pos}",
+          "dimension": "{door.dim}",
+          "properties": {
+            "open": "false"
+          }
+        }
+      ],
+      "objectives": [
+        {
+          "type": "deliver",
+          "item": "minecraft:slime_ball",
+          "count": "{count}",
+          "at": "{door.pos}",
+          "label": "Grease the rusted door ({count} slime balls)"
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "block",
+      "at": "{door.pos}",
+      "dimension": "{door.dim}",
+      "properties": {
+        "open": "true"
+      }
+    },
+    {
+      "type": "xp",
+      "amount": 15
+    },
+    {
+      "type": "money",
+      "amount": 8
+    }
+  ]
+}

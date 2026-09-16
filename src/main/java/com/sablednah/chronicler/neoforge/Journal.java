@@ -182,7 +182,7 @@ public final class Journal {
             contents.append(Feedback.colored(Lang.get("journal.none_active"))).append("\n");
         }
         for (int n = 0; n < active.size(); n++) {
-            String name = QuestEngine.quest(server, active.get(n)).map(h -> h.value().name()).orElse(active.get(n).toString());
+            String name = QuestEngine.questFor(player, active.get(n)).map(Quest::name).orElse(active.get(n).toString());
             boolean tracked = log.tracked().map(active.get(n)::equals).orElse(false);
             contents.append(pageLink(Lang.fmt(tracked ? "journal.contents.tracked" : "journal.contents.quest", "name", name),
                     questPageAt[n], Lang.get("journal.tip.turn"))).append("\n");
@@ -252,13 +252,13 @@ public final class Journal {
     /** One quest's page, or two when it would not fit. */
     private static List<MutableComponent> questPages(MinecraftServer server, ServerPlayer player, QuestLog log, Identifier id) {
         List<MutableComponent> out = new ArrayList<>();
-        var holder = QuestEngine.quest(server, id);
+        var holder = QuestEngine.questFor(player, id);
         QuestLog.Entry e = log.entry(id);
         if (holder.isEmpty() || e == null) {
             out.add(Component.empty().append(Feedback.colored(Lang.fmt("journal.quest.gone", "id", id))));
             return out;
         }
-        Quest q = holder.get().value();
+        Quest q = holder.get();
         MutableComponent head = Component.empty();
         head.append(Feedback.colored(Lang.fmt("journal.quest.name", "name", q.name()))).append("\n");
         String chapter = QuestEngine.chapters(server)

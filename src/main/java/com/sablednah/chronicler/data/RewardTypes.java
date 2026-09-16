@@ -144,11 +144,14 @@ public final class RewardTypes {
      * A placed NPC speaks -- the one that gives {@code quest} (its own quest, unless
      * another is named). Chat to everyone within {@code radius}. Nothing without Cast.
      */
-    public record NpcSay(Optional<Identifier> quest, String text, double radius) implements RewardSpec {
+    public record NpcSay(Optional<Identifier> quest, String text, double radius, Optional<String> npc) implements RewardSpec {
+        /** {@code npc}: a person by id -- a mini quest's {@code "{elder.id}"} -- instead of a quest's giver. */
+        public NpcSay(Optional<Identifier> quest, String text, double radius) { this(quest, text, radius, Optional.empty()); }
         public static final MapCodec<NpcSay> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(NpcSay::quest),
                 Codec.STRING.fieldOf("text").forGetter(NpcSay::text),
-                Codec.DOUBLE.optionalFieldOf("radius", 16.0D).forGetter(NpcSay::radius))
+                Codec.DOUBLE.optionalFieldOf("radius", 16.0D).forGetter(NpcSay::radius),
+                Codec.STRING.optionalFieldOf("npc").forGetter(NpcSay::npc))
                 .apply(i, NpcSay::new));
         @Override public MapCodec<NpcSay> codec() { return MAP_CODEC; }
         @Override public String describe() { return Lang.get("rew.npc_say"); }
@@ -162,15 +165,56 @@ public final class RewardTypes {
      * offset, so it lands right even after a Storyteller walked them somewhere else.
      */
     public record NpcRemove(Optional<Identifier> quest, Optional<String> text,
-            Optional<String> leave, Optional<Identifier> giverFor) implements RewardSpec {
+            Optional<String> leave, Optional<Identifier> giverFor, Optional<String> npc) implements RewardSpec {
+        public NpcRemove(Optional<Identifier> quest, Optional<String> text, Optional<String> leave, Optional<Identifier> giverFor) {
+            this(quest, text, leave, giverFor, Optional.empty());
+        }
         public static final MapCodec<NpcRemove> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(NpcRemove::quest),
                 Codec.STRING.optionalFieldOf("text").forGetter(NpcRemove::text),
                 Codec.STRING.optionalFieldOf("leave").forGetter(NpcRemove::leave),
-                ChroniclerIds.CODEC.optionalFieldOf("giver_for").forGetter(NpcRemove::giverFor))
+                ChroniclerIds.CODEC.optionalFieldOf("giver_for").forGetter(NpcRemove::giverFor),
+                Codec.STRING.optionalFieldOf("npc").forGetter(NpcRemove::npc))
                 .apply(i, NpcRemove::new));
         @Override public MapCodec<NpcRemove> codec() { return MAP_CODEC; }
         @Override public String describe() { return Lang.get("rew.npc_remove"); }
+    }
+
+    /**
+     * Change a block: {@code at} (a mini quest's {@code "{door.pos}"}), in {@code dimension} or the
+     * player's. {@code block} replaces it (a block state as {@code /setblock} takes it); {@code properties}
+     * set on whatever is there ({@code open: "true"} opens a door, both halves). The jammed door opens.
+     */
+    public record SetBlock(net.minecraft.core.BlockPos at, Optional<Identifier> dimension, Optional<String> block,
+            java.util.Map<String, String> properties) implements RewardSpec {
+        public static final MapCodec<SetBlock> MAP_CODEC = RecordCodecBuilder.<SetBlock>mapCodec(i -> i.group(
+                net.minecraft.core.BlockPos.CODEC.fieldOf("at").forGetter(SetBlock::at),
+                Identifier.CODEC.optionalFieldOf("dimension").forGetter(SetBlock::dimension),
+                Codec.STRING.optionalFieldOf("block").forGetter(SetBlock::block),
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("properties", java.util.Map.of()).forGetter(SetBlock::properties))
+                .apply(i, SetBlock::new)).validate(b -> b.block.isEmpty() && b.properties.isEmpty()
+                        ? com.mojang.serialization.DataResult.error(() -> "a block effect needs 'block' or 'properties'")
+                        : com.mojang.serialization.DataResult.success(b));
+        @Override public MapCodec<SetBlock> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.block"); }
+    }
+
+    /**
+     * Start a mini quest -- or, with {@code offer}, put it to the player with Accept. {@code near}
+     * anchors its {@code here} and its searches ({@code "{village.pos}"}: the next errand starts where
+     * this one ended); {@code slots} hands over values by name. The chain: temple, village, bank.
+     */
+    public record StartMini(Identifier template, Optional<net.minecraft.core.BlockPos> near, Optional<Identifier> dimension,
+            java.util.Map<String, String> slots, boolean offer) implements RewardSpec {
+        public static final MapCodec<StartMini> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                ChroniclerIds.CODEC.fieldOf("template").forGetter(StartMini::template),
+                net.minecraft.core.BlockPos.CODEC.optionalFieldOf("near").forGetter(StartMini::near),
+                Identifier.CODEC.optionalFieldOf("dimension").forGetter(StartMini::dimension),
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("slots", java.util.Map.of()).forGetter(StartMini::slots),
+                Codec.BOOL.optionalFieldOf("offer", true).forGetter(StartMini::offer))
+                .apply(i, StartMini::new));
+        @Override public MapCodec<StartMini> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.mini"); }
     }
 
     /** Record that the player reached an ending of this quest's chapter, without finishing the quest here. */
@@ -243,6 +287,8 @@ public final class RewardTypes {
         TYPES.register("npc_say", NpcSay.MAP_CODEC);
         TYPES.register("npc_remove", NpcRemove.MAP_CODEC);
         TYPES.register("ending", Ending.MAP_CODEC);
+        TYPES.register("block", SetBlock.MAP_CODEC);
+        TYPES.register("mini", StartMini.MAP_CODEC);
     }
 
     public static void init() {}

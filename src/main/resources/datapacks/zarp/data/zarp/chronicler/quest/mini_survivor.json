@@ -1,0 +1,99 @@
+{
+  "name": "Bring {survivor} In",
+  "description": "{survivor} has been hiding for a week and would like very much to stop. {camp} takes strays.",
+  "chapter": "zarp:errands",
+  "order": 1,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:leather_chestplate",
+  "requires": [
+    "zarp:the_camp"
+  ],
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Dee",
+          "Marcus",
+          "Kofi",
+          "Lena",
+          "Petrov",
+          "Sunny",
+          "Hal",
+          "Rosa",
+          "Tomasz",
+          "Jin",
+          "Abby",
+          "Nate"
+        ]
+      },
+      "survivor": {
+        "type": "npc",
+        "name": "&f{first}",
+        "min": 6,
+        "max": 12,
+        "equipment": {
+          "chest": "minecraft:leather_chestplate",
+          "mainhand": "minecraft:stick"
+        }
+      },
+      "camp": {
+        "type": "giver",
+        "quest": "zarp:the_camp",
+        "label": "the camp"
+      }
+    },
+    "spawn": {
+      "place": {
+        "dimension": "minecraft:overworld"
+      },
+      "chance": 0.02,
+      "every": 120,
+      "cap": 2,
+      "giver": "survivor",
+      "lapse": 240,
+      "say": "&7Don't shoot. Please. Are you from the camp? Take me with you."
+    }
+  },
+  "stages": [
+    {
+      "text": "{survivor} sticks to your heels. Get them to {camp} at {camp.x}, {camp.z} in one piece.",
+      "objectives": [
+        {
+          "type": "escort",
+          "who": "{survivor.id}",
+          "name": "{survivor}",
+          "to": "{camp.pos}",
+          "dimension": "{camp.dim}",
+          "radius": 16,
+          "near": 12,
+          "label": "{camp}"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{survivor.id}",
+          "text": "&7Fences. Real fences. I could cry.",
+          "radius": 24
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 3
+    },
+    {
+      "type": "xp",
+      "amount": 30
+    },
+    {
+      "type": "money",
+      "amount": 15
+    }
+  ]
+}

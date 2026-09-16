@@ -1,0 +1,89 @@
+{
+  "name": "{wants.name} for {asker}",
+  "description": "{asker} is short of {wants.name} and long on patience. Nearly.",
+  "chapter": "chronicler:errands",
+  "order": 2,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:bread",
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Aldous",
+          "Wen",
+          "Marisol",
+          "Tobiah",
+          "Ines",
+          "Cormac",
+          "Hester",
+          "Ravi",
+          "Odile",
+          "Bram"
+        ]
+      },
+      "asker": {
+        "type": "npc",
+        "name": "&f{first}",
+        "entity": "minecraft:villager",
+        "min": 4,
+        "max": 8
+      },
+      "wants": {
+        "type": "pick",
+        "pool": [
+          "minecraft:bread",
+          "minecraft:wheat",
+          "minecraft:apple",
+          "minecraft:leather",
+          "minecraft:iron_ingot",
+          "minecraft:honey_bottle",
+          "minecraft:pumpkin",
+          "minecraft:white_wool"
+        ]
+      },
+      "count": {
+        "type": "number",
+        "min": 3,
+        "max": 8
+      }
+    },
+    "spawn": {
+      "place": {
+        "structure": "#minecraft:village"
+      },
+      "chance": 0.05,
+      "every": 120,
+      "cap": 2,
+      "giver": "asker",
+      "lapse": 300,
+      "say": "&7You there. Yes, you. Have you got {count} {wants.name} going spare? I'd pay."
+    }
+  },
+  "objectives": [
+    {
+      "type": "deliver",
+      "item": "{wants}",
+      "count": "{count}",
+      "npc": "{asker.id}"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 20
+    },
+    {
+      "type": "item",
+      "item": "minecraft:emerald",
+      "count": 2
+    },
+    {
+      "type": "npc_say",
+      "npc": "{asker.id}",
+      "text": "&7That'll do nicely.",
+      "radius": 16
+    }
+  ]
+}

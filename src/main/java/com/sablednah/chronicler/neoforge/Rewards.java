@@ -132,12 +132,12 @@ public final class Rewards {
                 Sheet.grantSkillPoints(player, r.count())));
 
         register(RewardTypes.NpcSay.class, (player, r, questId, quest) -> {
-            var npc = npcFor(player, r.quest().orElse(questId));
+            var npc = r.npc().isPresent() ? npcById(player, r.npc().get()) : npcFor(player, r.quest().orElse(questId));
             if (npc.isEmpty()) { Feedback.chat(player, r.text()); return; }
             Npcs.provider().get().say(player.level().getServer(), npc.get(), r.text(), r.radius());
         });
         register(RewardTypes.NpcRemove.class, (player, r, questId, quest) -> {
-            var npc = npcFor(player, r.quest().orElse(questId));
+            var npc = r.npc().isPresent() ? npcById(player, r.npc().get()) : npcFor(player, r.quest().orElse(questId));
             r.text().ifPresent(t -> Feedback.chat(player, t));
             if (npc.isEmpty()) return;
             var server = player.level().getServer();
@@ -155,7 +155,44 @@ public final class Rewards {
             }
             Npcs.provider().get().remove(server, npc.get());
             GiverStore.get(server).removeNpc(npc.get());
+            GiverStore.get(server).clearMini(npc.get());
             Chronicler.LOGGER.info("Chronicler: quest {} removed the NPC of {} ({})", questId, r.quest().orElse(questId), npc.get());
+        });
+        register(RewardTypes.SetBlock.class, (player, r, questId, quest) -> {
+            var server = player.level().getServer();
+            var level = r.dimension().map(d -> server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, d)))
+                    .orElse(player.level());
+            if (level == null) { Chronicler.LOGGER.warn("Chronicler: quest {} changes a block in unknown dimension {}", questId, r.dimension().orElse(null)); return; }
+            var state = level.getBlockState(r.at());
+            if (r.block().isPresent()) {
+                try {
+                    state = net.minecraft.commands.arguments.blocks.BlockStateParser.parseForBlock(
+                            level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.BLOCK), r.block().get(), false).blockState();
+                } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+                    Chronicler.LOGGER.warn("Chronicler: quest {} names a block it cannot parse, '{}': {}", questId, r.block().get(), e.getMessage());
+                    return;
+                }
+            }
+            for (var p : r.properties().entrySet()) {
+                var prop = state.getBlock().getStateDefinition().getProperty(p.getKey());
+                if (prop == null) { Chronicler.LOGGER.warn("Chronicler: quest {}: {} has no property '{}'", questId, state.getBlock(), p.getKey()); continue; }
+                state = withValue(state, prop, p.getValue(), questId);
+            }
+            level.setBlockAndUpdate(r.at(), state);
+            if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN)) {
+                // A door, gate or trapdoor swinging open is a sound as much as a block state.
+                level.playSound(null, r.at(), state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN)
+                        ? net.minecraft.sounds.SoundEvents.WOODEN_DOOR_OPEN : net.minecraft.sounds.SoundEvents.WOODEN_DOOR_CLOSE,
+                        net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
+            }
+        });
+        register(RewardTypes.StartMini.class, (player, r, questId, quest) -> {
+            var server = player.level().getServer();
+            var level = r.dimension().map(d -> server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, d)))
+                    .orElse(player.level());
+            if (level == null) level = player.level();
+            Minis.Anchor anchor = new Minis.Anchor(level, r.near().orElse(player.blockPosition()));
+            Minis.start(player, r.template(), r.slots(), anchor, r.offer());
         });
         register(RewardTypes.Ending.class, (player, r, questId, quest) -> QuestEngine.reachEnding(player, quest, r.ending()));
         register(RewardTypes.Flag.class, (player, r, questId, quest) -> {
@@ -304,6 +341,27 @@ public final class Rewards {
                     Chronicler.LOGGER.warn("Chronicler: spawn cannot equip '{}': {}", item, e.getMessage());
                 }
             });
+        }
+    }
+
+    private static <T extends Comparable<T>> net.minecraft.world.level.block.state.BlockState withValue(
+            net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.block.state.properties.Property<T> prop, String value, Identifier questId) {
+        var parsed = prop.getValue(value);
+        if (parsed.isEmpty()) {
+            Chronicler.LOGGER.warn("Chronicler: quest {}: '{}' is not a value of {} (one of {})", questId, value, prop.getName(), prop.getPossibleValues());
+            return state;
+        }
+        return state.setValue(prop, parsed.get());
+    }
+
+    /** A person by Cast id, if they are there. */
+    private static java.util.Optional<java.util.UUID> npcById(ServerPlayer player, String id) {
+        if (!Npcs.available()) return java.util.Optional.empty();
+        try {
+            java.util.UUID u = java.util.UUID.fromString(id);
+            return Npcs.provider().get().byId(player.level().getServer(), u).map(p -> u);
+        } catch (IllegalArgumentException e) {
+            return java.util.Optional.empty();
         }
     }
 

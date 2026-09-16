@@ -448,6 +448,7 @@ public final class SelfTest {
             }
 
             overnight(server, solo);
+            minis(server, solo);
         } finally {
             QuestEngine.journal(solo).clear();
             solo.discard();
@@ -676,7 +677,7 @@ public final class SelfTest {
         if (zarp) {
             int zq = 0;
             for (var h : QuestEngine.quests(server).listElements().toList()) if (h.key().identifier().getNamespace().equals("zarp")) zq++;
-            check("zarp: all 21 quests loaded (" + zq + ")", zq == 21); // 21 since Wrench's Notes (2026-09-15)
+            check("zarp: all 26 quests loaded (" + zq + ")", zq == 26); // 21 since Wrench's Notes (2026-09-15), 26 with the five errands (2026-09-16)
             check("zarp: the finale has two endings, survivors two, beyond one",
                     QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "finale")).size() == 2
                     && QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "survivors")).size() == 2
@@ -810,6 +811,193 @@ public final class SelfTest {
         }
         log.clear();
     }
+
+    /**
+     * Mini quests (2026-09-16): templates with holes, filled where they start -- the loader's stand-in
+     * check, a fetch to a placed person, an escort that follows and arrives and offers the next errand,
+     * the jammed door, a tagged kill, a wild offer that lapses, and the refusals.
+     */
+    private static void minis(MinecraftServer server, FakePlayer solo) {
+        var level = server.overworld();
+        QuestLog log = QuestEngine.journal(solo);
+        log.clear();
+        var cast = Npcs.provider().orElse(null);
+        Identifier errand = ChroniclerIds.of("mini_village_errand");
+        Identifier scholarQuest = ChroniclerIds.of("mini_archaeologist");
+        Identifier door = ChroniclerIds.of("mini_jammed_door");
+        Identifier pests = ChroniclerIds.of("mini_pests");
+        Identifier hall = ChroniclerIds.of("mini_town_hall");
+        Identifier satchel = ChroniclerIds.of("mini_lost_satchel");
+
+        // --- the holes, loader-light ---
+        var mini = QuestEngine.quest(server, errand).flatMap(h -> h.value().mini()).orElse(null);
+        check("minis: the village errand loads as a template, with its file kept", mini != null
+                && QuestEngine.quest(server, errand).flatMap(h -> h.value().template()).isPresent());
+        if (mini == null) return;
+        var json = com.google.gson.JsonParser.parseString("{\"n\": \"{count}\", \"t\": \"Bring {count} {wants.name}\", \"p\": \"{asker.pos}\", \"c\": \"{player}\", \"mini\": {\"k\": \"{count}\"}}");
+        var filled = com.sablednah.chronicler.data.Slots.fill(json, java.util.Map.of("count", "4", "wants.name", "Bread", "asker.pos", "1 2 3"), mini).getAsJsonObject();
+        check("slots: a whole-string hole becomes a number", filled.get("n").isJsonPrimitive() && filled.get("n").getAsJsonPrimitive().isNumber() && filled.get("n").getAsInt() == 4);
+        check("slots: a hole in text is text", filled.get("t").getAsString().equals("Bring 4 Bread"));
+        check("slots: .pos becomes a list", filled.get("p").isJsonArray() && filled.get("p").getAsJsonArray().size() == 3);
+        check("slots: {player} is the command's, left alone", filled.get("c").getAsString().equals("{player}"));
+        check("slots: the mini block is left as written", filled.getAsJsonObject("mini").get("k").getAsString().equals("{count}"));
+        check("minis: every built-in template decodes filled with its stand-ins", Minis.templates(server).size() >= 6);
+        // A template with a mistake is refused at load, not when someone starts it.
+        var bad = com.google.gson.JsonParser.parseString("{\"name\": \"x\", \"chapter\": \"errands\", \"objectives\": [{\"type\": \"kill\", \"count\": \"{who}\"}],"
+                + "\"mini\": {\"slots\": {\"who\": {\"type\": \"pick\", \"pool\": [\"Bob\"]}}}}");
+        check("minis: a hole that cannot be a number where one is wanted refuses the file", com.sablednah.chronicler.data.Quest.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, bad).error().isPresent());
+        var badType = com.google.gson.JsonParser.parseString("{\"name\": \"x\", \"chapter\": \"errands\", \"mini\": {\"slots\": {\"who\": {\"type\": \"wizard\"}}}}");
+        check("minis: an unknown slot type refuses the file", com.sablednah.chronicler.data.Quest.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, badType).error().isPresent());
+        var reserved = com.google.gson.JsonParser.parseString("{\"name\": \"x\", \"chapter\": \"errands\", \"mini\": {\"slots\": {\"player\": {\"type\": \"here\"}}}}");
+        check("minis: a slot may not be called {player}", com.sablednah.chronicler.data.Quest.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, reserved).error().isPresent());
+        if (cast == null) {
+            check("minis: Cast is there to place people (it is required)", false);
+            return;
+        }
+        int npcsBefore = GiverStore.get(server).minis().size();
+
+        // --- a fetch: someone placed, the quest filled in, the hand-over to them by id ---
+        var started = Minis.start(solo, errand, java.util.Map.of("wants", "minecraft:bread", "count", "4"), Minis.Anchor.of(solo), false);
+        check("fetch: started (" + started.orElse("") + ")", started.isEmpty() && log.isActive(errand));
+        QuestLog.Entry fe = log.entry(errand);
+        java.util.UUID asker = fe == null ? null : java.util.UUID.fromString(fe.slots.getOrDefault("asker.id", Slots_NIL));
+        check("fetch: the asker stands in the world, working for this quest", asker != null && cast.byId(server, asker).isPresent()
+                && Minis.activeQuestOf(server, asker).map(errand::equals).orElse(false));
+        var filledQuest = QuestEngine.questFor(solo, errand).orElseThrow();
+        check("fetch: the name is filled in (" + filledQuest.name() + ")", filledQuest.name().startsWith("Bread for "));
+        check("fetch: the target count came from the slot", fe != null && fe.targets.equals(List.of(4)));
+        check("fetch: the objective names the asker (" + filledQuest.objectivesAt(0).getFirst().describe() + ")",
+                filledQuest.objectivesAt(0).getFirst().describe().contains(filledQuest.name().substring("Bread for ".length()).replaceAll("&.", "")));
+        check("fetch: the same filled quest comes back (objectives found by identity)", QuestEngine.questFor(solo, errand).orElseThrow() == filledQuest);
+        check("fetch: a second start is refused while it runs", Minis.start(solo, errand, java.util.Map.of(), Minis.Anchor.of(solo), false).isPresent());
+        solo.getInventory().add(new ItemStack(Items.BREAD, 4));
+        check("fetch: a click on somebody else does not take it", !QuestEngine.onDeliver(solo, d -> d.npc().map(java.util.UUID.randomUUID().toString()::equals).orElse(false)) && log.isActive(errand));
+        check("fetch: a click on the asker hands it over", asker != null && Givers.onUseNpc(solo, asker) && log.isComplete(errand));
+        check("fetch: the bread is gone", Trackers.count(solo, Identifier.parse("minecraft:bread")) == 0);
+        check("fetch: the asker has left, and the store forgot them", asker != null && cast.byId(server, asker).isEmpty()
+                && GiverStore.get(server).minis().size() == npcsBefore);
+        // The saved journal keeps the slots.
+        var saved = QuestLog.MAP_CODEC.codec().encodeStart(com.mojang.serialization.JsonOps.INSTANCE, log).getOrThrow();
+        QuestLog again = new QuestLog();
+        again.start(errand, List.of(1), java.util.Map.of("wants", "minecraft:apple"));
+        var round = QuestLog.MAP_CODEC.codec().parse(com.mojang.serialization.JsonOps.INSTANCE,
+                QuestLog.MAP_CODEC.codec().encodeStart(com.mojang.serialization.JsonOps.INSTANCE, again).getOrThrow()).getOrThrow();
+        check("journal: slots survive a save", saved != null && round.entry(errand) != null && "minecraft:apple".equals(round.entry(errand).slots.get("wants")));
+
+        // --- refusals: nothing to find, nobody left behind ---
+        int before = GiverStore.get(server).minis().size();
+        var noCity = Minis.start(solo, hall, java.util.Map.of(), Minis.Anchor.of(solo), false);
+        check("refusal: a city errand where there is no city says so (" + noCity.orElse("") + ")", noCity.isPresent() && !log.isActive(hall));
+        check("refusal: the person placed before the search failed was taken away again", GiverStore.get(server).minis().size() == before);
+        check("refusal: a quest that is not a mini quest is refused", Minis.start(solo, ChroniclerIds.of("first_steps"), java.util.Map.of(), Minis.Anchor.of(solo), false).isPresent());
+
+        // --- an escort: follows, arrives only with the player, and offers the next errand ---
+        var spawnAt = solo.blockPosition();
+        var villageAt = spawnAt.offset(200, 0, 0); // well outside the template's 64-block "at the village"
+        var escort = Minis.start(solo, scholarQuest, java.util.Map.of("village", villageAt.getX() + " " + villageAt.getY() + " " + villageAt.getZ()), Minis.Anchor.of(solo), false);
+        check("escort: started with the village handed over (" + escort.orElse("") + ")", escort.isEmpty() && log.isActive(scholarQuest));
+        QuestLog.Entry ee = log.entry(scholarQuest);
+        java.util.UUID scholar = ee == null ? null : java.util.UUID.fromString(ee.slots.getOrDefault("scholar.id", Slots_NIL));
+        if (scholar != null && cast.byId(server, scholar).isPresent()) {
+            QuestEngine.poll(solo);
+            check("escort: the professor follows the player", cast.leaderOf(scholar).map(solo.getUUID()::equals).orElse(false));
+            Vec3 village = Vec3.atBottomCenterOf(villageAt);
+            cast.teleport(server, scholar, village);
+            solo.snapTo(village.x + 40, village.y, village.z, 0F, 0F); // inside the village, too far from the professor
+            QuestEngine.poll(solo);
+            check("escort: at the village without the player is not there yet", log.isActive(scholarQuest) && log.entry(scholarQuest).progress.get(0) == 0);
+            solo.snapTo(village.x + 3, village.y, village.z, 0F, 0F);
+            QuestEngine.poll(solo);
+            check("escort: at the village with the player, done", log.isComplete(scholarQuest));
+            check("escort: the professor has gone into the village", cast.byId(server, scholar).isEmpty());
+            var next = Minis.pendingValues(solo, errand);
+            check("chain: the next errand is offered where this one ended", next.isPresent()
+                    && next.get().containsKey("asker.id") && Math.abs(Integer.parseInt(next.get().getOrDefault("asker.x", "0")) - villageAt.getX()) <= 16);
+            if (next.isPresent()) {
+                java.util.UUID nextAsker = java.util.UUID.fromString(next.get().get("asker.id"));
+                check("chain: accepting takes up that offer and that person", QuestEngine.accept(solo, errand).isEmpty()
+                        && log.entry(errand) != null && nextAsker.toString().equals(log.entry(errand).slots.get("asker.id")));
+                check("chain: abandoning sends them away", QuestEngine.abandon(solo, errand) && cast.byId(server, nextAsker).isEmpty());
+            }
+        } else {
+            check("escort: the professor was placed", false);
+            QuestEngine.abandon(solo, scholarQuest);
+        }
+        solo.snapTo(spawnAt.getX() + 0.5, spawnAt.getY(), spawnAt.getZ() + 0.5, 0F, 0F);
+
+        // --- the jammed door: a found block takes the delivery and will not open until then ---
+        var doorAt = Givers.dryColumn(level, spawnAt.getX() + 3, spawnAt.getZ() + 3);
+        var doorState = net.minecraft.world.level.block.Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorAt, doorState);
+        level.setBlockAndUpdate(doorAt.above(), doorState.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DOUBLE_BLOCK_HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
+        try {
+            var jam = Minis.start(solo, door, java.util.Map.of("count", "2"), Minis.Anchor.of(solo), false);
+            QuestLog.Entry de = log.entry(door);
+            check("door: started, and it found this door (" + jam.orElse("") + ")", jam.isEmpty() && de != null
+                    && (doorAt.getX() + " " + doorAt.getY() + " " + doorAt.getZ()).equals(de.slots.get("door.pos")));
+            check("door: using it with nothing in hand is refused, and it stays shut",
+                    Givers.onUseBlock(solo, level, doorAt) && log.isActive(door) && !level.getBlockState(doorAt).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN));
+            solo.getInventory().add(new ItemStack(Items.SLIME_BALL, 2));
+            check("door: with the slime balls it gives way", Givers.onUseBlock(solo, level, doorAt) && log.isComplete(door));
+            check("door: open, both halves", level.getBlockState(doorAt).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN)
+                    && level.getBlockState(doorAt.above()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN));
+        } finally {
+            level.setBlockAndUpdate(doorAt.above(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            level.setBlockAndUpdate(doorAt, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            if (log.isActive(door)) QuestEngine.abandon(solo, door);
+        }
+
+        // --- a kill from slots: the pests spawn tagged, the tagged ones count ---
+        var pest = Minis.start(solo, pests, java.util.Map.of("pest", "minecraft:zombie", "count", "3"), Minis.Anchor.of(solo), false);
+        check("pests: started, three zombies put out (" + pest.orElse("") + ", " + Rewards.lastSpawned() + ")", pest.isEmpty() && Rewards.lastSpawned() == 3);
+        for (int n = 0; n < 3; n++) {
+            Zombie z = new Zombie(net.minecraft.world.entity.EntityType.ZOMBIE, level);
+            z.addTag(Trackers.TAG_PREFIX + "pests");
+            QuestEngine.onKill(solo, z);
+            z.discard();
+        }
+        check("pests: three kills finish it", log.isComplete(pests));
+
+        // --- around: a spot the right distance from the one who asked ---
+        var s = Minis.start(solo, satchel, java.util.Map.of(), Minis.Anchor.of(solo), false);
+        QuestLog.Entry se = log.entry(satchel);
+        if (s.isEmpty() && se != null) {
+            double d = Math.hypot(Integer.parseInt(se.slots.get("spot.x")) - Integer.parseInt(se.slots.get("asker.x")),
+                    Integer.parseInt(se.slots.get("spot.z")) - Integer.parseInt(se.slots.get("asker.z")));
+            check("around: the spot is 40-90 blocks from the asker, give or take the dry ground (" + (int) d + ")", d >= 30 && d <= 100);
+            QuestEngine.abandon(solo, satchel);
+        } else {
+            check("around: the satchel errand started (" + s.orElse("") + ")", false);
+        }
+
+        // --- the wild: an offer made, standing, and lapsing with its person ---
+        int standing = Minis.pendingCount();
+        Minis.tickWild(solo); // spawn is not a village: nothing rolls
+        check("wild: nothing is found outside the place it lives", Minis.pendingCount() == standing);
+        var base = QuestEngine.quest(server, errand).orElseThrow().value();
+        var wild = Minis.offerWild(solo, errand, base);
+        var offered = Minis.pendingValues(solo, errand);
+        check("wild: an offer stands, with its person (" + wild.orElse("") + ")", wild.isEmpty() && offered.isPresent()
+                && cast.byId(server, java.util.UUID.fromString(offered.get().get("asker.id"))).isPresent());
+        check("wild: the offer shows the filled-in quest", QuestEngine.questFor(solo, errand).map(q -> !q.name().equals(base.name()) || offered.get().get("wants").equals("minecraft:bread")).orElse(false));
+        offered.ifPresent(o -> {
+            java.util.UUID wildAsker = java.util.UUID.fromString(o.get("asker.id"));
+            Minis.lapseAll(server);
+            check("wild: a lapsed offer takes its person away", cast.byId(server, wildAsker).isEmpty() && Minis.pendingCount() == 0);
+        });
+
+        check("api: the mini quests are listed", com.sablednah.chronicler.api.Quests.minis(server).contains(errand)
+                && com.sablednah.chronicler.api.Quests.isMini(solo, errand) && !com.sablednah.chronicler.api.Quests.isMini(solo, ChroniclerIds.of("first_steps")));
+        CommandSourceStack console = server.createCommandSourceStack();
+        command(server, console, "quest mini", true);
+        command(server, console, "quest mini chronicler:mini_village_errand", false); // the console stands nowhere
+        command(server, console, "quest mini no_such_quest", false);
+        check("minis: nobody placed by the tests is left standing", GiverStore.get(server).minis().size() == npcsBefore);
+        log.clear();
+    }
+
+    private static final String Slots_NIL = com.sablednah.chronicler.data.Slots.NIL_UUID;
 
     /** Stood at the world spawn, in a chunk kept loaded: a FakePlayer defaults to 0,0,0 in an unloaded one. */
     private static FakePlayer fake(MinecraftServer server, String name) {

@@ -545,7 +545,49 @@ seconds while open. The backtick opens it; the book is what every vanilla client
 Still to come from the list above: the objectives box and pop-up choices
 (choices are buttons on the quest's page for now).
 
-### Mini quests (2026-09-14, Sable) -- flagged, not scheduled
+### Mini quests (2026-09-14, Sable) -- built 2026-09-16
+
+**What was built** (Sable chose: one copy per template per player; everything
+including wild spawns in the first pass; ZARP-flavoured content as well):
+
+- **A template is a quest file with holes.** Any value may be `{slot}`; `mini.slots`
+  says how each is filled (`pick`, `number`, `here`, `around`, `structure`, `lot`,
+  `block`, `giver`, `given`, `npc`). `Quest.CODEC` checks a template by filling it
+  with stand-in values and decoding that, and keeps the raw JSON; starting it fills
+  the holes for real and decodes the result. So every existing objective and effect
+  takes slots for free, and the filled values live on the journal entry
+  (`Entry.slots`), which is why the journal, panel, `/quest`, parties, deadlines and
+  choices needed no mini-specific code -- only `QuestEngine.questFor(player, id)`.
+  Considered and rejected: slot-aware copies of each objective type (every new type
+  would need a twin) and instance ids (every command, the panel and the book would
+  learn them, for the rare case of two of the same errand at once).
+- **One copy per template per player**, keyed by the quest id. Variety is more
+  template files. Minis sit in an Errands chapter, hidden until found, not counting.
+- **Escort** is the one new objective, on **Cast 1.1.0's leased follow**: the person
+  walks the breadcrumb trail the leader walked (a phantom has no navigation, and
+  the trail is by construction walkable), Chronicler renews the lease each poll
+  while the escort runs, and a lapsed lease leaves them anchored where they stand --
+  so a restart or an abandon can never leave a stranger trailing someone. Cast NPCs
+  are invulnerable, so "arrives alive" is really "arrives with you"; failure is the
+  existing deadline/abandon path.
+- **Deliveries** go to a person by id (`npc`) or a block (`at`); a block with a
+  delivery pending takes the click, so the jammed door stays jammed. The **`block`**
+  effect sets a state or properties (a door's `open` syncs both halves). The **`mini`**
+  effect starts or offers the next errand anchored where this one ended: the chain.
+- **Wild spawns** (`mini.spawn`): per player, every `every` seconds in the `place`,
+  with `chance`, under `cap` standing offers; the offer is made by an npc slot placed
+  for it or a block slot found for it, and lapses after `lapse` seconds, taking the
+  person with it. Offers are memory; a person placed for one that a restart dropped
+  is removed on the next start (GiverStore marks them `pending`).
+- **The StoryTeller door**: `Quests.minis`, `isMini`, `startMini(player, template,
+  slots[, level, near])`, `offerMini`; `/quest mini <template> [players] [offer]`.
+
+**Not as planned:** CityWorld has **no bank lot** (its lots are hospitals, offices,
+government buildings, warehouses, shops by trade...), so the city escorts go to a
+town hall (`government`) and a warehouse. A bank is CityWorld's to add. The temple
+door became a village door: jungle and desert temples have no doors.
+
+**The original note**, kept for the reasoning:
 
 Prebuilt, reusable small quests -- **escort** and **fetch** first -- that
 StoryTeller can start by name or type on demand (a command, and its GUI

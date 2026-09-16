@@ -54,7 +54,7 @@ import net.minecraft.world.entity.LivingEntity;
  */
 public final class QuestEngine {
 
-    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS, COOLDOWN }
+    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS, COOLDOWN, UNRESOLVED }
 
     // --- lookups ---
 
@@ -68,6 +68,22 @@ public final class QuestEngine {
 
     public static Optional<Holder.Reference<Quest>> quest(MinecraftServer server, Identifier id) {
         return quests(server).get(ResourceKey.create(ChroniclerRegistries.QUEST, id));
+    }
+
+    /**
+     * The quest as this player sees it. For a mini quest that is the template filled with their
+     * slots -- from the journal once started, from a standing offer before -- so every name, line and
+     * objective they read or the engine measures is the real one. Anything else is the registry's.
+     */
+    public static Optional<Quest> questFor(ServerPlayer player, Identifier id) {
+        MinecraftServer server = player.level().getServer();
+        var holder = quest(server, id);
+        if (holder.isEmpty()) return Optional.empty();
+        Quest base = holder.get().value();
+        if (base.mini().isEmpty()) return Optional.of(base);
+        QuestLog.Entry e = journal(player).entry(id);
+        if (e != null && !e.slots.isEmpty()) return Optional.of(Minis.instance(server, id, base, e.slots));
+        return Optional.of(Minis.pendingValues(player, id).map(v -> Minis.instance(server, id, base, v)).orElse(base));
     }
 
     public static QuestScope scopeOf(MinecraftServer server, Quest quest) {
@@ -178,31 +194,58 @@ public final class QuestEngine {
     // --- accept / abandon / track ---
 
     public static Optional<Refusal> accept(ServerPlayer player, Identifier id) {
+        return accept(player, id, null);
+    }
+
+    /**
+     * Accept, with a mini quest's slots already filled ({@code slots}), or -- null -- whatever offer
+     * the player is taking up, or filled here and now from where they stand.
+     */
+    public static Optional<Refusal> accept(ServerPlayer player, Identifier id, java.util.Map<String, String> slots) {
         MinecraftServer server = player.level().getServer();
         var holder = quest(server, id);
         if (holder.isEmpty()) return Optional.of(Refusal.UNKNOWN);
-        Quest quest = holder.get().value();
-        Optional<Refusal> why = refusal(player, id, quest);
+        Quest base = holder.get().value();
+        Optional<Refusal> why = refusal(player, id, base);
         if (why.isPresent()) return why;
 
-        List<ServerPlayer> members = sharers(player, quest);
-        boolean party = scopeOf(server, quest) == QuestScope.PARTY;
-        int factor = party && quest.scale() ? members.size() : 1;
-        Stage first = quest.beats().getFirst();
-        List<Integer> targets = targetsFor(first.objectives(), factor);
-
+        List<ServerPlayer> members = sharers(player, base);
         QuestLog.Entry existing = null;
         for (ServerPlayer m : members) {
             QuestLog.Entry e = journal(m).entry(id);
             if (e != null) { existing = e; break; }
         }
 
+        Quest quest = base;
+        java.util.Map<String, String> bound = java.util.Map.of();
+        if (base.mini().isPresent()) {
+            if (existing != null) {
+                bound = existing.slots;
+            } else {
+                bound = slots != null ? slots : Minis.claim(player, id);
+                if (bound == null) {
+                    Minis.Resolved r = Minis.resolve(player, id, base, java.util.Map.of(), Minis.Anchor.of(player), false);
+                    if (r.failure().isPresent()) {
+                        Feedback.chat(player, Lang.fmt("msg.mini.unresolved", "name", base.name(), "why", r.failure().get()));
+                        return Optional.of(Refusal.UNRESOLVED);
+                    }
+                    bound = r.values();
+                }
+            }
+            quest = Minis.instance(server, id, base, bound);
+        }
+
+        boolean party = scopeOf(server, quest) == QuestScope.PARTY;
+        int factor = party && quest.scale() ? members.size() : 1;
+        Stage first = quest.beats().getFirst();
+        List<Integer> targets = targetsFor(first.objectives(), factor);
+
         List<ServerPlayer> started = new ArrayList<>();
         for (ServerPlayer m : members) {
             if (m != player && !available(m, id, quest)) continue;
             QuestLog log = journal(m);
             if (log.isActive(id)) continue;
-            if (existing != null) log.startFrom(id, existing); else log.start(id, targets);
+            if (existing != null) log.startFrom(id, existing); else log.start(id, targets, bound);
             started.add(m);
             if (m == player) {
                 Feedback.chat(m, Lang.fmt("msg.accept", "name", quest.name()));
@@ -272,14 +315,13 @@ public final class QuestEngine {
 
     /** A player picks option {@code n} (1-based) at the current decision beat. */
     public static boolean choose(ServerPlayer player, Identifier id, int n) {
-        MinecraftServer server = player.level().getServer();
-        var holder = quest(server, id);
+        var holder = questFor(player, id);
         QuestLog.Entry e = journal(player).entry(id);
         if (holder.isEmpty() || e == null) {
             Feedback.chat(player, Lang.get("msg.not_active"));
             return false;
         }
-        Quest quest = holder.get().value();
+        Quest quest = holder.get();
         Stage stage = quest.beats().get(Math.min(e.stage, quest.beats().size() - 1));
         if (!stage.isDecision()) {
             Feedback.chat(player, Lang.get("msg.choice.none"));
@@ -340,10 +382,12 @@ public final class QuestEngine {
             }
             return;
         }
+        java.util.Map<String, String> slots = lead.slots;
         for (ServerPlayer m : members) {
             journal(m).abandon(id);
             Feedback.chat(m, Lang.get("msg.deadline.abandoned"));
         }
+        Minis.ended(player.level().getServer(), id, slots);
         Chronicler.LOGGER.info("Chronicler: {} ran out of time on {}", player.getName().getString(), id);
     }
 
@@ -367,9 +411,11 @@ public final class QuestEngine {
     public static boolean abandon(ServerPlayer player, Identifier id) {
         QuestLog log = journal(player);
         if (!log.isActive(id)) return false;
+        String name = questFor(player, id).map(Quest::name).orElse(id.toString());
+        java.util.Map<String, String> slots = log.entry(id).slots;
         log.abandon(id);
-        String name = quest(player.level().getServer(), id).map(h -> h.value().name()).orElse(id.toString());
         Feedback.chat(player, Lang.fmt("msg.abandon", "name", name));
+        Minis.ended(player.level().getServer(), id, slots);
         return true;
     }
 
@@ -401,10 +447,10 @@ public final class QuestEngine {
         if (log.activeCount() == 0) return;
         MinecraftServer server = killer.level().getServer();
         for (Identifier id : List.copyOf(log.activeView().keySet())) {
-            var holder = quest(server, id);
+            var holder = questFor(killer, id);
             QuestLog.Entry e = log.entry(id);
             if (holder.isEmpty() || e == null) continue;
-            Quest quest = holder.get().value();
+            Quest quest = holder.get();
             List<ObjectiveSpec> objectives = currentObjectives(quest, e);
             for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
                 ObjectiveSpec spec = objectives.get(n);
@@ -442,9 +488,9 @@ public final class QuestEngine {
         QuestLog log = journal(player);
         MinecraftServer server = player.level().getServer();
         for (var e : log.activeView().entrySet()) {
-            var holder = quest(server, e.getKey());
+            var holder = questFor(player, e.getKey());
             if (holder.isEmpty()) continue;
-            for (ObjectiveSpec o : currentObjectives(holder.get().value(), e.getValue())) {
+            for (ObjectiveSpec o : currentObjectives(holder.get(), e.getValue())) {
                 if (o == spec) return e.getValue();
             }
         }
@@ -462,10 +508,10 @@ public final class QuestEngine {
         MinecraftServer server = level.getServer();
         Identifier clicked = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock());
         for (Identifier id : List.copyOf(log.activeView().keySet())) {
-            var holder = quest(server, id);
+            var holder = questFor(player, id);
             QuestLog.Entry e = log.entry(id);
             if (holder.isEmpty() || e == null) continue;
-            Quest quest = holder.get().value();
+            Quest quest = holder.get();
             List<ObjectiveSpec> objectives = currentObjectives(quest, e);
             for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
                 if (!(objectives.get(n) instanceof ObjectiveTypes.Ritual r)) continue;
@@ -504,24 +550,28 @@ public final class QuestEngine {
      * giver does not also make its offer over the top.
      */
     public static boolean onDeliver(ServerPlayer player, Identifier giverQuest) {
+        return onDeliver(player, d -> d.to().map(giverQuest::equals).orElse(false));
+    }
+
+    /** As above, for every active delivery {@code addressed} picks out: to a quest's giver, a person by id, a block. */
+    public static boolean onDeliver(ServerPlayer player, java.util.function.Predicate<ObjectiveTypes.Deliver> addressed) {
         QuestLog log = journal(player);
         if (log.activeCount() == 0) return false;
-        MinecraftServer server = player.level().getServer();
         boolean any = false;
         for (Identifier id : List.copyOf(log.activeView().keySet())) {
-            var holder = quest(server, id);
+            var holder = questFor(player, id);
             QuestLog.Entry e = log.entry(id);
             if (holder.isEmpty() || e == null) continue;
-            Quest quest = holder.get().value();
+            Quest quest = holder.get();
             List<ObjectiveSpec> objectives = currentObjectives(quest, e);
             for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
-                if (!(objectives.get(n) instanceof ObjectiveTypes.Deliver d) || !d.to().equals(giverQuest) || e.objectiveDone(n)) continue;
+                if (!(objectives.get(n) instanceof ObjectiveTypes.Deliver d) || !addressed.test(d) || e.objectiveDone(n)) continue;
                 any = true;
                 int held = Trackers.count(player, Trackers.matcher(d));
                 if (held >= d.count()) {
                     set(player, id, quest, n, d.count(), true);
                 } else {
-                    Feedback.chat(player, Lang.fmt("msg.deliver.short", "who", Givers.nameOf(giverQuest), "count", d.count(),
+                    Feedback.chat(player, Lang.fmt("msg.deliver.short", "who", d.recipient(), "count", d.count(),
                             "item", d.questItem().map(QuestItem::displayName).orElseGet(() -> Lang.pretty(d.tag().map(Identifier::getPath).orElse(d.item().getPath()))), "held", held));
                 }
                 if (journal(player).entry(id) == null || journal(player).entry(id).stage != e.stage) break;
@@ -530,7 +580,7 @@ public final class QuestEngine {
         return any;
     }
 
-    private static boolean blockMatches(ServerLevel level, BlockPos pos, String want) {
+    static boolean blockMatches(ServerLevel level, BlockPos pos, String want) {
         var state = level.getBlockState(pos);
         if (want.startsWith("#")) {
             Identifier tag = Identifier.tryParse(want.substring(1));
@@ -582,6 +632,14 @@ public final class QuestEngine {
         QuestLog log = journal(player);
         boolean touched = mine.stream().anyMatch(q -> log.isActive(q) || log.isComplete(q));
         if (!touched) { Feedback.chat(player, Lang.fmt("cmd.replay.untouched", "name", holder.get().value().name())); return false; }
+        for (Identifier q : mine) {
+            QuestLog.Entry e = log.entry(q);
+            if (e != null && !e.slots.isEmpty()) {
+                var slots = e.slots;
+                log.abandon(q);
+                Minis.ended(server, q, slots);
+            }
+        }
         log.replay(chapter, mine);
         Feedback.fanfare(player, Lang.fmt("cmd.replay.done", "name", holder.get().value().name(), "found", log.endings(chapter).size(), "total", endingsOf(server, chapter).size()),
                 Lang.fmt("cmd.replay.title", "name", holder.get().value().name()), Lang.get("cmd.replay.subtitle"));
@@ -614,10 +672,10 @@ public final class QuestEngine {
         if (log.activeCount() == 0) return;
         MinecraftServer server = player.level().getServer();
         for (Identifier id : List.copyOf(log.activeView().keySet())) {
-            var holder = quest(server, id);
+            var holder = questFor(player, id);
             QuestLog.Entry e = log.entry(id);
             if (holder.isEmpty() || e == null) continue;
-            Quest quest = holder.get().value();
+            Quest quest = holder.get();
             if (e.deadlineAt >= 0 && player.level().getGameTime() >= e.deadlineAt) {
                 failStage(player, id, quest);
                 continue;
@@ -716,6 +774,8 @@ public final class QuestEngine {
     }
 
     private static void complete(List<ServerPlayer> members, ServerPlayer player, Identifier id, Quest quest) {
+        QuestLog.Entry lead = journal(members.getFirst()).entry(id);
+        java.util.Map<String, String> slots = lead == null ? java.util.Map.of() : lead.slots;
         for (ServerPlayer m : members) {
             journal(m).complete(id);
             Feedback.fanfare(m, Lang.fmt("msg.complete", "name", quest.name()),
@@ -725,6 +785,7 @@ public final class QuestEngine {
             announceUnlocked(m, id);
             journal(m).tracked().ifPresent(t -> showTracker(m, t));
         }
+        Minis.ended(player.level().getServer(), id, slots);
         Chronicler.LOGGER.info("Chronicler: {} completed {}{}", player.getName().getString(), id,
                 members.size() > 1 ? " with " + (members.size() - 1) + " party member(s)" : "");
     }
@@ -771,10 +832,10 @@ public final class QuestEngine {
 
     public static void showTracker(ServerPlayer player, Identifier id) {
         if (!ChroniclerConfig.TRACKER_ACTION_BAR.get()) return;
-        var holder = quest(player.level().getServer(), id);
+        var holder = questFor(player, id);
         QuestLog.Entry e = journal(player).entry(id);
         if (holder.isEmpty() || e == null) return;
-        Quest quest = holder.get().value();
+        Quest quest = holder.get();
         List<ObjectiveSpec> objectives = currentObjectives(quest, e);
         for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
             if (!e.objectiveDone(n)) {

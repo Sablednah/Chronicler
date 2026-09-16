@@ -122,7 +122,7 @@ public final class JournalPanel {
             Set<Identifier> external = new HashSet<>();
             for (var h : mine) {
                 Identifier id = h.key().identifier();
-                Quest q = h.value();
+                Quest q = QuestEngine.questFor(player, id).orElse(h.value()); // a mini quest, filled in
                 List<String> requires = new ArrayList<>();
                 for (Identifier r : q.requires()) {
                     var req = visible.get(r);

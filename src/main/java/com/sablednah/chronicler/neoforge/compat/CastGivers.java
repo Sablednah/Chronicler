@@ -68,6 +68,18 @@ public final class CastGivers {
             @Override public boolean remove(MinecraftServer server, UUID id) {
                 return Cast.remove(server, id);
             }
+            @Override public boolean follow(MinecraftServer server, UUID id, ServerPlayer leader, int leaseTicks) {
+                return Cast.follow(server, id, leader, leaseTicks);
+            }
+            @Override public void stopFollowing(MinecraftServer server, UUID id) {
+                Cast.stopFollowing(server, id);
+            }
+            @Override public Optional<UUID> leaderOf(UUID id) {
+                return Cast.leaderOf(id);
+            }
+            @Override public void teleport(MinecraftServer server, UUID id, Vec3 pos) {
+                Cast.drive(server, id, pos, 0F, 0F);
+            }
         });
         Chronicler.LOGGER.info("Chronicler: NPC givers via Cast (role chronicler:giver)");
     }

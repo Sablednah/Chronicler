@@ -1,0 +1,105 @@
+{
+  "name": "Walk {scholar} Home",
+  "description": "{scholar} is done at the temple and would rather not walk to {village} alone. They will follow where you lead.",
+  "chapter": "chronicler:errands",
+  "order": 1,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:brush",
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Aldous",
+          "Wen",
+          "Marisol",
+          "Tobiah",
+          "Ines",
+          "Cormac",
+          "Hester",
+          "Ravi",
+          "Odile",
+          "Bram"
+        ]
+      },
+      "scholar": {
+        "type": "npc",
+        "name": "&fProfessor {first}",
+        "min": 5,
+        "max": 10,
+        "equipment": {
+          "mainhand": "minecraft:brush",
+          "head": "minecraft:leather_helmet"
+        }
+      },
+      "village": {
+        "type": "structure",
+        "structure": "#minecraft:village",
+        "label": "the nearest village",
+        "radius": 2400
+      }
+    },
+    "spawn": {
+      "place": {
+        "any": [
+          {
+            "structure": "minecraft:desert_pyramid"
+          },
+          {
+            "structure": "minecraft:jungle_pyramid"
+          }
+        ]
+      },
+      "chance": 0.25,
+      "every": 60,
+      "cap": 1,
+      "giver": "scholar",
+      "lapse": 300,
+      "say": "&7Oh, thank goodness, a person. Would you walk me to the village? These parts are not kind to people with notebooks."
+    }
+  },
+  "stages": [
+    {
+      "text": "{scholar} follows where you walk. Walk somewhere sensible: {village}, at {village.x}, {village.z}.",
+      "objectives": [
+        {
+          "type": "escort",
+          "who": "{scholar.id}",
+          "name": "{scholar}",
+          "to": "{village.pos}",
+          "dimension": "{village.dim}",
+          "radius": 64,
+          "near": 12,
+          "label": "{village}"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{scholar.id}",
+          "text": "&7Walls, roofs, bread. Civilisation. I owe you.",
+          "radius": 24
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 40
+    },
+    {
+      "type": "item",
+      "item": "minecraft:emerald",
+      "count": 3
+    },
+    {
+      "type": "mini",
+      "template": "chronicler:mini_village_errand",
+      "near": "{village.pos}",
+      "dimension": "{village.dim}",
+      "offer": true
+    }
+  ]
+}

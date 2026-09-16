@@ -85,6 +85,6 @@ logoBlur=false
 [[dependencies.${mod_id}]]
     modId="cast"
     type="required"
-    versionRange="[1.0.0,)"
+    versionRange="[1.1.0,)"
     ordering="AFTER"
     side="BOTH"
