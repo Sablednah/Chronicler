@@ -78,6 +78,13 @@ RUNNING="$(powershell.exe -NoProfile -Command \
 for INSTANCE in "${TARGETS[@]}"; do
     MODS="$INSTANCE/mods"
     NAME="$(basename "$INSTANCE")"
+    # A family convention: an instance whose root holds .sablecraft-no-deploy takes released
+    # CurseForge jars only (a modpack's export refers to CurseForge file ids), so it is never
+    # deployed to -- found by the scan or named outright.
+    if [ -e "$INSTANCE/.sablecraft-no-deploy" ]; then
+        echo ">> Skipping '$NAME': it is marked .sablecraft-no-deploy (released jars only)."
+        continue
+    fi
     [ -d "$MODS" ] || { echo "!! Instance mods folder not found: $MODS" >&2; exit 1; }
     if echo "$RUNNING" | grep -qxF "$NAME"; then
         echo "!! '$NAME' is RUNNING. Refusing to overwrite a jar underneath a live game." >&2
