@@ -39,9 +39,17 @@ public final class QuestLog {
         public long enteredAt = 0;
         /** A mini quest's filled slots, fixed at the start: every read of the quest is filled from these. Empty otherwise. */
         public final Map<String, String> slots;
+        /** Running counts that are not progress -- hits an escorted person has taken this beat. Cleared with the beat. */
+        public final Map<String, Integer> tallies = new LinkedHashMap<>();
 
         Entry(List<Integer> progress, List<Integer> targets) {
             this(progress, targets, 0, -1L, 0L, Map.of());
+        }
+
+        Entry(List<Integer> progress, List<Integer> targets, int stage, long deadlineAt, long enteredAt, Map<String, String> slots,
+                Map<String, Integer> tallies) {
+            this(progress, targets, stage, deadlineAt, enteredAt, slots);
+            this.tallies.putAll(tallies);
         }
 
         Entry(List<Integer> progress, List<Integer> targets, int stage, long deadlineAt, long enteredAt, Map<String, String> slots) {
@@ -59,7 +67,8 @@ public final class QuestLog {
                 Codec.INT.optionalFieldOf("stage", 0).forGetter(e -> e.stage),
                 Codec.LONG.optionalFieldOf("deadline_at", -1L).forGetter(e -> e.deadlineAt),
                 Codec.LONG.optionalFieldOf("entered_at", 0L).forGetter(e -> e.enteredAt),
-                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("slots", Map.of()).forGetter(e -> e.slots))
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("slots", Map.of()).forGetter(e -> e.slots),
+                Codec.unboundedMap(Codec.STRING, Codec.INT).optionalFieldOf("tallies", Map.of()).forGetter(e -> e.tallies))
                 .apply(i, Entry::new));
 
         /** Move to the next beat: fresh counters against its targets. */
@@ -71,6 +80,7 @@ public final class QuestLog {
         public void jump(int toStage, List<Integer> nextTargets) {
             stage = toStage;
             deadlineAt = -1;
+            tallies.clear();
             progress.clear();
             targets.clear();
             targets.addAll(nextTargets);
@@ -132,7 +142,7 @@ public final class QuestLog {
         this.flags.addAll(flags);
         this.completedAt = new LinkedHashMap<>(completedAt);
         this.active = new LinkedHashMap<>();
-        active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets, v.stage, v.deadlineAt, v.enteredAt, v.slots)));
+        active.forEach((k, v) -> this.active.put(k, new Entry(v.progress, v.targets, v.stage, v.deadlineAt, v.enteredAt, v.slots, v.tallies)));
         this.completed = new LinkedHashMap<>(completed);
         this.tracked = tracked.orElse(null);
     }
@@ -160,7 +170,7 @@ public final class QuestLog {
 
     /** Start a quest at somebody else's progress -- a party member joining a quest already under way. */
     public void startFrom(Identifier quest, Entry other) {
-        active.put(quest, new Entry(other.progress, other.targets, other.stage, other.deadlineAt, other.enteredAt, other.slots));
+        active.put(quest, new Entry(other.progress, other.targets, other.stage, other.deadlineAt, other.enteredAt, other.slots, other.tallies));
         if (tracked == null) tracked = quest;
     }
 

@@ -1,0 +1,92 @@
+{
+  "name": "The Deposit",
+  "description": "{client} has a satchel of coin for {bank} and does not fancy the walk with it.",
+  "chapter": "chronicler:errands",
+  "order": 8,
+  "repeatable": true,
+  "hidden": true,
+  "icon": "minecraft:gold_ingot",
+  "mini": {
+    "slots": {
+      "first": {
+        "type": "pick",
+        "pool": [
+          "Aldous",
+          "Wen",
+          "Marisol",
+          "Tobiah",
+          "Ines",
+          "Cormac",
+          "Hester",
+          "Ravi",
+          "Odile",
+          "Bram"
+        ]
+      },
+      "client": {
+        "type": "npc",
+        "name": "&f{first}, clutching a satchel",
+        "min": 4,
+        "max": 8
+      },
+      "bank": {
+        "type": "lot",
+        "schematic": "chayats-bank",
+        "label": "Chayat's Bank",
+        "radius": 640
+      }
+    },
+    "spawn": {
+      "place": {
+        "lot": "HouseLot"
+      },
+      "chance": 0.02,
+      "every": 180,
+      "cap": 1,
+      "giver": "client",
+      "lapse": 300,
+      "say": "&7Walk me to the bank? Everyone on this street knows what is in this bag."
+    }
+  },
+  "stages": [
+    {
+      "text": "{bank} is at {bank.x}, {bank.z}. Anyone who fancies the satchel will go for {client}.",
+      "objectives": [
+        {
+          "type": "escort",
+          "who": "{client.id}",
+          "name": "{client}",
+          "to": "{bank.pos}",
+          "dimension": "{bank.dim}",
+          "radius": 24,
+          "near": 10,
+          "hits": 5,
+          "label": "{bank}"
+        }
+      ],
+      "on_complete": [
+        {
+          "type": "npc_say",
+          "npc": "{client.id}",
+          "text": "&7Deposited. A fee, as agreed, and my eternal relief.",
+          "radius": 24
+        }
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "amount": 35
+    },
+    {
+      "type": "money",
+      "amount": 25
+    },
+    {
+      "type": "item",
+      "item": "minecraft:emerald",
+      "count": 3
+    }
+  ]
+}

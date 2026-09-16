@@ -44,6 +44,8 @@ public final class Npcs {
         default void stopFollowing(MinecraftServer server, UUID id) {}
         /** Who the NPC is following now. */
         default Optional<UUID> leaderOf(UUID id) { return Optional.empty(); }
+        /** Make the NPC worth attacking for {@code leaseTicks}: monsters go for it, and blows reach {@link Npcs#hit}. */
+        default boolean expose(MinecraftServer server, UUID id, int leaseTicks) { return false; }
         /** Put the NPC somewhere, at once. */
         default void teleport(MinecraftServer server, UUID id, Vec3 pos) {}
     }
@@ -55,6 +57,11 @@ public final class Npcs {
     public static Optional<Provider> provider() { return Optional.ofNullable(provider); }
 
     public static void install(Provider p) { provider = p; }
+
+    /** A blow landed on an NPC (Cast's hit event). The engine decides whether anyone was counting. */
+    public static void hit(MinecraftServer server, UUID id) {
+        QuestEngine.onNpcHit(server.getPlayerList().getPlayers(), id);
+    }
 
     private Npcs() {}
 }

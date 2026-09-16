@@ -36,6 +36,10 @@ public final class Places {
         if (place.structure().isPresent() && !structureMatches(level, pos, place.structure().get())) {
             return false;
         }
+        if (place.schematic().isPresent()) {
+            Optional<java.util.List<String>> tokens = Lots.describe(level, pos);
+            if (tokens.isEmpty() || !schematicMatches(tokens.get(), place.schematic().get())) return false;
+        }
         if (place.lot().isPresent()) {
             Optional<java.util.List<String>> tokens = Lots.describe(level, pos);
             if (tokens.isEmpty()) return false; // no CityWorld, or not a CityWorld level
@@ -43,6 +47,28 @@ public final class Places {
             if (tokens.get().stream().noneMatch(t -> t.toLowerCase(Locale.ROOT).contains(want))) return false;
         }
         return true;
+    }
+
+    /** The word CityWorldLots adds for a schematic lot: {@code schematic=<name>}. */
+    public static final String SCHEMATIC = "schematic=";
+
+    /** Is this lot the named schematic? Case, spaces, dashes and underscores aside: "Chayats Bank" is chayats-bank. */
+    public static boolean schematicMatches(java.util.List<String> lotWords, String want) {
+        String w = squash(want);
+        for (String t : lotWords) {
+            if (t != null && t.startsWith(SCHEMATIC) && squash(t.substring(SCHEMATIC.length())).equals(w)) return true;
+        }
+        return false;
+    }
+
+    /** A lot word match: contained, ignoring case. "houselot" is every kind of house, and not a warehouse. */
+    public static boolean lotMatches(java.util.List<String> lotWords, String want) {
+        String w = want.toLowerCase(Locale.ROOT);
+        return lotWords.stream().anyMatch(t -> t != null && !t.startsWith(SCHEMATIC) && t.toLowerCase(Locale.ROOT).contains(w));
+    }
+
+    private static String squash(String s) {
+        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 
     private static boolean biomeMatches(Holder<Biome> biome, String want) {

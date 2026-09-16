@@ -108,6 +108,12 @@ placed a few blocks off (or, for the door, by the door itself), and lapses if ig
 - **The Rusted Door** -- a door nearby is rusted shut: two to four slime balls into it,
   and it opens.
 - **The Warehouse** -- walk a scavenger to the nearest CityWorld warehouse.
+- **The Bank Job** -- a cashier who remembers the vault code, to Chayat's Bank. The
+  dead go for them; six blows and it is over.
+- **The Plan** (once) -- Ed has a plan. Take a car (a minecart), go round Mum's (the
+  nearest CityWorld house), kill Phil, grab Liz, get Liz and Mum to the Winchester (eight
+  blows each), have a nice cold pint and wait three minutes for it all to blow over while
+  the dead come to the windows. Needs a Winchester within 1200 blocks of Liz's flat.
 
 `/quest mini zarp:mini_survivor` starts one where you stand (admin).
 
