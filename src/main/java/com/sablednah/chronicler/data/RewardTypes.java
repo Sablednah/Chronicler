@@ -259,6 +259,20 @@ public final class RewardTypes {
         @Override public String describe() { return Lang.fmt("rew.skill_points", "count", count); }
     }
 
+    /**
+     * Grant a vanilla advancement by id -- one Chronicler generated (see {@code docs/DESIGN.md}
+     * "Achievements") or any other, including one a datapack ships itself. Every criterion is
+     * awarded, so a multi-criterion advancement lands whole. An id that does not exist is a
+     * config mistake, not a world-killer: logged, and the player is told nothing landed.
+     */
+    public record Advancement(Identifier id) implements RewardSpec {
+        public static final MapCodec<Advancement> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Identifier.CODEC.fieldOf("id").forGetter(Advancement::id))
+                .apply(i, Advancement::new));
+        @Override public MapCodec<Advancement> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.advancement"); }
+    }
+
     /** Set or clear a flag -- the world's, or the player's own. */
     public record Flag(String name, boolean value, boolean player) implements RewardSpec {
         public static final MapCodec<Flag> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -287,6 +301,7 @@ public final class RewardTypes {
         TYPES.register("npc_say", NpcSay.MAP_CODEC);
         TYPES.register("npc_remove", NpcRemove.MAP_CODEC);
         TYPES.register("ending", Ending.MAP_CODEC);
+        TYPES.register("advancement", Advancement.MAP_CODEC);
         TYPES.register("block", SetBlock.MAP_CODEC);
         TYPES.register("mini", StartMini.MAP_CODEC);
     }

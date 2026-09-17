@@ -645,6 +645,39 @@ What it would need, noted so the next session does not start cold:
 - Chains (temple -> village -> bank) fall out of a template's completion
   starting another template near where it ended.
 
+### Achievements (2026-09-17, Sable) -- built
+
+Sable: does Minecraft support dynamic achievements, one per chapter and per ending, maybe as a
+reward option, read from content on load? Yes -- vanilla Advancements are exactly this, and
+already datapack JSON, so the generator is one more page of the same trick the YAML front door
+already plays: a synthetic {@code PackResources} added in {@code AddPackFindersEvent}, read by
+vanilla's own advancement loader like any other datapack. No reload-listener surgery, no
+touching {@code ServerAdvancementManager} directly at all -- the only real vanilla API touched
+at runtime is granting (`server.getAdvancements().get(id)`, `player.getAdvancements().award(...)`),
+exactly what `/advancement grant` itself calls.
+
+**Why generation cannot read the frozen `Chapter`/`Quest` registries**: those are not populated
+until the SAME datapack pass this pack is a page of. So the generator scans, independently,
+`config/chronicler/*.yml` (parsed the same way `YamlConfigPack` does) and the two built-in packs,
+listed for real off the classpath -- **never a hardcoded file list**, which would silently go
+stale the day a quest is added and nobody remembers to update it. A trap paid for here: `Class#getResource`
+on a bare directory path does not reliably resolve through FML's classloader (it indexes files,
+not directories); resolving a known file inside the pack (`pack.mcmeta`) and taking its parent
+works on both a jar and a dev exploded-classes run.
+
+**The gap this leaves**: a chapter or ending that exists only inside a third-party datapack is
+not seen and gets no advancement of its own -- an honest, documented limitation rather than a
+deeper two-pass reload to close it. That pack's author can ship a real advancement JSON
+alongside their content (this generates nothing that stops them), and any quest anywhere can
+grant one explicitly with the new `advancement` reward type.
+
+**A FakePlayer cannot prove a grant lands** -- paid for here, general enough to matter to every
+sibling: `PlayerAdvancements#award` is a silent no-op on a `FakePlayer`, even for a genuinely
+vanilla advancement (`minecraft:story/root` was the control), because a FakePlayer is never sent
+through `PlayerList#placeNewPlayer`, which is what seeds a real join's advancement progress from
+the manager. The self-test proves generation, lookup and id/parent resolution instead, and
+documents the gap rather than chasing it; a real client is what proves the toast.
+
 ### The ZARP modpack (2026-09-15, Sable) -- planning, nothing built
 
 ZARP ships as a modpack, not only as an add-on. Before it: every outstanding fix

@@ -651,6 +651,7 @@ public final class QuestEngine {
         QuestLog log = journal(player);
         Identifier chapter = quest.chapter();
         boolean fresh = log.addEnding(chapter, ending);
+        if (fresh) Achievements.grantOrWarn(player, Achievements.endingId(chapter, ending), "ending " + ending + " of " + chapter);
         int total = endingsOf(server, chapter).size();
         int found = log.endings(chapter).size();
         String name = chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, chapter)).map(h -> h.value().name()).orElse(chapter.toString());
@@ -827,6 +828,10 @@ public final class QuestEngine {
             for (RewardSpec r : quest.rewards()) Rewards.grant(m, r, id, quest);
             announceUnlocked(m, id);
             journal(m).tracked().ifPresent(t -> showTracker(m, t));
+            Progress chapterProgress = progress(m, Optional.of(quest.chapter()));
+            if (chapterProgress.total() > 0 && chapterProgress.done() >= chapterProgress.total()) {
+                Achievements.grantOrWarn(m, Achievements.chapterId(quest.chapter()), "chapter " + quest.chapter());
+            }
         }
         Minis.ended(player.level().getServer(), id, slots);
         Chronicler.LOGGER.info("Chronicler: {} completed {}{}", player.getName().getString(), id,

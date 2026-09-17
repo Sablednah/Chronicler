@@ -31,6 +31,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_COMPLETE;
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_LOCKED;
     public static final ModConfigSpec.BooleanValue MINI_WILD;
+    public static final ModConfigSpec.BooleanValue ACHIEVEMENTS;
     public static final ModConfigSpec.IntValue MINI_OFFER_SECONDS;
     public static final ModConfigSpec.DoubleValue ESCORT_PICKUP;
 
@@ -123,6 +124,15 @@ public final class ChroniclerConfig {
                 .comment("An escorted person follows whoever is within this many blocks of them. Further, they stop",
                         "and wait where they are until someone comes back for them.")
                 .defineInRange("escortPickup", 16.0D, 2.0D, 128.0D);
+        BUILDER.pop();
+
+        BUILDER.comment("Achievements -- generated vanilla advancements").push("achievements");
+        ACHIEVEMENTS = BUILDER
+                .comment("One vanilla advancement per chapter and per ending, generated from chapters and",
+                        "quests in config/chronicler and the built-in packs (a chapter or ending that lives",
+                        "only in a third-party datapack is not seen here). Real toasts, real F-key screen.",
+                        "Off grants nothing and generates nothing.")
+                .define("enabled", true);
         BUILDER.pop();
 
         BUILDER.comment("Shipped content").push("content");
