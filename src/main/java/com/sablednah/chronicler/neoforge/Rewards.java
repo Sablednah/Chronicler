@@ -195,6 +195,14 @@ public final class Rewards {
             Minis.start(player, r.template(), r.slots(), anchor, r.offer());
         });
         register(RewardTypes.Ending.class, (player, r, questId, quest) -> QuestEngine.reachEnding(player, quest, r.ending()));
+        register(RewardTypes.Advancement.class, (player, r, questId, quest) -> {
+            if (Achievements.grant(player.level().getServer(), player, r.id())) {
+                Feedback.chat(player, Lang.fmt("msg.reward.given", "line", r.describe()));
+            } else {
+                Chronicler.LOGGER.warn("Chronicler: quest {} rewards unknown advancement {}", questId, r.id());
+                Feedback.chat(player, Lang.fmt("msg.reward.unknown_advancement", "id", r.id()));
+            }
+        });
         register(RewardTypes.Flag.class, (player, r, questId, quest) -> {
             if (r.player()) {
                 QuestEngine.journal(player).setFlag(r.name(), r.value(), quest.chapter());

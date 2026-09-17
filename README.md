@@ -218,6 +218,23 @@ override `scope`. Every word a player sees lives in
   count move it: `counts: true|false`, unsaid means "main chapter and not
   repeatable", so bounties and side lines never hold anyone short of 100%.
 
+### Achievements
+
+One vanilla advancement per chapter and one per ending, generated at pack-listing time from
+chapters and quests in `config/chronicler/*.yml` and the two built-in packs -- real toasts,
+real progress in the vanilla Advancements screen (`chronicler:root` is the tab; chapters chain
+off `requires`, or off the previous chapter by `order` when a chapter sets none; endings hang
+off their own chapter, framed as a challenge and hidden until reached). Granted automatically:
+`chronicler:root` the first time a player's journal begins, a chapter's the moment every
+counting quest in it is done, an ending's the moment it is reached. Any quest can also grant
+one explicitly: `{"type": "advancement", "id": "chronicler:chapter/zarp/finale"}` -- any
+advancement, including vanilla's own or one a third-party datapack ships. **The gap**: a
+chapter or ending that lives only in a third-party datapack (never in config YAML or the
+built-in packs) is not seen by the generator and gets no advancement of its own; that pack's
+author can ship a real advancement JSON alongside their content, or any quest can grant one by
+id regardless of where it came from. `content.achievements.enabled` (default on) turns the
+whole thing off.
+
 ### Mini quests
 
 Small errands that happen a hundred times -- walk this stranger to the nearest

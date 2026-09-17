@@ -365,6 +365,13 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
   `escort` find their journal entry by the objective object's identity.
 - An escort template's `radius` is the size of "there": a test that hands over a village 40 blocks
   away finishes a 64-block escort on its first poll.
+- **`Class#getResource` on a bare directory path does not reliably resolve through FML's
+  classloader** (it indexes files, not directories) -- resolve a known file inside it (`pack.mcmeta`)
+  and take its parent instead. Paid for by the achievement generator scanning the built-in packs.
+- **`PlayerAdvancements#award` is a silent no-op on a `FakePlayer`**, even for a genuinely vanilla
+  advancement -- it is never sent through `PlayerList#placeNewPlayer`, which is what seeds a real
+  join's advancement progress from the manager. The self-test proves generation and lookup, not
+  that a grant lands; that wants a real client, same family as the FakePlayer connection quirks.
 - A `static final` collection declared after the fields that fill it is null
   when they initialise. Declare collections first. (Same trap, other spelling:
   a static counter declared after the static block that bumps it is an

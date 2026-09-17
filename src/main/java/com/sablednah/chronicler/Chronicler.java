@@ -105,6 +105,15 @@ public class Chronicler {
         }
     }
 
+    /** {@code ACHIEVEMENTS.get()}, defaulting on when config has not loaded yet (pack listing can run before it has). */
+    private static boolean achievementsEnabled() {
+        try {
+            return ChroniclerConfig.ACHIEVEMENTS.get();
+        } catch (IllegalStateException e) {
+            return true;
+        }
+    }
+
     private static boolean mode(net.neoforged.neoforge.common.ModConfigSpec.EnumValue<ChroniclerConfig.ContentMode> value, boolean auto) {
         try {
             return switch (value.get()) {
@@ -138,6 +147,10 @@ public class Chronicler {
             // optional would leave it running in any world that once had it. Absent, the world drops it.
             if (zarp) builtIn(event, "datapacks/zarp", "Chronicler: ZARP");
             if (prologue) builtIn(event, "datapacks/prologue", "Chronicler: Prologue");
+            if (achievementsEnabled()) {
+                event.addRepositorySource(consumer -> consumer.accept(
+                        com.sablednah.chronicler.yaml.AchievementPack.makePack(zarp, prologue)));
+            }
             LOGGER.info("Chronicler: ZARP questline datapack is {}; the sample prologue is {}",
                     zarp ? "on" : "off (content.zarp)", prologue ? "on" : "off (content.prologue)");
         }

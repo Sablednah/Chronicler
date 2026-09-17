@@ -408,6 +408,63 @@ public final class SelfTest {
             check("api: accept", com.sablednah.chronicler.api.Quests.accept(solo, ChroniclerIds.of("hot_foot")).isEmpty()
                     && com.sablednah.chronicler.api.Quests.isActive(solo, ChroniclerIds.of("hot_foot")));
 
+            // Achievements (2026-09-17): one generated advancement per chapter and per ending, granted
+            // through the real vanilla API, never touched directly by the engine otherwise.
+            //
+            // A FakePlayer proves the generation and lookup: it is never sent through
+            // PlayerList#placeNewPlayer, which is what seeds a real join's PlayerAdvancements from the
+            // manager, so PlayerAdvancements#award is a silent no-op on it forever after -- true even
+            // for a genuinely vanilla advancement (checked below against minecraft:story/root), so it
+            // is not this feature's bug to fix. Whether a criterion actually lands, and the toast that
+            // goes with it, wants a real client, the same boundary as everything else FakePlayer cannot
+            // see (SelfTest's own class doc, and CLAUDE.md's Known traps).
+            {
+                var advancements = server.getAdvancements();
+                var vanillaRoot = advancements.get(Identifier.withDefaultNamespace("story/root"));
+                check("achievements: FakePlayer cannot award even a real vanilla advancement (the known gap, not this feature's)",
+                        vanillaRoot != null && !solo.getAdvancements().award(vanillaRoot, vanillaRoot.value().criteria().keySet().iterator().next()));
+
+                java.util.function.Function<Identifier, java.util.Optional<Identifier>> parentOf = id ->
+                        java.util.Optional.ofNullable(advancements.get(id)).flatMap(h -> h.value().parent());
+                check("achievements: the root advancement generated and loaded", advancements.get(Achievements.ROOT) != null);
+                var prologueChapter = Achievements.chapterId(ChroniclerIds.of("prologue"));
+                var errandsChapter = Achievements.chapterId(ChroniclerIds.of("errands"));
+                check("achievements: a built-in chapter generated one (is the fantasy prologue's pack.mcmeta on the classpath?)",
+                        advancements.get(prologueChapter) != null);
+                check("achievements: a chapter with no 'requires' chains to the previous chapter by order, not root",
+                        parentOf.apply(errandsChapter).map(prologueChapter::equals).orElse(false));
+                check("achievements: the first chapter in its pack chains to root",
+                        parentOf.apply(prologueChapter).map(Achievements.ROOT::equals).orElse(false));
+
+                check("achievements: granting a known id finds it and does not throw",
+                        Achievements.grant(server, solo, Achievements.ROOT) && Achievements.grant(server, solo, Achievements.ROOT));
+                check("achievements: an unknown id is refused, not thrown", !Achievements.grant(server, solo, ChroniclerIds.of("no_such_advancement")));
+
+                Identifier zarpFinale = Identifier.fromNamespaceAndPath("zarp", "finale");
+                var pzHolder = quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, Identifier.fromNamespaceAndPath("zarp", "patient_zero")));
+                if (pzHolder.isPresent()) {
+                    var cure = Achievements.endingId(zarpFinale, "cure");
+                    check("achievements: a ZARP ending generated one, parented to its own chapter (not the fantasy prologue's)",
+                            advancements.get(cure) != null && parentOf.apply(cure).map(Achievements.chapterId(zarpFinale)::equals).orElse(false));
+                    check("achievements: an ending is hidden and framed as a challenge", advancements.get(cure) != null
+                            && advancements.get(cure).value().display()
+                                    .map(d -> d.isHidden() && d.getType() == net.minecraft.advancements.AdvancementType.CHALLENGE).orElse(false));
+                    // reachEnding calls Achievements.grantOrWarn for a fresh ending; it must not throw, and
+                    // must not warn (the id it computes has to be exactly the one generated above).
+                    int before = FAILURES.size();
+                    QuestEngine.reachEnding(solo, pzHolder.get().value(), "cure");
+                    check("achievements: reaching an ending grants without a log warning (the id matches what was generated)", FAILURES.size() == before);
+                }
+
+                // The reward type: any quest can grant any advancement by id, not only Chronicler's own.
+                Rewards.grant(solo, new com.sablednah.chronicler.data.RewardTypes.Advancement(errandsChapter), ChroniclerIds.of("selftest"),
+                        quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, ChroniclerIds.of("hot_foot"))).get().value());
+                // Rewards.grant swallows a bad reward rather than take the rest of the list down with it (Rewards.java's own contract).
+                Rewards.grant(solo, new com.sablednah.chronicler.data.RewardTypes.Advancement(ChroniclerIds.of("no_such_advancement")), ChroniclerIds.of("selftest"),
+                        quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, ChroniclerIds.of("hot_foot"))).get().value());
+                check("achievements: the reward type ran both ways without throwing", true);
+            }
+
             // Deadlines: a clock in the past fails the beat on the next poll; with no fall-back, the quest is dropped.
             QuestLog.Entry hf = QuestEngine.journal(solo).entry(ChroniclerIds.of("hot_foot"));
             hf.deadlineAt = Math.max(0L, server.overworld().getGameTime() - 1); // a fresh world is at tick 0, and -1 means no deadline

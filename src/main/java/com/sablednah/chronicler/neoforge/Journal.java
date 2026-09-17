@@ -94,6 +94,7 @@ public final class Journal {
         if (!book.isEmpty()) player.drop(book, false);
         log.markJournalGiven();
         Feedback.chat(player, Lang.get("msg.journal.new_player"));
+        Achievements.grantOrWarn(player, Achievements.ROOT, "new player's journal");
     }
 
     // --- opening ---
