@@ -91,6 +91,7 @@ public final class Lang {
         def("msg.complete.subtitle", "&e{term.quest} complete");
         def("msg.reward.given", "  &a+ &f{line}");
         def("msg.reward.unknown_item", "  &c(a reward names an item this server does not have: {item} -- tell an admin)");
+        def("msg.reward.unknown_advancement", "  &c(a reward names an advancement this server does not have: {id} -- tell an admin)");
         def("msg.reward.reputation_none", "  &7({line}, but nothing on this server keeps reputation)");
         def("msg.reward.reputation_band", " &7-- {standing} now think of you as &f{band}");
         def("msg.reward.money_none", "  &7(+{amount} coin, but this server has no economy to pay it into)");
@@ -364,6 +365,7 @@ public final class Lang {
         def("rew.title", "A moment.");
         def("rew.message", "A word.");
         def("rew.spawn", "Company.");
+        def("rew.advancement", "An achievement.");
         def("msg.stage.enter", "{prefix}&e{text}");
         def("msg.stage.done", "{prefix}&7Stage {stage} of {stages} done.");
         def("cmd.info.stages", "&7{count} stages. The first:");

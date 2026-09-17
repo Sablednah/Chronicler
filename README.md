@@ -188,6 +188,85 @@ override `scope`. Every word a player sees lives in
   count move it: `counts: true|false`, unsaid means "main chapter and not
   repeatable", so bounties and side lines never hold anyone short of 100%.
 
+### Achievements
+
+One vanilla advancement per chapter and one per ending, generated at pack-listing time from
+chapters and quests in `config/chronicler/*.yml` and the two built-in packs -- real toasts,
+real progress in the vanilla Advancements screen (`chronicler:root` is the tab; chapters chain
+off `requires`, or off the previous chapter by `order` when a chapter sets none; endings hang
+off their own chapter, framed as a challenge and hidden until reached). Granted automatically:
+`chronicler:root` the first time a player's journal begins, a chapter's the moment every
+counting quest in it is done, an ending's the moment it is reached. Any quest can also grant
+one explicitly: `{"type": "advancement", "id": "chronicler:chapter/zarp/finale"}` -- any
+advancement, including vanilla's own or one a third-party datapack ships. **The gap**: a
+chapter or ending that lives only in a third-party datapack (never in config YAML or the
+built-in packs) is not seen by the generator and gets no advancement of its own; that pack's
+author can ship a real advancement JSON alongside their content, or any quest can grant one by
+id regardless of where it came from. `content.achievements.enabled` (default on) turns the
+whole thing off.
+
+### Mini quests
+
+Small errands that happen a hundred times -- walk this stranger to the nearest
+village, bring that villager five of something, free a stuck door -- written once
+as a **template**. Any value in a quest file may be a `{slot}` hole, and a `mini:`
+block says how each slot is filled when the quest starts:
+
+```yaml
+name: "{wants.name} for {asker}"
+chapter: errands
+repeatable: true
+hidden: true
+mini:
+  slots:
+    first:   { type: pick, pool: [Aldous, Wen, Marisol] }
+    asker:   { type: npc, name: "&f{first}", entity: minecraft:villager, min: 4, max: 8 }
+    wants:   { type: pick, pool: [minecraft:bread, minecraft:wheat, minecraft:leather] }
+    count:   { type: number, min: 3, max: 8 }
+  spawn:     # optional: offered unasked, while a player is in the place
+    place: { structure: "#minecraft:village" }
+    chance: 0.05
+    every: 120        # seconds between rolls, per player
+    cap: 2            # standing wild offers of this template
+    giver: asker      # the npc slot that makes the offer (or block: a block slot)
+    lapse: 300        # seconds before an ignored offer goes, and its person with it
+    say: "&7Have you got {count} {wants.name} going spare?"
+objectives:
+  - { type: deliver, item: "{wants}", count: "{count}", npc: "{asker.id}" }
+rewards:
+  - { type: xp, amount: 20 }
+```
+
+Slot types: `pick` (one of a `pool`), `number` (`min`..`max`), `here` (where it
+starts), `around` (a dry spot `min`..`max` blocks off), `structure` (the nearest, an
+id or `#tag`, within `radius`), `lot` (the nearest CityWorld lot whose words contain
+`lot`, or a CityWorld schematic by name with `schematic: chayats-bank`), `block` (the nearest, id or `#tag`), `giver` (where another quest's giver
+stands), `given` (a position whoever starts it hands over), `npc` (a person Cast
+places: `name`, `skin` or `entity`, `equipment`, `min`/`max` distance, `keep`). A place
+gives `{s}` (its `label`), `{s.x}`, `{s.y}`, `{s.z}`, `{s.pos}` and `{s.dim}`; a person
+also `{s.id}`; a pick `{s.name}`, prettified. `near: <slot>` searches from an earlier
+slot. A hole that is the whole value becomes a number or a list where one is wanted
+(`count: "{count}"`, `to: "{village.pos}"`). A template is checked at load by filling
+it with stand-in values, so a mistake is refused at boot like any other bad file.
+
+What minis use: `escort` (`who: "{scholar.id}"`, `to`, `radius`, `near`: the person
+follows whoever leads them, on foot along the way they walk, and it is done when they
+stand at `to` with the player beside them; wander off and they wait. `hits: 6` makes it
+dangerous: monsters nearby go for them, every blow is counted -- never damage -- and the
+sixth fails the beat like a deadline; unsaid, they are untouchable), `deliver` to
+`npc` (a person by id) or `at` (a block, which will not open until it has what it
+wants), `npc_say` / `npc_remove` with `npc`, the `block` effect (`at`, `block` and/or
+`properties`: `open: "true"`), and the `mini` effect (`template`, `near`, `slots`,
+`offer`), which starts the next errand where this one ended. One copy of each
+template runs per player; people placed for one leave when it ends unless `keep`.
+A `place` (for wild spawns, givers and the `place` objective) takes `schematic` too, so
+standing in Chayat's Bank or the Winchester can offer a quest. A `kill` with a `tag` and
+no `target` counts only the tagged mob (Phil). The built-in packs carry fifteen: the
+archaeologist, the village errand, the stuck door, pests, the lost satchel, a rescue
+from a pillager outpost, and in a CityWorld city a town-hall escort and a run to
+Chayat's Bank in the prologue; bring a survivor in, medicine, the nest, the rusted
+door, a warehouse run, a bank job and The Plan in ZARP.
+
 ### ZARP
 
 The Zombie Apocalypse Roleplay questline ships in the jar as a datapack and is
