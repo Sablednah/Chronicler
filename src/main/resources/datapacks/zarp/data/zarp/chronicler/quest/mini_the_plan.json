@@ -118,7 +118,8 @@
         {
           "type": "kill",
           "tag": "phil",
-          "count": 1
+          "count": 1,
+          "own_kill": true
         }
       ],
       "on_complete": [
