@@ -24,6 +24,11 @@ import net.minecraft.world.level.Level;
  * -- an escorted NPC updates every second, and a torn-down-and-rebuilt marker would never look
  * settled. {@code createClientWaypoint} never shares this to another player or persists it past
  * this session: it is a live readout of server state, not something worth remembering on its own.
+ *
+ * <p>26.2 drift: this build's vendored API jar has no {@code createClientWaypoint} overload at
+ * all (an older API snapshot, same {@code (name, pos, dimension, persistent)} shape under
+ * {@code createWaypoint} instead) -- main and 26.1 both have it. If the instance's JourneyMap is
+ * ever updated past 6.0.8, re-check for the client-only variant and switch back.</p>
  */
 public final class JourneyMapWaypoints {
 
@@ -45,7 +50,7 @@ public final class JourneyMapWaypoints {
                 continue;
             }
             try {
-                Waypoint w = WaypointFactory.createClientWaypoint(m.label(), new BlockPos(m.x(), m.y(), m.z()), dimension, false);
+                Waypoint w = WaypointFactory.createWaypoint(m.label(), new BlockPos(m.x(), m.y(), m.z()), dimension, false);
                 w.setColor(colorOf(m.kind()));
                 api.addWaypoint(MOD_ID, w);
                 SHOWN.put(m.id(), w);
