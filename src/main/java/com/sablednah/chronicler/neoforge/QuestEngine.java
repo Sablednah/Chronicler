@@ -459,6 +459,7 @@ public final class QuestEngine {
         log.abandon(id);
         Feedback.chat(player, Lang.fmt("msg.abandon", "name", name));
         Minis.ended(player.level().getServer(), id, slots);
+        clearSettling(player, id);
         return true;
     }
 
@@ -740,11 +741,39 @@ public final class QuestEngine {
                     if (v.isPresent()) { polled = true; sum += v.getAsInt(); }
                 }
                 if (!polled) continue;
+                if (spec.settleSeconds() > 0 && n < e.targets.size()) {
+                    boolean satisfiedNow = sum >= e.targets.get(n);
+                    if (!settled(player, id, stage, n, satisfiedNow, player.level().getGameTime(), spec.settleSeconds())) sum = 0;
+                }
                 set(player, id, quest, n, sum, tracker.latching(spec));
                 QuestLog.Entry now = journal(player).entry(id);
                 if (now == null || now.stage != stage) break; // the beat moved on under us
             }
         }
+    }
+
+    /**
+     * Has {@code satisfiedNow} held continuously for {@code seconds}? Not-yet-long-enough or a
+     * break in the middle both answer false and (re)start the clock; never satisfied, no clock runs
+     * at all. In-memory only, like the giver cooldowns and offer windows -- losing a countdown mid-way
+     * on a restart is a shrug, not a bug, and it would be worse to persist a key nothing ever prunes.
+     */
+    private static final java.util.Map<String, Long> SETTLING = new java.util.HashMap<>();
+
+    static boolean settled(ServerPlayer player, Identifier id, int stage, int n, boolean satisfiedNow, long now, int seconds) {
+        String key = player.getUUID() + "|" + id + "|" + stage + "|" + n;
+        if (!satisfiedNow) { SETTLING.remove(key); return false; }
+        Long since = SETTLING.get(key);
+        if (since == null) { SETTLING.put(key, now); return false; }
+        if (now - since < seconds * 20L) return false;
+        SETTLING.remove(key);
+        return true;
+    }
+
+    /** A quest ended for this player one way or another: forget any settle timers it was running. */
+    private static void clearSettling(ServerPlayer player, Identifier id) {
+        String prefix = player.getUUID() + "|" + id + "|";
+        SETTLING.keySet().removeIf(k -> k.startsWith(prefix));
     }
 
     /** Write one objective's progress to every sharer, tell them, and move on if that was the last. */
@@ -832,6 +861,7 @@ public final class QuestEngine {
             if (chapterProgress.total() > 0 && chapterProgress.done() >= chapterProgress.total()) {
                 Achievements.grantOrWarn(m, Achievements.chapterId(quest.chapter()), "chapter " + quest.chapter());
             }
+            clearSettling(m, id);
         }
         Minis.ended(player.level().getServer(), id, slots);
         Chronicler.LOGGER.info("Chronicler: {} completed {}{}", player.getName().getString(), id,

@@ -253,7 +253,10 @@ What minis use: `escort` (`who: "{scholar.id}"`, `to`, `radius`, `near`: the per
 follows whoever leads them, on foot along the way they walk, and it is done when they
 stand at `to` with the player beside them; wander off and they wait. `hits: 6` makes it
 dangerous: monsters nearby go for them, every blow is counted -- never damage -- and the
-sixth fails the beat like a deadline; unsaid, they are untouchable), `deliver` to
+sixth fails the beat like a deadline; unsaid, they are untouchable. `settle: 3` holds the
+arrival for that many seconds before it credits, so crossing a line does not end the beat
+before the player is actually inside -- `visit` takes the same field, for the same reason
+on a plain "go here"), `deliver` to
 `npc` (a person by id) or `at` (a block, which will not open until it has what it
 wants), `npc_say` / `npc_remove` with `npc`, the `block` effect (`at`, `block` and/or
 `properties`: `open: "true"`), and the `mini` effect (`template`, `near`, `slots`,

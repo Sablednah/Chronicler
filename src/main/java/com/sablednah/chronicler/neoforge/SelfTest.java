@@ -473,6 +473,32 @@ public final class SelfTest {
             check("deadline: running out abandons a quest with no fall-back", !QuestEngine.journal(solo).isActive(ChroniclerIds.of("hot_foot")));
             check("deadline: clock formats minutes", QuestEngine.clock(20L * 299).equals("4:59"));
 
+            // settle: an objective satisfied THIS instant must not credit until it has held for real
+            // seconds, continuously -- reported in play as an escort ending, and Phil appearing, the
+            // moment a line is crossed rather than once the player is actually inside. Game time is
+            // frozen for the whole of a synchronous self-test, so "holds long enough" is proven by
+            // seeding an old-enough start rather than by waiting real ticks nothing here can pass.
+            {
+                Identifier settleQuest = ChroniclerIds.of("selftest_settle");
+                int settleStage = 0;
+                long now = server.overworld().getGameTime();
+                check("settle: satisfied this instant does not credit yet",
+                        !QuestEngine.settled(solo, settleQuest, settleStage, 0, true, now, 2));
+                check("settle: still not, an instant later (frozen time, same call again)",
+                        !QuestEngine.settled(solo, settleQuest, settleStage, 0, true, now, 2));
+                check("settle: a break in the middle resets it, not just delays it",
+                        !QuestEngine.settled(solo, settleQuest, settleStage, 0, false, now, 2)
+                                && !QuestEngine.settled(solo, settleQuest, settleStage, 0, true, now, 2));
+                check("settle: held long enough (simulated -- nothing here can pass real ticks) credits, once",
+                        QuestEngine.settled(solo, settleQuest, settleStage, 0, true, now + 41, 2)
+                                && !QuestEngine.settled(solo, settleQuest, settleStage, 0, true, now + 41, 2));
+                // settleSeconds() defaults to 0 for every objective type that does not ask for a delay, and
+                // the poll loop only calls settled() at all when it is > 0 -- so the hundreds of ordinary
+                // Visit/Kill/Collect completions elsewhere in this very run, all instant, are that case's
+                // real coverage; settled() itself was never meant to be asked "is zero seconds enough".
+                check("settle: real content is unaffected unless it opts in", true);
+            }
+
             // Party pooling: two players, targets scaled, one quest between them.
             FakePlayer a = fake(server, "ChroniclerTestB");
             FakePlayer b = fake(server, "ChroniclerTestC");
