@@ -187,9 +187,13 @@ public final class Minis {
                     }
                     String npcName = Slots.text(slot.person().name().get(), v, mini);
                     if (!Npcs.available()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.npc", "name", npcName)); }
-                    // A person placed at a found place (an outpost, a house) stands on its ground: a far search only knows x and z.
+                    // A person placed at a found place (an outpost, a house) stands on its ground -- and a
+                    // building's ground is never its own coordinate: a lot or structure resolves to the
+                    // heightmap's highest block, which for anything built is its ROOF (Mum, standing near
+                    // "mums", landed on top of her own house). Placed exactly AT one (no near) is left
+                    // alone -- that is a deliberate coordinate (a giver's own spot, a chapter's camp).
                     BlockPos at = slot.max() > 0 ? around(level, from.pos(), slot.min(), slot.max())
-                            : slot.near().isPresent() ? Givers.dryColumn(level, from.pos().getX(), from.pos().getZ()) : from.pos();
+                            : slot.near().isPresent() ? around(level, from.pos(), 4, 10) : from.pos();
                     Vec3 pos = new Vec3(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
                     float yaw = rng.nextFloat() * 360F;
                     UUID uid;
