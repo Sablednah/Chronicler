@@ -18,6 +18,14 @@ public interface ObjectiveSpec {
     int required();
 
     /**
+     * Seconds the condition must hold continuously before it credits, for an objective that can
+     * otherwise complete the instant a line is crossed -- a village's edge, an escort's radius --
+     * with no chance to actually be inside before the next beat's narration (and its ambush) fires.
+     * 0, the default, credits the moment it is true, as every objective always has.
+     */
+    default int settleSeconds() { return 0; }
+
+    /**
      * One line for chat and the journal, from the record's own fields so the
      * text can never disagree with the rule. Goes through {@code Lang} so a
      * server can re-word it.

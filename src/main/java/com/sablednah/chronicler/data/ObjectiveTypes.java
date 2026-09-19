@@ -154,7 +154,7 @@ public final class ObjectiveTypes {
      * deadline does ({@code on_fail}, then {@code fail} or abandon).</p>
      */
     public record Escort(String who, Optional<String> name, net.minecraft.core.BlockPos to, Optional<Identifier> dimension,
-            double radius, double near, Optional<String> label, int hits) implements ObjectiveSpec {
+            double radius, double near, Optional<String> label, int hits, int settle) implements ObjectiveSpec {
         public static final MapCodec<Escort> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.STRING.fieldOf("who").forGetter(Escort::who),
                 Codec.STRING.optionalFieldOf("name").forGetter(Escort::name),
@@ -163,10 +163,12 @@ public final class ObjectiveTypes {
                 Codec.DOUBLE.optionalFieldOf("radius", 12.0D).forGetter(Escort::radius),
                 Codec.DOUBLE.optionalFieldOf("near", 10.0D).forGetter(Escort::near),
                 Codec.STRING.optionalFieldOf("label").forGetter(Escort::label),
-                Codec.intRange(0, 1000).optionalFieldOf("hits", 0).forGetter(Escort::hits))
+                Codec.intRange(0, 1000).optionalFieldOf("hits", 0).forGetter(Escort::hits),
+                Codec.intRange(0, 60).optionalFieldOf("settle", 0).forGetter(Escort::settle))
                 .apply(i, Escort::new));
         @Override public MapCodec<Escort> codec() { return MAP_CODEC; }
         @Override public int required() { return 1; }
+        @Override public int settleSeconds() { return settle; }
         @Override public String describe() {
             String whom = name.orElseGet(() -> com.sablednah.chronicler.neoforge.Givers.npcName(who));
             String line = Lang.fmt("obj.escort", "who", whom, "where", label.orElseGet(() -> Lang.fmt("obj.escort.coords", "x", to.getX(), "z", to.getZ())));
@@ -211,18 +213,20 @@ public final class ObjectiveTypes {
      * is told ("the hospital"), because coordinates are not a story.
      */
     public record Visit(int x, Optional<Integer> y, int z, double radius,
-            Optional<Identifier> dimension, Optional<String> label) implements ObjectiveSpec {
+            Optional<Identifier> dimension, Optional<String> label, int settle) implements ObjectiveSpec {
         public static final MapCodec<Visit> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.INT.fieldOf("x").forGetter(Visit::x),
                 Codec.INT.optionalFieldOf("y").forGetter(Visit::y),
                 Codec.INT.fieldOf("z").forGetter(Visit::z),
                 Codec.DOUBLE.optionalFieldOf("radius", 8.0D).forGetter(Visit::radius),
                 Identifier.CODEC.optionalFieldOf("dimension").forGetter(Visit::dimension),
-                Codec.STRING.optionalFieldOf("label").forGetter(Visit::label))
+                Codec.STRING.optionalFieldOf("label").forGetter(Visit::label),
+                Codec.intRange(0, 60).optionalFieldOf("settle", 0).forGetter(Visit::settle))
                 .apply(i, Visit::new));
 
         @Override public MapCodec<Visit> codec() { return MAP_CODEC; }
         @Override public int required() { return 1; }
+        @Override public int settleSeconds() { return settle; }
         @Override public String describe() {
             return label.map(l -> Lang.fmt("obj.visit_label", "label", l))
                     .orElseGet(() -> Lang.fmt("obj.visit", "x", x, "z", z));
