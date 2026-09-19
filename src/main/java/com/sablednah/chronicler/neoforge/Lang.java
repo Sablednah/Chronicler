@@ -255,6 +255,9 @@ public final class Lang {
         def("msg.escort.hit", "&c{who} was hit &7({taken}/{hits})");
         def("msg.escort.last", "{prefix}&c{who} cannot take another hit.");
         def("msg.escort.failed", "{prefix}&c{who} took one hit too many: &f{name}&c has failed.");
+        def("waypoint.target", "{quest}: {what}");
+        def("waypoint.giver", "{quest} (quest)");
+        def("waypoint.npc", "{name} ({quest})");
         def("msg.mini.unresolved", "{prefix}&7Not now: &f{name}&7 -- {why}.");
         def("msg.mini.refused", "{prefix}&7Not now: &f{name}&7 -- {why}.");
         def("msg.mini.refusal.unknown", "no such quest");

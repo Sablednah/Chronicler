@@ -13,6 +13,7 @@ import com.sablednah.chronicler.core.QuestMap;
 import com.sablednah.chronicler.data.ChroniclerIds;
 import com.sablednah.chronicler.data.Quest;
 import com.sablednah.chronicler.network.JournalPayload;
+import com.sablednah.chronicler.network.WaypointsPayload;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -1093,6 +1094,25 @@ public final class SelfTest {
                 guard.discard();
             }
             check("prisoner: guards down, the escort begins", log.entry(prisonerQuest) != null && log.entry(prisonerQuest).stage == 2);
+
+            // Waypoints: the escort's own "go here" and the prisoner's live spot, for whatever draws a map (JourneyMap, if installed).
+            var marks = Waypoints.build(solo).marks();
+            var targetMark = marks.stream().filter(m -> m.id().equals(prisonerQuest + ":target")).findFirst().orElse(null);
+            var npcMark = marks.stream().filter(m -> m.id().equals(prisoner.toString())).findFirst().orElse(null);
+            check("waypoints: the escort's destination is marked (" + marks.stream().map(WaypointsPayload.Mark::id).toList() + ")",
+                    targetMark != null && targetMark.kind() == WaypointsPayload.TARGET);
+            check("waypoints: the prisoner is marked where they actually are", npcMark != null && npcMark.kind() == WaypointsPayload.NPC
+                    && cast.byId(server, prisoner).map(p -> Math.abs(npcMark.x() - p.pos().x) < 1 && Math.abs(npcMark.z() - p.pos().z) < 1).orElse(false));
+            check("waypoints: neither label is a raw key or a section sign", targetMark != null && npcMark != null
+                    && !targetMark.label().contains("waypoint.") && !targetMark.label().contains("§")
+                    && !npcMark.label().contains("waypoint.") && !npcMark.label().contains("§"));
+            var wpWire = io.netty.buffer.Unpooled.buffer();
+            var wpPayload = Waypoints.build(solo);
+            WaypointsPayload.CODEC.encode(wpWire, wpPayload);
+            var wpBack = WaypointsPayload.CODEC.decode(wpWire);
+            check("waypoints payload survives the wire", wpWire.readableBytes() == 0 && wpBack.marks().size() == wpPayload.marks().size()
+                    && wpBack.marks().stream().map(WaypointsPayload.Mark::id).toList().equals(wpPayload.marks().stream().map(WaypointsPayload.Mark::id).toList()));
+
             QuestEngine.onNpcHit(List.of(solo), pAsker);
             check("hits: a blow on somebody else is not counted", log.entry(prisonerQuest).tallies.isEmpty());
             for (int n = 0; n < 5; n++) QuestEngine.onNpcHit(List.of(solo), prisoner);
