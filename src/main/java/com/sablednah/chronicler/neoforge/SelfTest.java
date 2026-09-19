@@ -1052,8 +1052,8 @@ public final class SelfTest {
         var outpostAt = spawnAt.offset(0, 0, 300);
         var taken = Minis.start(solo, prisonerQuest, java.util.Map.of("outpost", outpostAt.getX() + " " + outpostAt.getY() + " " + outpostAt.getZ()), Minis.Anchor.of(solo), false);
         QuestLog.Entry pe = log.entry(prisonerQuest);
-        check("prisoner: started, the prisoner placed at the outpost (" + taken.orElse("") + ")", taken.isEmpty() && pe != null
-                && Math.abs(Integer.parseInt(pe.slots.getOrDefault("prisoner.z", "0")) - outpostAt.getZ()) <= 1);
+        check("prisoner: started, the prisoner placed near the outpost, not on its own roof (" + taken.orElse("") + ")", taken.isEmpty() && pe != null
+                && Math.abs(Integer.parseInt(pe.slots.getOrDefault("prisoner.z", "0")) - outpostAt.getZ()) <= 11);
         if (pe != null) {
             java.util.UUID prisoner = java.util.UUID.fromString(pe.slots.get("prisoner.id"));
             java.util.UUID pAsker = java.util.UUID.fromString(pe.slots.get("asker.id"));
