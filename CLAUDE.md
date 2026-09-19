@@ -365,6 +365,12 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
   compiles. It is discovered at runtime purely by JourneyMap scanning every mod's classes for one
   annotated `@journeymap.api.v2.common.JourneyMapPlugin` -- nothing registers it, and the
   `neoforge.mods.toml` entry is informational only; deleting it changes nothing.
+- **`WaypointFactory.createClientWaypoint(String, BlockPos, ResourceKey, boolean)`'s lone
+  `String` is the calling mod's id, not a display name** -- shipped once as if it were one
+  (Sable, in play: "they are just co-ords"), because an unnamed waypoint falls back to its
+  coordinates. It is also deprecated. `createWaypoint(modId, pos, name, dim, persistent)`, with
+  an explicit `name`, is the real call, and it exists on every line this repo builds for -- the
+  method that looked missing on 26.2 was `createClientWaypoint`, never `createWaypoint`.
 - **Resolving a cherry-pick conflict with `git add -A` resurrects files the commit deleted.**
   Cast paid for it: `Proxies.java`, deleted on main, came back on both 26.x branches as an
   orphan nothing called. After `cherry-pick --continue`, `git grep` for the name of the thing

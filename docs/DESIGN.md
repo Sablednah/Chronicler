@@ -776,9 +776,18 @@ A JourneyMap waypoint is looked up by ITS OWN id, which this mod does not contro
 `JourneyMapWaypoints` keeps its own `Map<mark id, Waypoint>` and mutates an existing waypoint's
 name/position in place on every resend rather than removing and recreating it -- an escort's
 charge moves every second, and a torn-down-and-rebuilt marker never looks settled on a live map.
-Every mark is `createClientWaypoint` (never shared to another player, never saved past the
-session): it is a live readout of server state, the same as the panel is, not a landmark worth
-remembering on its own.
+Every mark is `createWaypoint(modId, pos, name, dim, persistent=false)` -- never shared to
+another player, never saved past the session: it is a live readout of server state, the same as
+the panel is, not a landmark worth remembering on its own. Every one goes into a single "Quests"
+`WaypointGroup` (fetched by name if a previous session already made it, created once otherwise),
+so they land together instead of JourneyMap's default folder. **The trap that shipped first**:
+`WaypointFactory`'s deprecated `createClientWaypoint(name, pos, dim, persistent)` takes no name at
+all -- its lone `String` is the calling mod's id, per its own javadoc -- and an unnamed waypoint
+falls back to its coordinates, which is exactly what went out the first time (Sable: "they are
+just co-ords"). `createWaypoint`'s 5-arg overload, with an explicit `name` parameter, is correct
+on all three lines; the earlier 26.2-only `createWaypoint`-without-a-name workaround (that line's
+older API build has no `createClientWaypoint` at all) turned out to already have the RIGHT
+overload sitting right next to the wrong one -- it never needed special-casing.
 
 **Not done**: a "camp" as a landmark in its own right, independent of any quest referencing it --
 today an NPC is only marked while a live quest objective (an escort) points at them. Worth
