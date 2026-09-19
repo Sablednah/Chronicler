@@ -12,6 +12,7 @@ import com.sablednah.chronicler.network.WaypointsPayload.Mark;
 import journeymap.api.v2.client.IClientAPI;
 import journeymap.api.v2.common.waypoint.Waypoint;
 import journeymap.api.v2.common.waypoint.WaypointFactory;
+import journeymap.api.v2.common.waypoint.WaypointGroup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -22,18 +23,21 @@ import net.minecraft.world.level.Level;
  * {@link Mark}'s own {@code id} is stable resend to resend (see {@link WaypointsPayload}), so a
  * waypoint already on the map is moved and renamed in place rather than flickered away and back
  * -- an escorted NPC updates every second, and a torn-down-and-rebuilt marker would never look
- * settled. {@code createClientWaypoint} never shares this to another player or persists it past
- * this session: it is a live readout of server state, not something worth remembering on its own.
+ * settled. {@code persistent = false}: it never survives past this session and is never shared to
+ * another player -- a live readout of server state, not a landmark worth remembering on its own.
  *
- * <p>26.2 drift: this build's vendored API jar has no {@code createClientWaypoint} overload at
- * all (an older API snapshot, same {@code (name, pos, dimension, persistent)} shape under
- * {@code createWaypoint} instead) -- main and 26.1 both have it. If the instance's JourneyMap is
- * ever updated past 6.0.8, re-check for the client-only variant and switch back.</p>
+ * <p>{@code createWaypoint}'s single {@code String} parameter is the calling mod's id, not a
+ * display name -- {@link WaypointFactory}'s own javadoc says as much, and an unnamed waypoint
+ * falls back to its coordinates, which is exactly what a bare {@code createClientWaypoint(name,
+ * pos, dim, persistent)} call produced: a real name, quietly read as {@code modId}. The overload
+ * that actually takes a name is what {@link #sync} calls now.</p>
  */
 public final class JourneyMapWaypoints {
 
     private static final String MOD_ID = "chronicler";
+    private static final String GROUP_NAME = "Quests";
     private static final Map<String, Waypoint> SHOWN = new HashMap<>();
+    private static WaypointGroup group;
 
     public static void sync(List<Mark> marks) {
         IClientAPI api = JourneyMapPlugin.api();
@@ -50,8 +54,9 @@ public final class JourneyMapWaypoints {
                 continue;
             }
             try {
-                Waypoint w = WaypointFactory.createWaypoint(m.label(), new BlockPos(m.x(), m.y(), m.z()), dimension, false);
+                Waypoint w = WaypointFactory.createWaypoint(MOD_ID, new BlockPos(m.x(), m.y(), m.z()), m.label(), dimension, false);
                 w.setColor(colorOf(m.kind()));
+                group(api).addWaypoint(w);
                 api.addWaypoint(MOD_ID, w);
                 SHOWN.put(m.id(), w);
             } catch (Exception ignored) {
@@ -63,6 +68,16 @@ public final class JourneyMapWaypoints {
             try { api.removeWaypoint(MOD_ID, SHOWN.get(id)); } catch (Exception ignored) {}
             return true;
         });
+    }
+
+    /** One "Quests" folder, found again by name if a previous session (or this one) already made it. */
+    private static WaypointGroup group(IClientAPI api) {
+        if (group != null) return group;
+        WaypointGroup existing = api.getWaypointGroupByName(MOD_ID, GROUP_NAME);
+        if (existing != null) return group = existing;
+        group = WaypointFactory.createWaypointGroup(MOD_ID, GROUP_NAME);
+        api.addWaypointGroup(group);
+        return group;
     }
 
     /** A fresh world, or a disconnect: nothing on the map is still ours to update. */
