@@ -738,3 +738,49 @@ quests want placed sites too), reaching CityWorld through `compat/CityWorldLots`
 Open: default preset in CityWorld config or a pack mod; what a city End gives in
 place of End cities; how common a vault near spawn really is on apocalypse
 worlds (CityWorld calls them rare) and how far "nearby" may stretch.
+
+### JourneyMap markers (2026-09-19, Sable) -- built
+
+Sable: for a "go here" quest, can JourneyMap show it on the map -- and givers, and moving NPCs
+like the camp -- updating live? Yes, and it needed nothing from JourneyMap's own mod list entry:
+its client API discovers a plugin purely by scanning every mod's classes for one annotated
+`@journeymap.api.v2.common.JourneyMapPlugin` (`client/compat/JourneyMapPlugin`), so Chronicler
+never declares a real dependency and starts identically with JourneyMap present or entirely
+absent -- the `journeymap` line in `neoforge.mods.toml` is `type="optional"`, `side="CLIENT"`,
+purely informational.
+
+**The data was already there.** A `visit`'s x/z, an `escort`'s `to`, a giver's resolved world
+position (`Givers.positionOf`, which already resolves an NPC giver's LIVE position through Cast,
+not a cached one) and an escort's charge (`Npcs.provider().byId(...).pos()`) are exactly what the
+journal page and the action bar already turn into words for the player. `neoforge/Waypoints`
+reads the same `QuestEngine.currentObjectives`/`questFor` a mini quest's own tracker uses, so a
+mini quest's slot-filled coordinates ("Mum's house", not `{mums.x}`) come through for free. A new
+`WaypointsPayload` carries it -- plain data, one entry per mark, no JourneyMap type anywhere near
+it -- sent once a second alongside the polled-objective sweep (`QuestEvents.onTick`), whether or
+not the journal panel is open: a map marker is not journal text, and someone who never opens the
+book still benefits from it.
+
+**The seam, same discipline as every other sibling.** Only `client/compat/JourneyMapPlugin` and
+`client/compat/JourneyMapWaypoints` import a `journeymap.*` type; everything else (the payload,
+`neoforge/Waypoints`, `client/ClientWaypoints`) is neutral data and a `ModList.isLoaded("journeymap")`
+guard, the same shape `Chronicler.optionalIntegration` uses server-side, because "present" is not
+"new enough" for a map mod either. `client/ClientWaypoints` never imports a JourneyMap type for
+exactly that reason -- Java only loads a class on first active use, so the rest of the mod never
+touching `client/compat` is what lets it run with JourneyMap simply not installed at all. The
+API jar itself is not published anywhere this family's unattended builds can fetch it from, so
+it is vendored under `libs/` (gitignored) straight out of the JourneyMap jar the CurseForge
+instances already carry (`META-INF/jarjar/journeymap-api-neoforge-*`) -- one file per Minecraft
+line, same trick as ZombieMod's 26.1.2 fallback jar.
+
+A JourneyMap waypoint is looked up by ITS OWN id, which this mod does not control, so
+`JourneyMapWaypoints` keeps its own `Map<mark id, Waypoint>` and mutates an existing waypoint's
+name/position in place on every resend rather than removing and recreating it -- an escort's
+charge moves every second, and a torn-down-and-rebuilt marker never looks settled on a live map.
+Every mark is `createClientWaypoint` (never shared to another player, never saved past the
+session): it is a live readout of server state, the same as the panel is, not a landmark worth
+remembering on its own.
+
+**Not done**: a "camp" as a landmark in its own right, independent of any quest referencing it --
+today an NPC is only marked while a live quest objective (an escort) points at them. Worth
+building if a chapter ever wants its whole camp visible on arrival rather than one NPC at a time;
+nothing about the payload shape stops it, `Waypoints.build` just has nothing yet that asks.

@@ -24,6 +24,9 @@ public final class ChroniclerClient {
         modEventBus.addListener(ChroniclerKeys::register);
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> ChroniclerKeys.onClientTick());
         // Last server's journal is not this server's.
-        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> ClientJournal.clear());
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+            ClientJournal.clear();
+            ClientWaypoints.clear();
+        });
     }
 }

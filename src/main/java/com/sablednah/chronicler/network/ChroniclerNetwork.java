@@ -17,6 +17,8 @@ public final class ChroniclerNetwork {
         // The client class is named only inside the enqueued lambda, so a dedicated server never loads it.
         registrar.playToClient(JournalPayload.TYPE, JournalPayload.CODEC, (payload, context) ->
                 context.enqueueWork(() -> com.sablednah.chronicler.client.ClientJournal.accept(payload)));
+        registrar.playToClient(WaypointsPayload.TYPE, WaypointsPayload.CODEC, (payload, context) ->
+                context.enqueueWork(() -> com.sablednah.chronicler.client.ClientWaypoints.accept(payload)));
         registrar.playToServer(JournalRequestPayload.TYPE, JournalRequestPayload.CODEC, (payload, context) ->
                 context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player) {
