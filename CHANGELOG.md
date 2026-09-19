@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix: `own_kill`'s respawn safety net was an in-memory record only -- a server restart between a mob's spawn and an unowned death left nothing to respawn from, stranding the kill quest anyway (reported: Phil, twice). It now falls back to the beat's own `on_enter` spawn (matched by tag) when nothing live is remembered.
 - **JourneyMap markers.** A quest's "go here" (`visit`, `escort`), a giver waiting to be found, and an escort's charge (live, moving as they do) are sent to the client once a second and drawn on JourneyMap if it is installed -- optional both ways, discovered through JourneyMap's own plugin annotation, never a real mods.toml dependency.
 - `settle` on `visit` and `escort`: the condition must hold continuously for this many seconds before it credits, rather than the instant a line is crossed -- reported in play as an escort ending, and an ambush appearing, while still on the path outside.
 - Mini quests: an `npc` slot placed `near` a found lot or structure now steps 4-10 blocks away before finding a dry surface, rather than using that place's own coordinate directly -- a building's coordinate is its roof.

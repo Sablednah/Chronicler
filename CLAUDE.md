@@ -357,6 +357,15 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
 
 ## Known traps (paid for next door, and some here)
 
+- **`own_kill`'s respawn record (`Rewards.SPAWNED`) is one of the in-memory maps the "surviving a
+  restart would be worse than losing them" rule above is about -- except here losing it is worse.**
+  `own_kill` exists so a kill quest cannot be stranded by a death that was not the player's; a
+  server restart between the spawn and that death is exactly the ordinary case it must survive,
+  and the live record cannot (paid for twice in play: Phil, on The Plan). The fallback is
+  `Quest.onEnterAt(stage)` -- the same `spawn` reward that made the mob in the first place, matched
+  by its `tag`, re-read from the frozen (and, for a mini quest, already slot-resolved) quest
+  content rather than remembered. Reach for the same trick before adding another in-memory record
+  a stranded-quest guard depends on.
 - **JourneyMap's API jar is not published anywhere an unattended build can fetch it from** --
   it is vendored under `libs/journeymap-api-neoforge+mc<version>.jar` (gitignored, one per line),
   extracted straight out of the JourneyMap jar the CurseForge instances already carry

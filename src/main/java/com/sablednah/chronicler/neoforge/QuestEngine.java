@@ -22,6 +22,7 @@ import com.sablednah.chronicler.data.QuestItem;
 import com.sablednah.chronicler.data.ObjectiveTypes;
 import com.sablednah.chronicler.data.Quest;
 import com.sablednah.chronicler.data.RewardSpec;
+import com.sablednah.chronicler.data.RewardTypes;
 import com.sablednah.chronicler.data.Stage;
 
 import net.minecraft.core.Holder;
@@ -500,7 +501,7 @@ public final class QuestEngine {
                 ObjectiveSpec spec = objectives.get(n);
                 if (Trackers.of(spec).countsKill(killer, victim, spec)) {
                     if (!ownKill && spec instanceof ObjectiveTypes.Kill k && k.ownKill()) {
-                        var was = Rewards.spawnedRecord(victim);
+                        var was = Rewards.spawnedRecord(victim).or(() -> onEnterSpawnFor(killer, id, quest, e.stage, k));
                         Feedback.chat(killer, Lang.fmt(was.isPresent() ? "msg.kill.escaped_again" : "msg.kill.escaped", "what", spec.describe()));
                         was.ifPresent(w -> Rewards.respawnOne(w, killer));
                         continue;
@@ -513,6 +514,25 @@ public final class QuestEngine {
                 }
             }
         }
+    }
+
+    /**
+     * {@code Rewards.SPAWNED} is an in-memory map, not saved -- a server restart between a mob's
+     * spawn and its (unowned) death leaves it empty, which otherwise silently defeats the entire
+     * point of {@code own_kill}: the one case it exists for, a kill quest stranded for good, is
+     * exactly what a restart mid-session would produce. The beat that spawned this mob is still
+     * sitting right there in the (frozen, per-player resolved) quest content, so a {@code spawn}
+     * reward in its {@code on_enter} whose {@code tag} matches this objective's is the same thing
+     * {@code Rewards.SPAWNED} would have held, reconstructed instead of remembered.
+     */
+    private static Optional<Rewards.Spawned> onEnterSpawnFor(ServerPlayer killer, Identifier questId, Quest quest, int stage, ObjectiveTypes.Kill k) {
+        if (k.tag().isEmpty()) return Optional.empty();
+        for (RewardSpec r : quest.onEnterAt(stage)) {
+            if (r instanceof RewardTypes.Spawn sp && sp.tag().equals(k.tag())) {
+                return Optional.of(new Rewards.Spawned(sp, killer.getUUID(), questId, quest));
+            }
+        }
+        return Optional.empty();
     }
 
     private static void dropQuestItem(LivingEntity victim, ObjectiveTypes.Kill.Drop drop) {

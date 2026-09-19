@@ -129,6 +129,12 @@ public record Quest(
         return b.get(Math.min(Math.max(stage, 0), b.size() - 1)).objectives();
     }
 
+    /** What that beat granted on entry -- an own_kill respawn's fallback source when nothing was recorded live. */
+    public List<RewardSpec> onEnterAt(int stage) {
+        List<Stage> b = beats();
+        return b.get(Math.min(Math.max(stage, 0), b.size() - 1)).onEnter();
+    }
+
     /** The record as written, holes already filled. */
     public static final Codec<Quest> BASE_CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.fieldOf("name").forGetter(Quest::name),
