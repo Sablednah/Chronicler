@@ -368,6 +368,13 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
 - **`Class#getResource` on a bare directory path does not reliably resolve through FML's
   classloader** (it indexes files, not directories) -- resolve a known file inside it (`pack.mcmeta`)
   and take its parent instead. Paid for by the achievement generator scanning the built-in packs.
+- **A lot or structure's own coordinate is its roof, not its ground** -- both are the heightmap's
+  highest block, which for anything built is the roof. An `npc` slot placed `near` one landed a
+  named NPC standing on top of the building (Mum, on her own house). Step away first, the same
+  `around` search other slots already use, then find a dry surface from there.
+- **An objective satisfied the instant a line is crossed has no story in it** -- an escort ending,
+  or an ambush firing, while the player is still on the path outside. `settle` (visit, escort)
+  holds the condition true for real seconds, continuously, before it credits.
 - **`PlayerAdvancements#award` is a silent no-op on a `FakePlayer`**, even for a genuinely vanilla
   advancement -- it is never sent through `PlayerList#placeNewPlayer`, which is what seeds a real
   join's advancement progress from the manager. The self-test proves generation and lookup, not

@@ -86,6 +86,7 @@
           "x": "{mums.x}",
           "z": "{mums.z}",
           "radius": 12,
+          "settle": 2,
           "label": "Mum's"
         }
       ],
@@ -143,6 +144,7 @@
           "radius": 20,
           "near": 14,
           "hits": 8,
+          "settle": 3,
           "label": "the Winchester"
         },
         {
@@ -154,6 +156,7 @@
           "radius": 20,
           "near": 14,
           "hits": 8,
+          "settle": 3,
           "label": "the Winchester"
         }
       ],
