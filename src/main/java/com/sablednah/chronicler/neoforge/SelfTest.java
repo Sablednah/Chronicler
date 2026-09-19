@@ -880,9 +880,15 @@ public final class SelfTest {
                 hce.jump(2, List.of(1)); // the First Bed beat
                 Zombie bed = new Zombie(level); bed.snapTo(spawn.getX(), spawn.getY(), spawn.getZ(), 0F, 0F);
                 bed.addTag(Trackers.TAG_PREFIX + "first_bed"); bed.addTag(Rewards.FOR_PREFIX + solo.getUUID());
-                int spawnedBefore = Rewards.lastSpawned();
+                // No Rewards.decorate() ran for this synthetic bed, so Rewards.SPAWNED holds nothing for
+                // it -- exactly a server restart between the real spawn and this death. own_kill's fallback
+                // must still find the beat's own on_enter spawn (by tag) and use that instead.
+                // (lastSpawned is reset to 0 at the start of every grant, not cumulative -- ==1, not a before/after delta.)
                 QuestEngine.onUnownedDeath(solo, bed); bed.discard();
                 check("own_kill: a self-destructed boss does not count", log.entry(hc) != null && log.entry(hc).stage == 2 && log.entry(hc).progress.get(0) == 0);
+                check("own_kill: a fresh one is spawned even with no live record of the first (a restart survived)", Rewards.lastSpawned() == 1);
+                bed = new Zombie(level); bed.snapTo(spawn.getX(), spawn.getY(), spawn.getZ(), 0F, 0F);
+                bed.addTag(Trackers.TAG_PREFIX + "first_bed"); bed.addTag(Rewards.FOR_PREFIX + solo.getUUID());
                 QuestEngine.onKill(solo, bed);
                 check("own_kill: the player's own kill does", log.entry(hc) != null && log.entry(hc).stage == 3);
             } else {
