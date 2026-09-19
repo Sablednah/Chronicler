@@ -151,6 +151,12 @@ dependencies {
     compileOnly files(newestJar('../ZombieMod/ZombieMod/build/libs', 'zombiemod-'))
     compileOnly files(newestJar('../CityWorld-ReForged/build/libs', 'cityworld-'))
     compileOnly files(newestJar('../Cast/build/libs', 'cast-'))
+    // JourneyMap is a client mod with no build/libs of its own on this line -- its API jar is
+    // vendored under libs/ (gitignored, like ZombieMod's 26.1.2 fallback) straight out of the
+    // JourneyMap jar the CurseForge instances already carry (META-INF/jarjar/journeymap-api-*),
+    // since the API is not published anywhere this family's builds can reach unattended. Only
+    // client/compat may import it (see CLAUDE.md).
+    compileOnly files("libs/journeymap-api-neoforge+mc${minecraft_version}.jar")
 }
 
 // Expand mod metadata properties into the generated neoforge.mods.toml.

@@ -44,6 +44,7 @@ public final class QuestEvents {
         for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
             QuestEngine.poll(player);
             Givers.tick(player);
+            Waypoints.sync(player);
         }
         Minis.tick(event.getServer());
     }

@@ -195,8 +195,14 @@ neoforge/Givers      offers near a block or in a kind of place; GiverStore = op-
 neoforge/Journal     the written book; FlagStore = world flags (SavedData, cached for off-thread)
 neoforge/JournalPanel the same journal as one payload for a modded client (journal.panel): text resolved
                      here, buttons are /quest commands the client sends back (RUN runs only "quest ...")
-network/             JournalPayload (clientbound, whole journal) + JournalRequestPayload (open/refresh/run)
-client/              dist=CLIENT entrypoint: JournalScreen (chapters | quest map or page), ` key (never J: JourneyMap), ClientJournal
+network/             JournalPayload (clientbound, whole journal) + JournalRequestPayload (open/refresh/run) +
+                     WaypointsPayload (clientbound, once a second: quest targets/givers/led NPCs, for a map)
+neoforge/Waypoints   plain data for WaypointsPayload -- reads the same currentObjectives/Givers/Npcs every
+                     tracker and page already reads; knows nothing of JourneyMap or any client at all
+client/              dist=CLIENT entrypoint: JournalScreen (chapters | quest map or page), ` key (never J: JourneyMap), ClientJournal, ClientWaypoints
+client/compat/       ONE guarded pair for JourneyMap: JourneyMapPlugin (its own annotation-discovered
+                     plugin, storing IClientAPI), JourneyMapWaypoints (creates/moves/removes Waypoints).
+                     The client-side twin of neoforge/compat/ -- same "only this may import it" rule
 core/QuestMap        prerequisite-depth layout for the map; loader-light so the self-test checks it
 neoforge/Party|Money|Rep|Sheet|Lots   neutral bridges, "nothing here" without a sibling
 neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEconomy,
@@ -279,7 +285,9 @@ has a page). LegendQuest, ZombieMod and CityWorld stay `type="optional"`. All fi
 or `me.daddychurchill.CityWorld`.** Everything else talks to a neutral bridge
 that answers sensibly when the sibling is absent (no economy → reward skipped
 and said so; no CityWorld → `lot` objective never completes and the file is
-rejected at load with a clear message).
+rejected at load with a clear message). **JourneyMap is the same rule, client-side**: only
+`client/compat/` may import `journeymap.*`, and it is `compileOnly` against a vendored jar
+(see Known traps) rather than a sibling's `build/libs`, since it is not one of ours.
 
 **Floors are what is consumed, not what is newest.** Standards' floor is `[1.5.0,)` because
 reputation (1.5.0) is consumed; Cast's is `[1.1.0,)` because `follow` (the escort objective) is.
@@ -349,6 +357,14 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
 
 ## Known traps (paid for next door, and some here)
 
+- **JourneyMap's API jar is not published anywhere an unattended build can fetch it from** --
+  it is vendored under `libs/journeymap-api-neoforge+mc<version>.jar` (gitignored, one per line),
+  extracted straight out of the JourneyMap jar the CurseForge instances already carry
+  (`unzip -j -p <journeymap jar> "META-INF/jarjar/journeymap-api-neoforge-*.jar"`). A fresh
+  checkout on a machine without those instances needs this redone by hand before `client/compat`
+  compiles. It is discovered at runtime purely by JourneyMap scanning every mod's classes for one
+  annotated `@journeymap.api.v2.common.JourneyMapPlugin` -- nothing registers it, and the
+  `neoforge.mods.toml` entry is informational only; deleting it changes nothing.
 - **Resolving a cherry-pick conflict with `git add -A` resurrects files the commit deleted.**
   Cast paid for it: `Proxies.java`, deleted on main, came back on both 26.x branches as an
   orphan nothing called. After `cherry-pick --continue`, `git grep` for the name of the thing

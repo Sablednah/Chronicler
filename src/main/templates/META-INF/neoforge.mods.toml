@@ -88,3 +88,14 @@ logoBlur=false
     versionRange="[1.1.0,)"
     ordering="AFTER"
     side="BOTH"
+
+# Client-only, and never a real dependency (see docs/DESIGN.md "JourneyMap"): Chronicler's own
+# plugin class is discovered by JourneyMap's own annotation scan, not through anything declared
+# here. This entry exists only so the mod list shows the relationship; nothing breaks if it is
+# removed, and NOTHING in this build ever fails to start for JourneyMap's absence.
+[[dependencies.${mod_id}]]
+    modId="journeymap"
+    type="optional"
+    versionRange="[1,)"
+    ordering="NONE"
+    side="CLIENT"

@@ -32,6 +32,9 @@ in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
   left, a map of what leads to what, a page per quest with its buttons.
 - Choices arrive as buttons in chat and in the book. `/quest replay <chapter>`
   starts a replayable chapter over, keeping the endings you found.
+- With [JourneyMap](https://www.curseforge.com/minecraft/mc-mods/journeymap) installed too, a
+  quest's "go here", a giver waiting to be found, and an escort's charge all show up on the map,
+  live -- entirely optional, on both sides.
 
 ## Requirements
 
