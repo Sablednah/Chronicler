@@ -1090,6 +1090,14 @@ public final class SelfTest {
         phil.discard();
         notPhil.discard();
 
+        // --- interior: the Y band keeps a "near a building" search out of a deep cave or off a high
+        // roof (Mum, 45m under a house; Phil, on a roof) -- the band math itself, not terrain the
+        // self-test cannot control.
+        check("interior: the default band sits around sea level", Minis.defaultInteriorMinY(level) < level.getSeaLevel()
+                && Minis.defaultInteriorMaxY(level) > level.getSeaLevel());
+        BlockPos impossible = Minis.interiorNear(level, spawnAt, 10, level.getSeaLevel() + 400, level.getSeaLevel() + 401);
+        check("interior: a band above the world's own height finds nothing and falls back outdoors, not a false match", impossible != null);
+
         // --- the prisoner: an outpost handed over, the guards, then an escort that fails on its sixth hit ---
         Identifier prisonerQuest = ChroniclerIds.of("mini_prisoner");
         var outpostAt = spawnAt.offset(0, 0, 300);
