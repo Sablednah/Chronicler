@@ -9,6 +9,7 @@ import com.sablednah.chronicler.data.ObjectiveSpec;
 import com.sablednah.chronicler.data.ObjectiveTypes;
 import com.sablednah.chronicler.data.QuestItem;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -129,7 +130,11 @@ public final class Trackers {
                 boolean rightWorld = spec.dimension().map(d -> d.equals(player.level().dimension().identifier())).orElse(true);
                 double dx = at.x - (spec.to().getX() + 0.5), dz = at.z - (spec.to().getZ() + 0.5);
                 if (rightWorld && dx * dx + dz * dz <= spec.radius() * spec.radius() && toPlayer <= spec.near()) {
-                    cast.stopFollowing(server, who);
+                    // Arrived is not the same as settled: the last few steps, indoors and out of the
+                    // fight the destination is often braced for, are worth walking on their own rather
+                    // than leaving them stood wherever the radius happened to catch them.
+                    BlockPos inside = Minis.interiorNear(player.level(), spec.to(), 10);
+                    if (!cast.walkTo(server, who, net.minecraft.world.phys.Vec3.atBottomCenterOf(inside))) cast.stopFollowing(server, who);
                     return OptionalInt.of(1);
                 }
                 // Lead them, unless someone nearer already is (a party escorting together).

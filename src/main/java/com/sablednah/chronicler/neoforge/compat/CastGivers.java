@@ -83,6 +83,9 @@ public final class CastGivers {
             @Override public void teleport(MinecraftServer server, UUID id, Vec3 pos) {
                 Cast.drive(server, id, pos, 0F, 0F);
             }
+            @Override public boolean walkTo(MinecraftServer server, UUID id, Vec3 target) {
+                return Cast.walkTo(server, id, target);
+            }
         });
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((com.sablednah.cast.api.NpcHitEvent ev) ->
                 { var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer(); if (server != null) Npcs.hit(server, ev.npcId()); });

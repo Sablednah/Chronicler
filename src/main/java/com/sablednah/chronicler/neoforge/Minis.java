@@ -187,13 +187,14 @@ public final class Minis {
                     }
                     String npcName = Slots.text(slot.person().name().get(), v, mini);
                     if (!Npcs.available()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.npc", "name", npcName)); }
-                    // A person placed at a found place (an outpost, a house) stands on its ground -- and a
-                    // building's ground is never its own coordinate: a lot or structure resolves to the
-                    // heightmap's highest block, which for anything built is its ROOF (Mum, standing near
-                    // "mums", landed on top of her own house). Placed exactly AT one (no near) is left
-                    // alone -- that is a deliberate coordinate (a giver's own spot, a chapter's camp).
+                    // A person placed at a found place (an outpost, a house) stands INSIDE it -- a lot or
+                    // structure's own coordinate is the heightmap's highest block, which for anything
+                    // built is its ROOF (Mum, standing near "mums", first landed on top of her own house;
+                    // fixed once already to step outdoors, still not what "near a house" should mean for
+                    // a person). Placed exactly AT one (no near) is left alone -- that is a deliberate
+                    // coordinate (a giver's own spot, a chapter's camp).
                     BlockPos at = slot.max() > 0 ? around(level, from.pos(), slot.min(), slot.max())
-                            : slot.near().isPresent() ? around(level, from.pos(), 4, 10) : from.pos();
+                            : slot.near().isPresent() ? interiorNear(level, from.pos(), 10) : from.pos();
                     Vec3 pos = new Vec3(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
                     float yaw = rng.nextFloat() * 360F;
                     UUID uid;
@@ -268,6 +269,42 @@ public final class Minis {
         double angle = rng.nextDouble() * Math.PI * 2;
         double dist = min + rng.nextDouble() * Math.max(0, max - min);
         return Givers.dryColumn(level, (int) Math.round(from.getX() + Math.cos(angle) * dist), (int) Math.round(from.getZ() + Math.sin(angle) * dist));
+    }
+
+    /**
+     * A sheltered floor within {@code radius} blocks of {@code from} -- CityWorld's own API only
+     * ever answers "what kind of place is this chunk" (no bounding box, no door, no floor level: a
+     * lot is chunk-granular metadata, not geometry), so there is no API to ask for a building's
+     * inside. This asks the world instead: scan down from each column's roof for the first walkable
+     * block that cannot see the sky (under cover, not the roof itself) with solid ground beneath it.
+     * A person placed "near" a house lands standing in it, not on its roof or the path outside.
+     * Falls back to the old outdoor spot ({@link #around}) if nothing sheltered turns up nearby --
+     * CityWorld generates whatever shape it likes, and not every "near" reference is a real building.
+     */
+    static BlockPos interiorNear(ServerLevel level, BlockPos from, int radius) {
+        var rng = level.getRandom();
+        for (int attempt = 0; attempt < 12; attempt++) {
+            double angle = rng.nextDouble() * Math.PI * 2;
+            double dist = rng.nextDouble() * radius;
+            int x = (int) Math.round(from.getX() + Math.cos(angle) * dist);
+            int z = (int) Math.round(from.getZ() + Math.sin(angle) * dist);
+            BlockPos found = interiorColumn(level, x, z);
+            if (found != null) return found;
+        }
+        return around(level, from, 4, 10);
+    }
+
+    /** The first sheltered, walkable, floored spot in this column, scanning down from its roof. */
+    private static BlockPos interiorColumn(ServerLevel level, int x, int z) {
+        int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        for (int y = top - 1; y > level.getMinY() + 1; y--) {
+            BlockPos pos = new BlockPos(x, y, z);
+            if (level.canSeeSky(pos)) continue; // still the roof, or the open air outside it
+            if (level.getBlockState(pos).blocksMotion() || level.getBlockState(pos.above()).blocksMotion()) continue; // not standing room
+            if (!level.getBlockState(pos.below()).blocksMotion()) continue; // no floor
+            return pos;
+        }
+        return null;
     }
 
     /**
