@@ -89,17 +89,22 @@ public record Mini(Map<String, Slot> slots, Optional<Wild> spawn) {
      * <li>{@code block} -- the nearest {@code block} (an id or {@code #tag}) within {@code radius}.</li>
      * <li>{@code giver} -- where the giver of {@code quest} stands (Okafor, the camp).</li>
      * <li>{@code given} -- a position handed over by whoever starts it (StoryTeller, the command).</li>
-     * <li>{@code npc} -- a person placed at the anchor, or {@code min}..{@code max} from it.</li>
+     * <li>{@code npc} -- a person placed at the anchor, or {@code min}..{@code max} from it. With
+     * {@code near} and no {@code max}, placed genuinely inside whatever is there (a scan down from
+     * its roof for a sheltered, walkable, floored spot), bounded by {@code y_min}/{@code y_max} --
+     * near sea level by default, so the search cannot wander into a cave far underneath or land on
+     * a roof high above; set them to widen or move that band for a place that is neither.</li>
      * </ul>
      * A place gives {@code {s}} (its {@code label}), {@code {s.x}}, {@code {s.y}}, {@code {s.z}},
      * {@code {s.pos}} and {@code {s.dim}}; a person also {@code {s.id}}, and {@code {s}} is their name.
      * {@code near} anchors the search at an earlier slot instead of the start.
      */
     public record Slot(String type, List<String> pool, int min, int max, Find find, int radius,
-            Optional<String> near, Optional<String> label, Person person) {
+            Optional<String> near, Optional<String> label, Person person, Optional<Integer> yMin, Optional<Integer> yMax) {
 
         static final Slot NONE = new Slot("", List.of(), 0, 0, new Find(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()),
-                0, Optional.empty(), Optional.empty(), new Person(Optional.empty(), Optional.empty(), Optional.empty(), Map.of(), Optional.empty(), false));
+                0, Optional.empty(), Optional.empty(), new Person(Optional.empty(), Optional.empty(), Optional.empty(), Map.of(), Optional.empty(), false),
+                Optional.empty(), Optional.empty());
 
         public static final List<String> TYPES = List.of("pick", "number", "here", "around", "structure", "lot", "block", "giver", "given", "npc");
         /** The types that stand for a place, and so give x, y, z, pos and dim. */
@@ -114,7 +119,9 @@ public record Mini(Map<String, Slot> slots, Optional<Wild> spawn) {
                 Codec.INT.optionalFieldOf("radius", 0).forGetter(Slot::radius),
                 Codec.STRING.optionalFieldOf("near").forGetter(Slot::near),
                 Codec.STRING.optionalFieldOf("label").forGetter(Slot::label),
-                Person.MAP_CODEC.forGetter(Slot::person))
+                Person.MAP_CODEC.forGetter(Slot::person),
+                Codec.INT.optionalFieldOf("y_min").forGetter(Slot::yMin),
+                Codec.INT.optionalFieldOf("y_max").forGetter(Slot::yMax))
                 .apply(i, Slot::new)).validate(Slot::validate);
 
         private static DataResult<Slot> validate(Slot s) {

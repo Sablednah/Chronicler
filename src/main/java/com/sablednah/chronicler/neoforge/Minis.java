@@ -194,7 +194,9 @@ public final class Minis {
                     // a person). Placed exactly AT one (no near) is left alone -- that is a deliberate
                     // coordinate (a giver's own spot, a chapter's camp).
                     BlockPos at = slot.max() > 0 ? around(level, from.pos(), slot.min(), slot.max())
-                            : slot.near().isPresent() ? interiorNear(level, from.pos(), 10) : from.pos();
+                            : slot.near().isPresent() ? interiorNear(level, from.pos(), 10,
+                                    slot.yMin().orElseGet(() -> defaultInteriorMinY(level)), slot.yMax().orElseGet(() -> defaultInteriorMaxY(level)))
+                            : from.pos();
                     Vec3 pos = new Vec3(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
                     float yaw = rng.nextFloat() * 360F;
                     UUID uid;
@@ -271,33 +273,47 @@ public final class Minis {
         return Givers.dryColumn(level, (int) Math.round(from.getX() + Math.cos(angle) * dist), (int) Math.round(from.getZ() + Math.sin(angle) * dist));
     }
 
-    /**
-     * A sheltered floor within {@code radius} blocks of {@code from} -- CityWorld's own API only
-     * ever answers "what kind of place is this chunk" (no bounding box, no door, no floor level: a
-     * lot is chunk-granular metadata, not geometry), so there is no API to ask for a building's
-     * inside. This asks the world instead: scan down from each column's roof for the first walkable
-     * block that cannot see the sky (under cover, not the roof itself) with solid ground beneath it.
-     * A person placed "near" a house lands standing in it, not on its roof or the path outside.
-     * Falls back to the old outdoor spot ({@link #around}) if nothing sheltered turns up nearby --
-     * CityWorld generates whatever shape it likes, and not every "near" reference is a real building.
-     */
+    /** {@link #interiorNear(ServerLevel, BlockPos, int, int, int)}, bounded to near sea level. */
     static BlockPos interiorNear(ServerLevel level, BlockPos from, int radius) {
+        return interiorNear(level, from, radius, defaultInteriorMinY(level), defaultInteriorMaxY(level));
+    }
+
+    static int defaultInteriorMinY(ServerLevel level) { return level.getSeaLevel() - 8; }
+    static int defaultInteriorMaxY(ServerLevel level) { return level.getSeaLevel() + 24; }
+
+    /**
+     * A sheltered floor within {@code radius} blocks of {@code from}, between {@code minY} and
+     * {@code maxY} -- CityWorld's own API only ever answers "what kind of place is this chunk" (no
+     * bounding box, no door, no floor level: a lot is chunk-granular metadata, not geometry), so
+     * there is no API to ask for a building's inside. This asks the world instead: scan down from
+     * each column's roof for the first walkable block that cannot see the sky (under cover, not the
+     * roof itself) with solid ground beneath it -- but "sheltered, walkable, floored" describes a
+     * natural cave just as well as a room, and an unbounded scan found one 45 blocks under a house.
+     * The Y band keeps it out of a cave far underneath and off a roof high above; near sea level by
+     * default ({@link #interiorNear(ServerLevel, BlockPos, int)}), a slot's own {@code y_min}/
+     * {@code y_max} otherwise. A person placed "near" a house lands standing in it, not on its roof,
+     * in the cave under it, or the path outside. Falls back to the old outdoor spot
+     * ({@link #around}) if nothing sheltered turns up in the band -- CityWorld generates whatever
+     * shape it likes, and not every "near" reference is a real building.
+     */
+    static BlockPos interiorNear(ServerLevel level, BlockPos from, int radius, int minY, int maxY) {
         var rng = level.getRandom();
         for (int attempt = 0; attempt < 12; attempt++) {
             double angle = rng.nextDouble() * Math.PI * 2;
             double dist = rng.nextDouble() * radius;
             int x = (int) Math.round(from.getX() + Math.cos(angle) * dist);
             int z = (int) Math.round(from.getZ() + Math.sin(angle) * dist);
-            BlockPos found = interiorColumn(level, x, z);
+            BlockPos found = interiorColumn(level, x, z, minY, maxY);
             if (found != null) return found;
         }
         return around(level, from, 4, 10);
     }
 
-    /** The first sheltered, walkable, floored spot in this column, scanning down from its roof. */
-    private static BlockPos interiorColumn(ServerLevel level, int x, int z) {
-        int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-        for (int y = top - 1; y > level.getMinY() + 1; y--) {
+    /** The first sheltered, walkable, floored spot in this column between {@code minY} and {@code maxY}, scanning down. */
+    private static BlockPos interiorColumn(ServerLevel level, int x, int z, int minY, int maxY) {
+        int top = Math.min(level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, maxY);
+        int bottom = Math.max(level.getMinY() + 1, minY);
+        for (int y = top; y > bottom; y--) {
             BlockPos pos = new BlockPos(x, y, z);
             if (level.canSeeSky(pos)) continue; // still the roof, or the open air outside it
             if (level.getBlockState(pos).blocksMotion() || level.getBlockState(pos.above()).blocksMotion()) continue; // not standing room

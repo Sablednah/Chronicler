@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- A person placed "near" a lot or structure now stands genuinely inside it -- CityWorld's own API has no bounding box or floor to ask for (a lot is chunk-granular metadata, not geometry), so this scans down from the roof for the first sheltered, walkable, floored spot instead. Mum, in her own house rather than the path outside.
+- A person placed "near" a lot or structure now stands genuinely inside it -- CityWorld's own API has no bounding box or floor to ask for (a lot is chunk-granular metadata, not geometry), so this scans down from the roof for the first sheltered, walkable, floored spot instead. Mum, in her own house rather than the path outside. Fix: an unbounded scan found a spot 45 blocks under the house (a natural cave answers "sheltered, walkable, floored" just as well as a room does) -- bounded to near sea level by default, or a mini quest's own `y_min`/`y_max` on an `npc` slot.
+- Fix: a `spawn` reward's placement had no opinion on elevation at all -- a beat completing while the player happened to be on or near a roof spawned the follow-up mob up there too (Phil, right after "Go round Mum's"). Now prefers a point near sea level, same band as the interior search.
 - An escort's charge, arrived, now walks the rest of the way to a sheltered spot near the destination and stands there, rather than stopping wherever the arrival radius happened to catch them.
 - A boss bar shows an escort's hits taken while it is in danger, so missing the action-bar line does not mean losing track of how close it is to failing.
 - Waypoints/JourneyMap: every person a mini quest has placed is marked for as long as it is active, not only whichever one the current beat's objective happens to name (Ed, met once at the start and never an objective again, was missing entirely).
