@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A person placed "near" a lot or structure now stands genuinely inside it -- CityWorld's own API has no bounding box or floor to ask for (a lot is chunk-granular metadata, not geometry), so this scans down from the roof for the first sheltered, walkable, floored spot instead. Mum, in her own house rather than the path outside.
+- An escort's charge, arrived, now walks the rest of the way to a sheltered spot near the destination and stands there, rather than stopping wherever the arrival radius happened to catch them.
+- A boss bar shows an escort's hits taken while it is in danger, so missing the action-bar line does not mean losing track of how close it is to failing.
+- Waypoints/JourneyMap: every person a mini quest has placed is marked for as long as it is active, not only whichever one the current beat's objective happens to name (Ed, met once at the start and never an objective again, was missing entirely).
 - Fix: `own_kill`'s respawn safety net was an in-memory record only -- a server restart between a mob's spawn and an unowned death left nothing to respawn from, stranding the kill quest anyway (reported: Phil, twice). It now falls back to the beat's own `on_enter` spawn (matched by tag) when nothing live is remembered.
 - Fix: an `own_kill` target that mutates into something else (ZombieMod: a Walker turning Runner) never fires a death event at all -- it is a silent `discard()`, not a kill, and the replacement carries none of the original's tags. Reported a third time on Phil, this time with no death and no respawn either. Now caught on `EntityLeaveLevelEvent` (a genuine discard, never a chunk unload or an already-credited kill).
 - **JourneyMap markers.** A quest's "go here" (`visit`, `escort`), a giver waiting to be found, and an escort's charge (live, moving as they do) are sent to the client once a second and drawn on JourneyMap if it is installed -- optional both ways, discovered through JourneyMap's own plugin annotation, never a real mods.toml dependency.

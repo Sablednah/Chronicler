@@ -46,8 +46,16 @@ public final class Waypoints {
                     Identifier dim = esc.dimension().orElse(here);
                     marks.add(new Mark(id + ":target", Lang.fmt("waypoint.target", "quest", questName, "what", esc.describe()),
                             esc.to().getX(), esc.to().getY(), esc.to().getZ(), dim, WaypointsPayload.TARGET));
-                    liveNpc(server, esc.who(), questName).ifPresent(marks::add);
                 }
+            }
+            // Every person a mini quest has placed, for as long as it is active -- not only whichever
+            // one the current beat's objective happens to name. Ed, met once at the start and never an
+            // objective again, is exactly the case this covers: reported missing entirely from the map.
+            for (var slotEntry : e.getValue().slots.entrySet()) {
+                if (!slotEntry.getKey().endsWith(".id")) continue;
+                String slotName = slotEntry.getKey().substring(0, slotEntry.getKey().length() - ".id".length());
+                String label = e.getValue().slots.getOrDefault(slotName, slotName);
+                liveNpc(server, slotEntry.getValue(), questName, label).ifPresent(marks::add);
             }
         }
 
@@ -66,13 +74,13 @@ public final class Waypoints {
         return new WaypointsPayload(marks);
     }
 
-    /** An escort's charge, wherever Cast says they are right now -- a mark that moves as they do. */
-    private static java.util.Optional<Mark> liveNpc(MinecraftServer server, String who, String questName) {
+    /** A person the quest placed, wherever Cast says they are right now -- a mark that moves as they do. */
+    private static java.util.Optional<Mark> liveNpc(MinecraftServer server, String who, String questName, String label) {
         if (!Npcs.available()) return java.util.Optional.empty();
         UUID id;
         try { id = UUID.fromString(who); } catch (IllegalArgumentException e) { return java.util.Optional.empty(); }
         return Npcs.provider().get().byId(server, id).map(p -> new Mark(p.id().toString(),
-                Lang.fmt("waypoint.npc", "name", p.name(), "quest", questName),
+                Lang.fmt("waypoint.npc", "name", label, "quest", questName),
                 (int) p.pos().x, (int) p.pos().y, (int) p.pos().z, p.dimension(), WaypointsPayload.NPC));
     }
 
