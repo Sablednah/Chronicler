@@ -247,12 +247,7 @@ public final class Rewards {
             var rng = level.getRandom();
             lastSpawned = 0;
             for (int n = 0; n < r.count(); n++) {
-                double angle = rng.nextDouble() * Math.PI * 2;
-                double dist = 2 + rng.nextDouble() * Math.max(0, r.radius() - 2);
-                int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
-                int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
-                var at = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                        new net.minecraft.core.BlockPos(x, 0, z));
+                var at = surfaceNear(level, player, r.radius(), rng);
                 if (r.genus().isPresent() && Genera.available()) {
                     Identifier genusId = Identifier.tryParse(r.genus().get());
                     var mob = genusId == null ? java.util.Optional.<net.minecraft.world.entity.Mob>empty()
@@ -295,6 +290,28 @@ public final class Rewards {
                 if (level.addFreshEntity(spawned)) lastSpawned++;
             }
         });
+    }
+
+    /**
+     * A random surface point within {@code radius} of the player, preferring one near sea level --
+     * the plain heightmap surface has no opinion on elevation at all, and a beat completing while the
+     * player happened to be on or near a roof spawned its follow-up mob up there too (Phil, on The
+     * Plan, right after "Go round Mum's"). Retries a few offsets before giving up and using the last
+     * one tried, same idea as {@link Minis#interiorNear}: near sea level by default, not a hard rule --
+     * a quest that genuinely wants a rooftop or a cave encounter is not blocked by this.
+     */
+    private static net.minecraft.core.BlockPos surfaceNear(net.minecraft.server.level.ServerLevel level, ServerPlayer player, double radius, net.minecraft.util.RandomSource rng) {
+        int minY = Minis.defaultInteriorMinY(level), maxY = Minis.defaultInteriorMaxY(level);
+        net.minecraft.core.BlockPos last = null;
+        for (int attempt = 0; attempt < 6; attempt++) {
+            double angle = rng.nextDouble() * Math.PI * 2;
+            double dist = 2 + rng.nextDouble() * Math.max(0, radius - 2);
+            int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
+            int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
+            last = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new net.minecraft.core.BlockPos(x, 0, z));
+            if (last.getY() >= minY && last.getY() <= maxY) return last;
+        }
+        return last;
     }
 
     private static void character(ServerPlayer player, RewardSpec r, boolean landed) {
