@@ -790,6 +790,27 @@ older API build has no `createClientWaypoint` at all) turned out to already have
 overload sitting right next to the wrong one -- it never needed special-casing.
 
 **Not done**: a "camp" as a landmark in its own right, independent of any quest referencing it --
-today an NPC is only marked while a live quest objective (an escort) points at them. Worth
-building if a chapter ever wants its whole camp visible on arrival rather than one NPC at a time;
-nothing about the payload shape stops it, `Waypoints.build` just has nothing yet that asks.
+`Waypoints.build` marks every person a mini quest has placed for as long as it is active (not only
+whichever one the current beat's objective names, fixed 2026-09-20), but a camp with no quest
+currently pointing at it still shows nothing. Worth building if a chapter ever wants its whole camp
+visible on arrival rather than one NPC at a time; nothing about the payload shape stops it.
+
+### Open questions, deferred on purpose (2026-09-20, Sable)
+
+**NPC map markers: Chronicler or Cast?** Sable asked whether live NPC map-marking (what
+`Waypoints`/`client/compat/JourneyMapWaypoints` do today) belongs in Cast instead -- a generic "any
+NPC can get a live marker" capability other Cast consumers (StoryTeller) could reuse, rather than
+duplicated per mod. Real tradeoff, not decided: Cast has no concept of a quest, so *something* still
+has to tell it "this NPC matters, with this label" -- the plumbing does not disappear, it moves.
+Judge again later; nothing here blocks on it.
+
+**A companion who fights.** Sable asked whether Ed could follow the player to fetch Mum and Liz,
+fight alongside them against the swarm, then walk inside with everyone at the end -- and floated
+"scripted movements and animations" as a general quest-authoring primitive. Genuinely new ground,
+not a tweak: Cast's NPCs today only know three motions (follow passively, walk-to-and-anchor, lurk
+then rush a door) and no combat AI at all -- the existing `Exposure`/`LureGoal` system makes
+*monsters* attack an exposed NPC, never the reverse. Ed specifically is a human phantom (no
+`entity:` in his slot), and a phantom cannot fight in Cast's current architecture at all -- only a
+mob body can swing a weapon under vanilla AI. On the TODO for a dedicated session (most of the
+design work is Cast's side: a real "attack what my leader is fighting" goal, and probably a
+mob-body option for a companion that needs to fight), not improvised into a content fix.
