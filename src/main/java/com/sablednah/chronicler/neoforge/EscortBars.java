@@ -46,7 +46,8 @@ public final class EscortBars {
                 int taken = e.getValue().tallies.getOrDefault("hits:" + esc.who(), 0);
                 String whom = esc.name().orElseGet(() -> Givers.npcName(esc.who()));
                 ServerBossEvent bar = BARS.computeIfAbsent(key, k -> {
-                    ServerBossEvent b = new ServerBossEvent(Feedback.colored(""), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10);
+                    // 26.x: ServerBossEvent takes a UUID identity first -- ours is transient, never looked up again, so a fresh random one is fine.
+                    ServerBossEvent b = new ServerBossEvent(java.util.UUID.randomUUID(), Feedback.colored(""), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10);
                     b.addPlayer(player);
                     return b;
                 });
