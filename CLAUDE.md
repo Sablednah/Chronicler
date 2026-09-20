@@ -366,6 +366,13 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
   by its `tag`, re-read from the frozen (and, for a mini quest, already slot-resolved) quest
   content rather than remembered. Reach for the same trick before adding another in-memory record
   a stranded-quest guard depends on.
+- **Not every way a tracked mob disappears is a death.** ZombieMod's mutation (a Walker turning
+  Runner at low health) replaces the entity with `Entity#discard()` -- no `LivingDeathEvent`, no
+  damage source, and the replacement inherits only persistent-data NBT, never Chronicler's vanilla
+  scoreboard tags. `own_kill` paid for this a third time on the same Phil before it was caught:
+  `QuestEvents.onLeave` (`EntityLeaveLevelEvent`, reason `DISCARDED` specifically -- never `KILLED`,
+  already credited by `onDeath` an instant earlier, and never a chunk unload, where the mob is
+  still there) is the only hook that ever sees a mutation happen to a tagged target.
 - **JourneyMap's API jar is not published anywhere an unattended build can fetch it from** --
   it is vendored under `libs/journeymap-api-neoforge+mc<version>.jar` (gitignored, one per line),
   extracted straight out of the JourneyMap jar the CurseForge instances already carry

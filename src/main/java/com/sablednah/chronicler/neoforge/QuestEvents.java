@@ -2,8 +2,11 @@ package com.sablednah.chronicler.neoforge;
 
 import com.sablednah.chronicler.ChroniclerConfig;
 
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.minecraft.world.InteractionResult;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -22,17 +25,41 @@ public final class QuestEvents {
             // A FakePlayer with a journal is the self-test driving the real path.
             QuestEngine.onKill(killer, victim);
         } else {
-            // Not a player's doing. If a quest spawned it for someone, that someone still gets an answer.
-            for (String tag : victim.getTags()) {
-                if (!tag.startsWith(Rewards.FOR_PREFIX)) continue;
-                try {
-                    ServerPlayer owner = victim.level().getServer().getPlayerList().getPlayer(java.util.UUID.fromString(tag.substring(Rewards.FOR_PREFIX.length())));
-                    if (owner != null) QuestEngine.onUnownedDeath(owner, victim);
-                } catch (IllegalArgumentException ignored) {}
-                break;
-            }
+            notifyOwnerOfUnownedRemoval(victim);
         }
         Rewards.forget(victim);
+    }
+
+    /**
+     * The other way a tracked mob can disappear without a {@code LivingDeathEvent} at all: ZombieMod's
+     * mutation swaps a mob for a fresh one of a different genus (a Walker that drops low enough health
+     * turning into a Runner is exactly this, not a kill) via {@code Entity#discard()} -- which removes
+     * the entity silently, no death, no damage source, nothing {@code onDeath} above ever sees. The
+     * replacement carries none of Chronicler's tags either (only persistent-data NBT crosses a
+     * mutation, never vanilla scoreboard tags), so this is the only place a tagged own_kill target's
+     * disappearance is ever noticed. {@code DISCARDED} only, never {@code KILLED} (that already went
+     * through {@code onDeath} an instant earlier and must not be credited twice) nor an unload (the mob
+     * is still there, just not loaded).
+     */
+    @SubscribeEvent
+    static void onLeave(EntityLeaveLevelEvent event) {
+        if (event.getLevel().isClientSide()) return;
+        if (!(event.getEntity() instanceof LivingEntity victim)) return;
+        if (victim.getRemovalReason() != Entity.RemovalReason.DISCARDED) return;
+        notifyOwnerOfUnownedRemoval(victim);
+        Rewards.forget(victim);
+    }
+
+    /** Not the player's doing. If a quest spawned it for someone, that someone still gets an answer. */
+    private static void notifyOwnerOfUnownedRemoval(LivingEntity victim) {
+        for (String tag : victim.getTags()) {
+            if (!tag.startsWith(Rewards.FOR_PREFIX)) continue;
+            try {
+                ServerPlayer owner = victim.level().getServer().getPlayerList().getPlayer(java.util.UUID.fromString(tag.substring(Rewards.FOR_PREFIX.length())));
+                if (owner != null) QuestEngine.onUnownedDeath(owner, victim);
+            } catch (IllegalArgumentException ignored) {}
+            break;
+        }
     }
 
     /** Polled objectives (inventory, position) on the configured interval, not every tick. */

@@ -887,6 +887,16 @@ public final class SelfTest {
                 QuestEngine.onUnownedDeath(solo, bed); bed.discard();
                 check("own_kill: a self-destructed boss does not count", log.entry(hc) != null && log.entry(hc).stage == 2 && log.entry(hc).progress.get(0) == 0);
                 check("own_kill: a fresh one is spawned even with no live record of the first (a restart survived)", Rewards.lastSpawned() == 1);
+                // A mutation (ZombieMod: a Walker turning Runner) never fires LivingDeathEvent at all --
+                // Mutations.mutate() replaces the mob with Entity#discard(), which is a silent removal,
+                // and copies only persistent-data NBT across, never Chronicler's vanilla scoreboard tags.
+                // QuestEvents.onLeave is the only thing that ever sees this: EntityLeaveLevelEvent with
+                // DISCARDED, on the OLD (still-tagged) entity, before it disappears for good.
+                Zombie mutated = new Zombie(level); mutated.snapTo(spawn.getX(), spawn.getY(), spawn.getZ(), 0F, 0F);
+                mutated.addTag(Trackers.TAG_PREFIX + "first_bed"); mutated.addTag(Rewards.FOR_PREFIX + solo.getUUID());
+                mutated.discard();
+                net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent(mutated, level));
+                check("own_kill: a mutation (discard, no death event) still respawns", log.entry(hc) != null && log.entry(hc).stage == 2 && Rewards.lastSpawned() == 1);
                 bed = new Zombie(level); bed.snapTo(spawn.getX(), spawn.getY(), spawn.getZ(), 0F, 0F);
                 bed.addTag(Trackers.TAG_PREFIX + "first_bed"); bed.addTag(Rewards.FOR_PREFIX + solo.getUUID());
                 QuestEngine.onKill(solo, bed);
