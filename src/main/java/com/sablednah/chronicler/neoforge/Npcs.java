@@ -48,6 +48,8 @@ public final class Npcs {
         default boolean expose(MinecraftServer server, UUID id, int leaseTicks) { return false; }
         /** Put the NPC somewhere, at once. */
         default void teleport(MinecraftServer server, UUID id, Vec3 pos) {}
+        /** Walk there on foot, then stand, anchored -- an escort's charge finishing the last few steps indoors on its own. */
+        default boolean walkTo(MinecraftServer server, UUID id, Vec3 target) { return false; }
     }
 
     private static volatile Provider provider = null;

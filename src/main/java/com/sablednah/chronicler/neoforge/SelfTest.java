@@ -1133,6 +1133,9 @@ public final class SelfTest {
             check("hits: a blow on somebody else is not counted", log.entry(prisonerQuest).tallies.isEmpty());
             for (int n = 0; n < 5; n++) QuestEngine.onNpcHit(List.of(solo), prisoner);
             check("hits: five blows are counted, and five is not six", log.isActive(prisonerQuest) && log.entry(prisonerQuest).tallies.getOrDefault("hits:" + prisoner, 0) == 5);
+            int barsBefore = EscortBars.activeCount();
+            EscortBars.sync(solo);
+            check("hits: a bar exists while the escort is in danger (missed the action-bar line has no other way to know)", EscortBars.activeCount() > barsBefore);
             QuestLog saveHits = new QuestLog();
             saveHits.startFrom(prisonerQuest, log.entry(prisonerQuest));
             var reread = QuestLog.MAP_CODEC.codec().parse(com.mojang.serialization.JsonOps.INSTANCE,
@@ -1141,6 +1144,8 @@ public final class SelfTest {
             QuestEngine.onNpcHit(List.of(solo), prisoner);
             check("hits: the sixth fails the escort", !log.isActive(prisonerQuest) && !log.isComplete(prisonerQuest));
             check("hits: and everyone placed for it has gone", cast.byId(server, prisoner).isEmpty() && cast.byId(server, pAsker).isEmpty());
+            EscortBars.sync(solo);
+            check("hits: the bar goes with the failed escort", EscortBars.activeCount() == barsBefore);
         }
         solo.snapTo(spawnAt.getX() + 0.5, spawnAt.getY(), spawnAt.getZ() + 0.5, 0F, 0F);
 

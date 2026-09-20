@@ -199,6 +199,8 @@ network/             JournalPayload (clientbound, whole journal) + JournalReques
                      WaypointsPayload (clientbound, once a second: quest targets/givers/led NPCs, for a map)
 neoforge/Waypoints   plain data for WaypointsPayload -- reads the same currentObjectives/Givers/Npcs every
                      tracker and page already reads; knows nothing of JourneyMap or any client at all
+neoforge/EscortBars  a vanilla boss bar per escorted charge in danger, showing hits taken; recomputed
+                     each poll like Waypoints, no separate cleanup path when the escort ends
 client/              dist=CLIENT entrypoint: JournalScreen (chapters | quest map or page), ` key (never J: JourneyMap), ClientJournal, ClientWaypoints
 client/compat/       ONE guarded pair for JourneyMap: JourneyMapPlugin (its own annotation-discovered
                      plugin, storing IClientAPI), JourneyMapWaypoints (creates/moves/removes Waypoints).
@@ -406,10 +408,15 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
 - **`Class#getResource` on a bare directory path does not reliably resolve through FML's
   classloader** (it indexes files, not directories) -- resolve a known file inside it (`pack.mcmeta`)
   and take its parent instead. Paid for by the achievement generator scanning the built-in packs.
-- **A lot or structure's own coordinate is its roof, not its ground** -- both are the heightmap's
-  highest block, which for anything built is the roof. An `npc` slot placed `near` one landed a
-  named NPC standing on top of the building (Mum, on her own house). Step away first, the same
-  `around` search other slots already use, then find a dry surface from there.
+- **A lot or structure's own coordinate is its roof, not its ground, and "near" a building does not
+  mean inside it either** -- both the coordinate and the heightmap are the highest block, the roof.
+  First fixed by stepping away to a dry OUTDOOR spot (still not what "near a house" should mean for
+  a person); CityWorld's API has no bounding box or floor level to ask for a real fix from (a lot is
+  chunk-granular metadata, not geometry -- there is no upstream answer to reach for). `Minis.interiorNear`
+  asks the world instead: scan down from each column's roof for the first walkable block that cannot
+  see the sky (under cover) with solid ground beneath it. Falls back to the old outdoor spot if
+  nothing sheltered turns up nearby -- CityWorld generates whatever shape it likes, and not every
+  "near" reference is a real building.
 - **An objective satisfied the instant a line is crossed has no story in it** -- an escort ending,
   or an ambush firing, while the player is still on the path outside. `settle` (visit, escort)
   holds the condition true for real seconds, continuously, before it credits.

@@ -72,6 +72,7 @@ public final class QuestEvents {
             QuestEngine.poll(player);
             Givers.tick(player);
             Waypoints.sync(player);
+            EscortBars.sync(player);
         }
         Minis.tick(event.getServer());
     }
@@ -130,6 +131,7 @@ public final class QuestEvents {
         Givers.forget(event.getEntity().getUUID());
         Markers.forget(event.getEntity().getUUID());
         JournalPanel.forget(event.getEntity().getUUID());
+        if (event.getEntity() instanceof ServerPlayer player) EscortBars.forget(player);
     }
 
     /** The client dropped every entity it had; the marks must be re-sent, so forget what it was sent. */
