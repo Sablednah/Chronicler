@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-09-21
 
 - A person placed "near" a lot or structure now stands genuinely inside it -- CityWorld's own API has no bounding box or floor to ask for (a lot is chunk-granular metadata, not geometry), so this scans down from the roof for the first sheltered, walkable, floored spot instead. Mum, in her own house rather than the path outside. Fix: an unbounded scan found a spot 45 blocks under the house (a natural cave answers "sheltered, walkable, floored" just as well as a room does) -- bounded to near sea level by default, or a mini quest's own `y_min`/`y_max` on an `npc` slot.
 - Fix: a `spawn` reward's placement had no opinion on elevation at all -- a beat completing while the player happened to be on or near a roof spawned the follow-up mob up there too (Phil, right after "Go round Mum's"). Now prefers a point near sea level, same band as the interior search.
