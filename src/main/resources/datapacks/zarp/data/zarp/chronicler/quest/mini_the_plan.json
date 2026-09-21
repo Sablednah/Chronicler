@@ -5,9 +5,7 @@
   "order": 10,
   "hidden": true,
   "icon": "minecraft:minecart",
-  "requires": [
-    "zarp:the_camp"
-  ],
+  "requires": [],
   "mini": {
     "slots": {
       "ed": {
