@@ -104,6 +104,17 @@ public final class Quests {
 
     // --- registries: add your own kinds, during mod construction ---
 
+    /**
+     * Your mod ships a built-in datapack with Chronicler chapters in it (say {@code "/datapacks/zarp"},
+     * from the jar root): give its chapters and endings the generated achievements Chronicler's own
+     * packs get. {@code anchor} is any class of yours, so the path resolves in YOUR jar even when
+     * another carries the same one. Call during mod construction or common setup, and only when you
+     * register the pack. Since 1.2.0.
+     */
+    public static void registerAchievementSource(Class<?> anchor, String jarRootPath) {
+        com.sablednah.chronicler.yaml.AchievementPack.registerSource(anchor, jarRootPath);
+    }
+
     public static void registerGiverType(Identifier id, MapCodec<? extends GiverSpec> codec) {
         GiverTypes.TYPES.register(id, codec);
     }

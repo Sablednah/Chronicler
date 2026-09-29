@@ -441,6 +441,18 @@ public final class SelfTest {
                         Achievements.grant(server, solo, Achievements.ROOT) && Achievements.grant(server, solo, Achievements.ROOT));
                 check("achievements: an unknown id is refused, not thrown", !Achievements.grant(server, solo, ChroniclerIds.of("no_such_advancement")));
 
+                // Another mod's built-in pack opts in (Threadwork's copy of ZARP): the same scanner, resolved through
+                // the caller's own class so two jars carrying /datapacks/zarp each find their own.
+                check("achievements: a registered source's pack is scanned through its anchor class",
+                        com.sablednah.chronicler.yaml.AchievementPack.chaptersIn(SelfTest.class, "/datapacks/prologue").contains(ChroniclerIds.of("prologue")));
+                check("achievements: a source path that is not there finds nothing, and does not throw",
+                        com.sablednah.chronicler.yaml.AchievementPack.chaptersIn(SelfTest.class, "/datapacks/no_such_pack").isEmpty());
+                int sources = com.sablednah.chronicler.yaml.AchievementPack.sourceCount();
+                com.sablednah.chronicler.api.Quests.registerAchievementSource(SelfTest.class, "datapacks/prologue/");
+                com.sablednah.chronicler.api.Quests.registerAchievementSource(SelfTest.class, "/datapacks/prologue");
+                check("achievements: registering a source twice (either spelling) keeps one",
+                        com.sablednah.chronicler.yaml.AchievementPack.sourceCount() == sources + 1);
+
                 Identifier zarpFinale = Identifier.fromNamespaceAndPath("zarp", "finale");
                 var pzHolder = quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, Identifier.fromNamespaceAndPath("zarp", "patient_zero")));
                 if (pzHolder.isPresent()) {
@@ -708,6 +720,40 @@ public final class SelfTest {
         // trap), so the spawn is proven by what the granter reports, and the kill by a pair we can hold.
         check("spawn: the beat's spawn effect placed two entities (granter reports " + Rewards.lastSpawned() + ", lookup sees " + drawn.size() + ")",
                 Rewards.lastSpawned() == 2);
+
+        // around / min_radius: "five dead at the fence" -- a ring round world spawn, however far off the player is.
+        {
+            var ops = com.mojang.serialization.JsonOps.INSTANCE;
+            var fence = com.sablednah.chronicler.data.RewardTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                    "{\"type\": \"spawn\", \"entity\": \"minecraft:zombie\", \"around\": \"spawn\", \"min_radius\": 17, \"radius\": 24}")).result();
+            check("spawn: around and min_radius parse", fence.isPresent() && fence.get() instanceof com.sablednah.chronicler.data.RewardTypes.Spawn sp
+                    && sp.around().equals("spawn") && sp.minRadius() == 17D);
+            check("spawn: an around that is not player/spawn/giver refuses the file",
+                    com.sablednah.chronicler.data.RewardTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                            "{\"type\": \"spawn\", \"entity\": \"minecraft:zombie\", \"around\": \"moon\"}")).error().isPresent());
+            var plain = com.sablednah.chronicler.data.RewardTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                    "{\"type\": \"spawn\", \"entity\": \"minecraft:zombie\"}")).result();
+            check("spawn: left out, around is the player and min_radius 2 (as before)", plain.isPresent()
+                    && plain.get() instanceof com.sablednah.chronicler.data.RewardTypes.Spawn sp && sp.around().equals("player") && sp.minRadius() == 2D);
+            if (fence.isPresent() && plain.isPresent()) {
+                var fenceSpec = (com.sablednah.chronicler.data.RewardTypes.Spawn) fence.get();
+                var nearSpec = new com.sablednah.chronicler.data.RewardTypes.Spawn(java.util.Optional.of(Identifier.withDefaultNamespace("zombie")),
+                        java.util.Optional.empty(), 1, 4D, java.util.Optional.empty(), java.util.Optional.empty(), 0D, java.util.Map.of(), false, "giver", 0D);
+                double px = solo.getX(), py = solo.getY(), pz = solo.getZ();
+                solo.setPos(spawn.getX() + 120.5D, py, spawn.getZ() + 0.5D); // far enough that "round the player" could not pass as "round spawn"
+                boolean ring = true, near = true;
+                for (int n = 0; n < 12; n++) {
+                    var at = Rewards.spawnPoint(solo, fenceSpec, beacon);
+                    double d = Math.hypot(at.pos().getX() + 0.5D - (spawn.getX() + 0.5D), at.pos().getZ() + 0.5D - (spawn.getZ() + 0.5D));
+                    if (at.dimension() != net.minecraft.world.level.Level.OVERWORLD || d < 16D || d > 25D) ring = false;
+                    var by = Rewards.spawnPoint(solo, nearSpec, ChroniclerIds.of("no_such_quest"));
+                    if (Math.hypot(by.pos().getX() + 0.5D - solo.getX(), by.pos().getZ() + 0.5D - solo.getZ()) > 5D) near = false;
+                }
+                solo.setPos(px, py, pz);
+                check("spawn: around spawn lands between min_radius and radius of world spawn, not of the player", ring);
+                check("spawn: around a giver the quest does not have falls back to the player", near);
+            }
+        }
         if (drawn.size() < 2) {
             // The entity index can lag a tick on a dev server; drive the kill with our own tagged pair so the rest still runs.
             drawn = new ArrayList<>();

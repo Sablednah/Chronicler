@@ -56,8 +56,9 @@ import net.neoforged.fml.loading.FMLPaths;
  * itself controls ahead of that pass: {@code config/chronicler/*.yml} (parsed the same way
  * {@link YamlConfigPack} does) and the two built-in packs bundled in the jar, listed for real off
  * the classpath -- never a hardcoded file list, which would silently go stale the day a quest is
- * added and nobody remembers to update it. <b>The gap this leaves</b>: a chapter or ending that
- * exists only inside a third-party datapack is not seen here and gets no advancement of its own --
+ * added and nobody remembers to update it -- plus any other mod's built-in pack that opted in through
+ * {@link #registerSource} (Threadwork's copy of ZARP). <b>The gap this leaves</b>: a chapter or ending
+ * that exists only inside a plain third-party datapack is not seen here and gets no advancement of its own --
  * that pack's author can ship a real advancement JSON alongside their content (this generates
  * nothing that stops them), or a quest anywhere can grant one explicitly with the {@code
  * advancement} reward type.</p>
@@ -68,7 +69,25 @@ public final class AchievementPack implements PackResources {
     private static final PackLocationInfo LOCATION = new PackLocationInfo(
             PACK_ID, Component.literal("Chronicler achievements"), PackSource.BUILT_IN, java.util.Optional.empty());
 
+    /** A built-in pack in some other mod's jar that asked for achievements: see {@link #registerSource}. */
+    private record Source(Class<?> anchor, String jarRootPath) {}
+    private static final List<Source> SOURCES = new java.util.concurrent.CopyOnWriteArrayList<>();
+
     private final Map<Identifier, byte[]> resources = new HashMap<>();
+
+    /**
+     * Another mod's built-in datapack opts in: its chapters and endings get achievements exactly as
+     * ZARP's and the prologue's do. {@code anchor} is any class from that mod -- its resource is
+     * looked up through the class, so two jars that both carry {@code /datapacks/zarp} each find
+     * their own. Call it before the pack list is built (mod construction or common setup), and only
+     * when that pack is actually registered: a pack that is not on gets no achievements for it.
+     */
+    public static void registerSource(Class<?> anchor, String jarRootPath) {
+        String path = jarRootPath.startsWith("/") ? jarRootPath : "/" + jarRootPath;
+        if (path.endsWith("/")) path = path.substring(0, path.length() - 1);
+        Source source = new Source(anchor, path);
+        if (!SOURCES.contains(source)) SOURCES.add(source);
+    }
 
     private record ChapterInfo(Identifier id, String name, String description, String icon, List<Identifier> requires, int order) {}
 
@@ -77,8 +96,9 @@ public final class AchievementPack implements PackResources {
         Map<Identifier, Set<String>> endings = new LinkedHashMap<>();
 
         scanConfig(chapters, endings);
-        if (prologue) scanBuiltIn("/datapacks/prologue", chapters, endings);
-        if (zarp) scanBuiltIn("/datapacks/zarp", chapters, endings);
+        if (prologue) scanBuiltIn(AchievementPack.class, "/datapacks/prologue", chapters, endings);
+        if (zarp) scanBuiltIn(AchievementPack.class, "/datapacks/zarp", chapters, endings);
+        for (Source source : SOURCES) scanBuiltIn(source.anchor(), source.jarRootPath(), chapters, endings);
 
         emitRoot();
         // Chained by order WITHIN each pack's own namespace only -- ZARP and the prologue are two
@@ -100,6 +120,16 @@ public final class AchievementPack implements PackResources {
                     chapters.size(), endings.values().stream().mapToInt(Set::size).sum());
         }
     }
+
+    /** The chapters a built-in pack holds, found exactly as generation finds them; the self-test's window. */
+    public static Set<Identifier> chaptersIn(Class<?> anchor, String jarRootPath) {
+        Map<Identifier, ChapterInfo> chapters = new LinkedHashMap<>();
+        scanBuiltIn(anchor, jarRootPath, chapters, new LinkedHashMap<>());
+        return chapters.keySet();
+    }
+
+    /** How many sources other mods have registered; the self-test's window. */
+    public static int sourceCount() { return SOURCES.size(); }
 
     // --- discovery: config YAML ---
 
@@ -133,12 +163,12 @@ public final class AchievementPack implements PackResources {
 
     // --- discovery: a built-in pack bundled in the jar, listed for real ---
 
-    private void scanBuiltIn(String jarRootPath, Map<Identifier, ChapterInfo> chapters, Map<Identifier, Set<String>> endings) {
+    private static void scanBuiltIn(Class<?> anchor, String jarRootPath, Map<Identifier, ChapterInfo> chapters, Map<Identifier, Set<String>> endings) {
         // A bare directory path does not reliably resolve through FML's classloader (it indexes
         // files, not directories, and Class#getResource on the directory itself just comes back
         // null there even though the same path opens fine as a real datapack). pack.mcmeta is a
         // real file every one of these packs ships, so resolve THAT and take its parent instead.
-        URL url = AchievementPack.class.getResource(jarRootPath + "/pack.mcmeta");
+        URL url = anchor.getResource(jarRootPath + "/pack.mcmeta");
         if (url == null) {
             Chronicler.LOGGER.warn("Chronicler achievements: could not find {}/pack.mcmeta on the classpath -- no achievements generated for it", jarRootPath);
             return;
@@ -172,7 +202,7 @@ public final class AchievementPack implements PackResources {
     }
 
     /** {@code <root>/data/<namespace>/chronicler/{chapter,quest}/<name>.json}, for every namespace the pack uses. */
-    private void walkPack(Path root, Map<Identifier, ChapterInfo> chapters, Map<Identifier, Set<String>> endings) throws IOException {
+    private static void walkPack(Path root, Map<Identifier, ChapterInfo> chapters, Map<Identifier, Set<String>> endings) throws IOException {
         Path data = root.resolve("data");
         if (!Files.isDirectory(data)) return;
         try (Stream<Path> namespaces = Files.list(data)) {
@@ -185,7 +215,7 @@ public final class AchievementPack implements PackResources {
         }
     }
 
-    private void readJsonDir(Path dir, EntryHandler handler) {
+    private static void readJsonDir(Path dir, EntryHandler handler) {
         if (!Files.isDirectory(dir)) return;
         try (Stream<Path> files = Files.list(dir)) {
             files.filter(f -> f.getFileName().toString().endsWith(".json")).forEach(file -> {
@@ -204,7 +234,7 @@ public final class AchievementPack implements PackResources {
 
     // --- pulling chapter and ending info out of a parsed file ---
 
-    private void addChapter(Map<Identifier, ChapterInfo> chapters, Identifier id, JsonElement json) {
+    private static void addChapter(Map<Identifier, ChapterInfo> chapters, Identifier id, JsonElement json) {
         if (!(json instanceof JsonObject o)) return;
         List<Identifier> requires = new ArrayList<>();
         if (o.get("requires") instanceof JsonArray arr) {
@@ -216,7 +246,7 @@ public final class AchievementPack implements PackResources {
     }
 
     /** Every distinct {@code "ending": "..."} anywhere in a quest file, filed under the chapter it declares. */
-    private void addQuestEndings(Map<Identifier, Set<String>> endings, JsonElement json) {
+    private static void addQuestEndings(Map<Identifier, Set<String>> endings, JsonElement json) {
         if (!(json instanceof JsonObject o) || !o.has("chapter")) return;
         var chapter = ChroniclerIds.parse(o.get("chapter").getAsString()).result();
         if (chapter.isEmpty()) return;

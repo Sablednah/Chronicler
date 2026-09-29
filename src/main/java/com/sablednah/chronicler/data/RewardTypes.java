@@ -111,10 +111,27 @@ public final class RewardTypes {
      */
     public record Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius,
             Optional<String> name, Optional<String> tag, double health, java.util.Map<String, String> equipment,
-            boolean override) implements RewardSpec {
+            boolean override, String around, double minRadius) implements RewardSpec {
+        /** What {@code around} may name: the player (the default), world spawn, or this quest's giver. */
+        public static final java.util.List<String> AROUND = java.util.List.of("player", "spawn", "giver");
+
         public Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius) {
-            this(entity, genus, count, radius, Optional.empty(), Optional.empty(), 0D, java.util.Map.of(), false);
+            this(entity, genus, count, radius, Optional.empty(), Optional.empty(), 0D, java.util.Map.of(), false, "player", 2D);
         }
+        public Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius, Optional<String> name,
+                Optional<String> tag, double health, java.util.Map<String, String> equipment, boolean override) {
+            this(entity, genus, count, radius, name, tag, health, equipment, override, "player", 2D);
+        }
+        /** The same spawn, {@code count} changed: a respawn is one more of what this was, placed the same way. */
+        public Spawn withCount(int n) {
+            return new Spawn(entity, genus, n, radius, name, tag, health, equipment, override, around, minRadius);
+        }
+        /**
+         * {@code around}: where the ring is centred -- {@code player} (default), {@code spawn} (world
+         * spawn, in the overworld, wherever the player is), or {@code giver} (this quest's giver block
+         * or person; the player when it has none). {@code min_radius} (default 2) keeps the near edge
+         * of the ring clear, so "five dead at the fence" lands outside a camp's fence and not inside it.
+         */
         /** The genus dresses first; {@code equipment} fills the slots it left empty, or every slot with {@code override}. */
         /** {@code equipment}: slot -> item as /give takes it; a leather cap keeps a daytime zombie alive. */
         /**
@@ -133,7 +150,11 @@ public final class RewardTypes {
                 Codec.STRING.optionalFieldOf("tag").forGetter(Spawn::tag),
                 Codec.DOUBLE.optionalFieldOf("health", 0D).forGetter(Spawn::health),
                 Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("equipment", java.util.Map.of()).forGetter(Spawn::equipment),
-                Codec.BOOL.optionalFieldOf("override", false).forGetter(Spawn::override))
+                Codec.BOOL.optionalFieldOf("override", false).forGetter(Spawn::override),
+                Codec.STRING.validate(a -> AROUND.contains(a) ? com.mojang.serialization.DataResult.success(a)
+                        : com.mojang.serialization.DataResult.error(() -> "spawn: around must be one of " + AROUND + ", not '" + a + "'"))
+                        .optionalFieldOf("around", "player").forGetter(Spawn::around),
+                Codec.DOUBLE.optionalFieldOf("min_radius", 2D).forGetter(Spawn::minRadius))
                 .apply(i, Spawn::new));
 
         @Override public MapCodec<Spawn> codec() { return MAP_CODEC; }
