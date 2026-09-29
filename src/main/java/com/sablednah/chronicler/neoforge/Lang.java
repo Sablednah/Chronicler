@@ -257,6 +257,13 @@ public final class Lang {
         def("msg.escort.failed", "{prefix}&c{who} took one hit too many: &f{name}&c has failed.");
         def("escort.bar", "{who}: {taken}/{hits} hits taken");
         def("waypoint.target", "{quest}: {what}");
+        // The quest tracker HUD (a modded client's left-hand panel): the same answers as the action bar.
+        def("hud.quest", "&e{quest}");
+        def("hud.objective", "&7{objective} &f{done}/{target}");
+        def("hud.objective_single", "&7{objective}");
+        def("hud.objective_done", "&a\u2714 &8{objective}");
+        def("hud.deadline", "&c{time} left");
+        def("hud.more", "&8+{count} more");
         def("waypoint.giver", "{quest} (quest)");
         def("waypoint.npc", "{name} ({quest})");
         def("msg.mini.unresolved", "{prefix}&7Not now: &f{name}&7 -- {why}.");

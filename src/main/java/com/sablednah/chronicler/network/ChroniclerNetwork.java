@@ -19,6 +19,8 @@ public final class ChroniclerNetwork {
                 context.enqueueWork(() -> com.sablednah.chronicler.client.ClientJournal.accept(payload)));
         registrar.playToClient(WaypointsPayload.TYPE, WaypointsPayload.CODEC, (payload, context) ->
                 context.enqueueWork(() -> com.sablednah.chronicler.client.ClientWaypoints.accept(payload)));
+        registrar.playToClient(HudPayload.TYPE, HudPayload.CODEC, (payload, context) ->
+                context.enqueueWork(() -> com.sablednah.chronicler.client.ClientHud.accept(payload)));
         registrar.playToServer(JournalRequestPayload.TYPE, JournalRequestPayload.CODEC, (payload, context) ->
                 context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player) {

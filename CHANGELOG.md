@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Quest tracker HUD** (Chronicler on the client too): your active quests down the left of the screen, the tracked one first, each objective with its count, done ones ticked, and a deadline when there is one. **Shift+`** shows or hides it, and it remembers. Worded server-side like everything else, so `messages.yml` rewrites it (`hud.*`). The server's `tracker.hudMaxQuests` (default 5) caps the list; `chronicler-client.toml` says where it sits and how wide it grows.
+- **Action-bar buttons** with SableCraft Standards 1.8.0+: the quest tracker (toggles the HUD, lit while it is up) and the full journal. A client without Chronicler gets the same buttons as chat, running `/quest` and `/quest journal`.
 - API: `Quests.playerFlag(player, name)` and `Quests.setPlayerFlag(player, name, value)` -- a player's own flags, the same store a `{"type": "flag", "player": true}` reward writes, so another mod can finish a quest that waits on one (Threadwork watching Factions for ZARP's camp tutorial). Set this way, a flag belongs to no chapter, and a replay does not take it back.
 - `/chronicler flag player <player> [<flag> [true|false]]` sets a player's flag, or lists them.
 - A `flag` objective takes `label`, the line the journal shows ("Found your faction: /f create <name>"), like `deliver` and `ritual`; unsaid, the flag's name as before.

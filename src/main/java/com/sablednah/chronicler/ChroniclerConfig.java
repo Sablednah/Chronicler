@@ -17,6 +17,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.BooleanValue FANFARE;
     public static final ModConfigSpec.BooleanValue TRACKER_ACTION_BAR;
     public static final ModConfigSpec.IntValue TRACKER_INTERVAL_TICKS;
+    public static final ModConfigSpec.IntValue HUD_MAX_QUESTS;
     public static final ModConfigSpec.BooleanValue SHOW_HIDDEN_TO_OPS;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> PARTY_GROUP_KINDS;
     public static final ModConfigSpec.BooleanValue JOURNAL_GIVE_NEW;
@@ -52,6 +53,11 @@ public final class ChroniclerConfig {
                 .comment("How often (ticks) the server re-evaluates location objectives.",
                         "20 = once a second. Lower is snappier and costs more.")
                 .defineInRange("intervalTicks", 20, 1, 1200);
+        HUD_MAX_QUESTS = BUILDER
+                .comment("How many active quests a modded client's quest tracker HUD lists (the",
+                        "tracked one first); the rest are a \"+N more\" line. The player toggles the",
+                        "HUD itself, with Shift+` or the action bar.")
+                .defineInRange("hudMaxQuests", 5, 1, 20);
         BUILDER.pop();
 
         BUILDER.comment("Visibility").push("visibility");
