@@ -6,7 +6,7 @@ import com.sablednah.chronicler.network.HudPayload;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
@@ -57,7 +57,7 @@ public final class ClientHud {
         event.registerBelow(VanillaGuiLayers.CHAT, LAYER, ClientHud::render);
     }
 
-    private static void render(GuiGraphics g, DeltaTracker delta) {
+    private static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
         HudPayload p = last;
         if (p == null || p.quests().isEmpty() || !shown()) return;
@@ -96,13 +96,13 @@ public final class ClientHud {
     }
 
     /** One line, cut short with an ellipsis rather than running off into the world. */
-    private static void line(GuiGraphics g, Font font, Component text, int x, int y, int maxW) {
+    private static void line(GuiGraphicsExtractor g, Font font, Component text, int x, int y, int maxW) {
         if (font.width(text) <= maxW) {
-            g.drawString(font, text, x, y, 0xFFFFFFFF);
+            g.text(font, text, x, y, 0xFFFFFFFF);
             return;
         }
         FormattedText cut = font.substrByWidth(text, maxW - font.width(ELLIPSIS));
-        g.drawString(font, Language.getInstance().getVisualOrder(FormattedText.composite(cut, FormattedText.of(ELLIPSIS))),
+        g.text(font, Language.getInstance().getVisualOrder(FormattedText.composite(cut, FormattedText.of(ELLIPSIS))),
                 x, y, 0xFFFFFFFF);
     }
 
