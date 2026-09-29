@@ -409,6 +409,35 @@ public final class SelfTest {
             check("api: accept", com.sablednah.chronicler.api.Quests.accept(solo, ChroniclerIds.of("hot_foot")).isEmpty()
                     && com.sablednah.chronicler.api.Quests.isActive(solo, ChroniclerIds.of("hot_foot")));
 
+            // Player flags from another mod (Threadwork watching Factions): the same store a
+            // {"type": "flag", "player": true} reward writes and the flag objective reads.
+            {
+                var Q = com.sablednah.chronicler.api.Quests.class;
+                var waiting = new com.sablednah.chronicler.data.ObjectiveTypes.FlagSet("selftest_claimed_hut", true, true);
+                check("api: a player flag nobody set reads false, and its objective waits",
+                        !com.sablednah.chronicler.api.Quests.playerFlag(solo, "selftest_claimed_hut")
+                        && Trackers.of(waiting).poll(solo, waiting).orElse(-1) == 0);
+                com.sablednah.chronicler.api.Quests.setPlayerFlag(solo, "  SelfTest_Claimed_Hut ", true);
+                check("api: setPlayerFlag normalises like the flag reward, and playerFlag reads it back",
+                        com.sablednah.chronicler.api.Quests.playerFlag(solo, "selftest_claimed_hut")
+                        && QuestEngine.journal(solo).hasFlag("selftest_claimed_hut"));
+                check("api: a waiting player-flag objective sees it on its next check", Trackers.of(waiting).poll(solo, waiting).orElse(-1) == 1);
+                check("api: a player flag is not a world flag, nor anybody else's", !com.sablednah.chronicler.api.Quests.flag(solo, "selftest_claimed_hut")
+                        && !com.sablednah.chronicler.api.Quests.playerFlag(fake(server, "ChroniclerTestD"), "selftest_claimed_hut"));
+                com.sablednah.chronicler.api.Quests.setPlayerFlag(solo, "selftest_claimed_hut", false);
+                check("api: setPlayerFlag false clears it", !com.sablednah.chronicler.api.Quests.playerFlag(solo, "selftest_claimed_hut"));
+                check("api: Threadwork's reflective lookup finds both by name", java.util.Arrays.stream(Q.getMethods()).map(java.lang.reflect.Method::getName)
+                        .filter(n -> n.equals("playerFlag") || n.equals("setPlayerFlag")).count() == 2);
+
+                CommandSourceStack asSolo = server.createCommandSourceStack().withEntity(solo);
+                command(server, asSolo, "chronicler flag player @s selftest_set_home", true);
+                check("command: /chronicler flag player sets the player's own flag", QuestEngine.journal(solo).hasFlag("selftest_set_home"));
+                command(server, asSolo, "chronicler flag player @s", true);
+                command(server, asSolo, "chronicler flag player @s selftest_set_home false", true);
+                check("command: ... false clears it", !QuestEngine.journal(solo).hasFlag("selftest_set_home"));
+                command(server, asSolo, "chronicler flag player @s selftest_set_home maybe", false);
+            }
+
             // Achievements (2026-09-17): one generated advancement per chapter and per ending, granted
             // through the real vanilla API, never touched directly by the engine otherwise.
             //

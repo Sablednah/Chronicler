@@ -302,6 +302,7 @@ ZARP world is not offered two kinds of log run.
 | `/chronicler status` | `chronicler.admin` or op 2 |
 | `/chronicler journal <player>` | `chronicler.admin` or op 2 — hand someone a journal |
 | `/chronicler flag set <flag> [true\|false]` / `list` | `chronicler.admin` or op 2 — world flags |
+| `/chronicler flag player <player> [<flag> [true\|false]]` | `chronicler.admin` or op 2 — a player's own flags (no flag: list them) |
 | `/chronicler reset <player>` | `chronicler.admin` or op 2 — wipe a journal |
 
 ## Building

@@ -72,6 +72,14 @@ public final class ChroniclerCommands {
                 .then(Commands.literal("flag")
                         .requires(ChroniclerPermissions::isAdmin)
                         .then(Commands.literal("list").executes(ChroniclerCommands::flagList))
+                        // A player's own flags -- what another mod (Threadwork watching Factions) sets through the API.
+                        .then(Commands.literal("player")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(ChroniclerCommands::playerFlagList)
+                                        .then(Commands.argument("flag", com.mojang.brigadier.arguments.StringArgumentType.string())
+                                                .executes(ctx -> playerFlagSet(ctx, true))
+                                                .then(Commands.argument("value", com.mojang.brigadier.arguments.BoolArgumentType.bool())
+                                                        .executes(ctx -> playerFlagSet(ctx, com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "value")))))))
                         .then(Commands.literal("set")
                                 .then(Commands.argument("flag", com.mojang.brigadier.arguments.StringArgumentType.string())
                                         .executes(ctx -> flagSet(ctx, true))
@@ -612,6 +620,31 @@ public final class ChroniclerCommands {
         FlagStore.get(ctx.getSource().getServer()).set(flag, value);
         ctx.getSource().sendSuccess(() -> Feedback.colored(Lang.fmt("msg.flag.set", "flag", FlagStore.normalise(flag), "value", value)), true);
         return 1;
+    }
+
+    private static int playerFlagSet(CommandContext<CommandSourceStack> ctx, boolean value) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var target = EntityArgument.getPlayer(ctx, "player");
+        String flag = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "flag");
+        com.sablednah.chronicler.api.Quests.setPlayerFlag(target, flag, value);
+        ctx.getSource().sendSuccess(() -> Feedback.colored(Lang.fmt("msg.flag.player.set", "player", target.getName().getString(),
+                "flag", FlagStore.normalise(flag), "value", value)), true);
+        return 1;
+    }
+
+    private static int playerFlagList(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var target = EntityArgument.getPlayer(ctx, "player");
+        var flags = QuestEngine.journal(target).flags();
+        String who = target.getName().getString();
+        if (flags.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Feedback.colored(Lang.fmt("msg.flag.player.none", "player", who)), false);
+            return 0;
+        }
+        List<String> lines = new ArrayList<>();
+        lines.add(Lang.fmt("msg.flag.player.header", "player", who, "count", flags.size()));
+        flags.stream().sorted().forEach(f -> lines.add(Lang.fmt("msg.flag.list.entry", "flag", f)));
+        String joined = String.join("\n", lines);
+        ctx.getSource().sendSuccess(() -> Feedback.colored(joined), false);
+        return flags.size();
     }
 
     private static int flagList(CommandContext<CommandSourceStack> ctx) {
