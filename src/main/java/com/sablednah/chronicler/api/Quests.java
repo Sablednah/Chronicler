@@ -67,7 +67,7 @@ public final class Quests {
      * The player's own flags: the store a {@code {"type": "flag", "player": true}} reward writes and
      * objective reads, names trimmed and lower-cased the same way. Set one from your mod (you founded
      * a faction, you claimed the hut) and a quest waiting on it completes on its next check. A flag
-     * set here belongs to no chapter, so replaying a chapter does not take it back. Since 1.2.2.
+     * set here belongs to no chapter, so replaying a chapter does not take it back. Since 1.3.0.
      */
     public static boolean playerFlag(ServerPlayer player, String name) {
         return com.sablednah.chronicler.neoforge.QuestEngine.journal(player).hasFlag(name);
