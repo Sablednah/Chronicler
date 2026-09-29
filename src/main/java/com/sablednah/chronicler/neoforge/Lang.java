@@ -352,6 +352,9 @@ public final class Lang {
         def("msg.flag.list.header", "{prefix}&f{count} world flag(s) set:");
         def("msg.flag.list.entry", "  &7- &f{flag}");
         def("msg.flag.list.none", "{prefix}&7No world flags are set.");
+        def("msg.flag.player.set", "{prefix}&7{player}'s flag &f{flag}&7 is now &f{value}&7.");
+        def("msg.flag.player.header", "{prefix}&f{player} has {count} flag(s) set:");
+        def("msg.flag.player.none", "{prefix}&7{player} has no flags set.");
         def("msg.choice.header", "{prefix}&eWhat do you do?");
         def("msg.choice.option", "  &f{n}. ");
         def("msg.choice.button", "&a[{label}]");
