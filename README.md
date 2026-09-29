@@ -43,6 +43,7 @@ in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
 | 1.21.11 | 21.11.42+ | 21 | `main` |
 | 26.1.2 | 26.1.2.95+ | 25 | `mc26.1` |
 | 26.2 | 26.2.0.72+ | 25 | `mc26.2` |
+| 26.3 | 26.3.0.33-beta+ | 25 | `mc26.3` |
 
 Install on the server; players need nothing. **Requires [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) and [Cast](https://github.com/Sablednah/Cast) 1.1.0+** (the economy, groups and reputation the quests pay through, and the people who give them); LegendQuest, ZombieMod and CityWorld are optional.
 

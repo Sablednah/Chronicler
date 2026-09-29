@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1 — 2026-09-29
+
+- **Minecraft 26.3** (NeoForge 26.3.0.33-beta or newer -- the floor is the build it was tested on, since NeoForge's own registry event only arrived partway through the betas). Needs Cast 1.1.1's 26.3 build.
+- 26.3 numbers the mouse from 1, not 0: the journal compares against the named buttons, so clicks, map drags and the back button work there too (checked in a real 26.3 client).
+
 ## 1.2.0 — 2026-09-29
 
 - Fix: a giver block inside a claim (Standards' Factions: "Camp Okafor") could be dead -- Factions refuses a non-member's block click at the same priority, so registration order decided the winner. Chronicler now answers giver and turn-in clicks first (HIGH), and cancels only those, so the claim still guards everything else and nobody is told off for talking to a campfire.
