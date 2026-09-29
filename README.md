@@ -180,7 +180,10 @@ override `scope`. Every word a player sees lives in
   satisfied in your pack, which is not the same thing. `spawn` takes `equipment`
   (a leather cap keeps a daytime zombie alive). With a `genus`, ZombieMod
   dresses the mob first and `equipment` only fills the slots it left empty --
-  a Patient keeps its mask -- unless `override: true`. Quest items are not
+  a Patient keeps its mask -- unless `override: true`. `around: spawn` (world
+  spawn) or `around: giver` (this quest's giver) centres the ring somewhere other
+  than the player, and `min_radius` keeps its middle clear: `{ type: spawn,
+  around: spawn, min_radius: 17, radius: 24 }` is outside a fence at 15. Quest items are not
   eatable or drinkable unless the entry says `usable: true`.
 - **`wait`** (`seconds`) lets time pass from entering the beat -- "come back later".
 - **`collect`** takes `tag: minecraft:logs` or `quest_item: zarp:insulin`.

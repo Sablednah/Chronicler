@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 — 2026-09-29
+
+- Fix: a giver block inside a claim (Standards' Factions: "Camp Okafor") could be dead -- Factions refuses a non-member's block click at the same priority, so registration order decided the winner. Chronicler now answers giver and turn-in clicks first (HIGH), and cancels only those, so the claim still guards everything else and nobody is told off for talking to a campfire.
+- `spawn` takes `around` (`player`, the default; `spawn`, world spawn in the overworld; `giver`, this quest's giver, else the player) and `min_radius` (default 2, as before): "five dead at the fence" lands outside the fence, not in the camp with you.
+- API: `Quests.registerAchievementSource(anchorClass, "/datapacks/<pack>")` -- another mod's built-in pack gets chapter and ending achievements like ZARP's and the prologue's.
+
 ## 1.1.0 — 2026-09-21
 
 - A person placed "near" a lot or structure now stands genuinely inside it -- CityWorld's own API has no bounding box or floor to ask for (a lot is chunk-granular metadata, not geometry), so this scans down from the roof for the first sheltered, walkable, floored spot instead. Mum, in her own house rather than the path outside. Fix: an unbounded scan found a spot 45 blocks under the house (a natural cave answers "sheltered, walkable, floored" just as well as a room does) -- bounded to near sea level by default, or a mini quest's own `y_min`/`y_max` on an `npc` slot.

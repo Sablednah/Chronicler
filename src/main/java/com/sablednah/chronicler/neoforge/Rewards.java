@@ -243,11 +243,12 @@ public final class Rewards {
         });
 
         register(RewardTypes.Spawn.class, (player, r, questId, quest) -> {
-            var level = player.level();
+            var anchor = anchorOf(player, r, questId);
+            var level = anchor.level();
             var rng = level.getRandom();
             lastSpawned = 0;
             for (int n = 0; n < r.count(); n++) {
-                var at = surfaceNear(level, player, r.radius(), rng);
+                var at = surfaceNear(level, anchor.x(), anchor.z(), r.minRadius(), r.radius(), rng);
                 if (r.genus().isPresent() && Genera.available()) {
                     Identifier genusId = Identifier.tryParse(r.genus().get());
                     var mob = genusId == null ? java.util.Optional.<net.minecraft.world.entity.Mob>empty()
@@ -292,22 +293,55 @@ public final class Rewards {
         });
     }
 
+    /** Where one of this spawn's creatures would stand, and in which level: the granter's own choice, for the self-test. */
+    public static net.minecraft.core.GlobalPos spawnPoint(ServerPlayer player, RewardTypes.Spawn r, Identifier questId) {
+        var anchor = anchorOf(player, r, questId);
+        return net.minecraft.core.GlobalPos.of(anchor.level().dimension(),
+                surfaceNear(anchor.level(), anchor.x(), anchor.z(), r.minRadius(), r.radius(), anchor.level().getRandom()));
+    }
+
+    /** Where a spawn's ring is centred, and in which level. */
+    private record Anchor(net.minecraft.server.level.ServerLevel level, double x, double z) {}
+
+    /** {@code around}: the player, world spawn, or the quest's giver -- the player whenever the other is not to be had. */
+    private static Anchor anchorOf(ServerPlayer player, RewardTypes.Spawn r, Identifier questId) {
+        var server = player.level().getServer();
+        switch (r.around()) {
+            case "spawn" -> {
+                var level = server.overworld();
+                var pos = level.getRespawnData().globalPos().pos();
+                return new Anchor(level, pos.getX() + 0.5D, pos.getZ() + 0.5D);
+            }
+            case "giver" -> {
+                var where = Givers.positionOf(server, questId);
+                var level = where.map(w -> server.getLevel(net.minecraft.resources.ResourceKey.create(
+                        net.minecraft.core.registries.Registries.DIMENSION, w.level()))).orElse(null);
+                if (level != null) return new Anchor(level, where.get().pos().x, where.get().pos().z);
+                Chronicler.LOGGER.warn("Chronicler: quest {} spawns around its giver, but it has none placed; spawning around the player", questId);
+            }
+            default -> {}
+        }
+        return new Anchor(player.level(), player.getX(), player.getZ());
+    }
+
     /**
-     * A random surface point within {@code radius} of the player, preferring one near sea level --
+     * A random surface point between {@code minRadius} and {@code radius} of the anchor, preferring one near sea level --
      * the plain heightmap surface has no opinion on elevation at all, and a beat completing while the
      * player happened to be on or near a roof spawned its follow-up mob up there too (Phil, on The
      * Plan, right after "Go round Mum's"). Retries a few offsets before giving up and using the last
      * one tried, same idea as {@link Minis#interiorNear}: near sea level by default, not a hard rule --
      * a quest that genuinely wants a rooftop or a cave encounter is not blocked by this.
      */
-    private static net.minecraft.core.BlockPos surfaceNear(net.minecraft.server.level.ServerLevel level, ServerPlayer player, double radius, net.minecraft.util.RandomSource rng) {
+    private static net.minecraft.core.BlockPos surfaceNear(net.minecraft.server.level.ServerLevel level, double cx, double cz,
+            double minRadius, double radius, net.minecraft.util.RandomSource rng) {
+        double near = Math.max(0, Math.min(minRadius, radius));
         int minY = Minis.defaultInteriorMinY(level), maxY = Minis.defaultInteriorMaxY(level);
         net.minecraft.core.BlockPos last = null;
         for (int attempt = 0; attempt < 6; attempt++) {
             double angle = rng.nextDouble() * Math.PI * 2;
-            double dist = 2 + rng.nextDouble() * Math.max(0, radius - 2);
-            int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
-            int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
+            double dist = near + rng.nextDouble() * Math.max(0, radius - near);
+            int x = (int) Math.round(cx + Math.cos(angle) * dist);
+            int z = (int) Math.round(cz + Math.sin(angle) * dist);
             last = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new net.minecraft.core.BlockPos(x, 0, z));
             if (last.getY() >= minY && last.getY() <= maxY) return last;
         }
@@ -338,9 +372,7 @@ public final class Rewards {
 
     /** Spawn one more of what this was, for the same player: the one that got away comes back. */
     public static void respawnOne(Spawned was, ServerPlayer player) {
-        RewardTypes.Spawn one = new RewardTypes.Spawn(was.spec().entity(), was.spec().genus(), 1, was.spec().radius(),
-                was.spec().name(), was.spec().tag(), was.spec().health(), was.spec().equipment(), was.spec().override());
-        grant(player, one, was.questId(), was.quest());
+        grant(player, was.spec().withCount(1), was.questId(), was.quest());
     }
 
     private static void decorate(net.minecraft.world.entity.Entity entity, RewardTypes.Spawn r, ServerPlayer player, Identifier questId, Quest quest) {

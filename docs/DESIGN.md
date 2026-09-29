@@ -581,6 +581,10 @@ including wild spawns in the first pass; ZARP-flavoured content as well):
   is removed on the next start (GiverStore marks them `pending`).
 - **The StoryTeller door**: `Quests.minis`, `isMini`, `startMini(player, template,
   slots[, level, near])`, `offerMini`; `/quest mini <template> [players] [offer]`.
+- **Achievements for another mod's pack**: `Quests.registerAchievementSource(anchorClass,
+  "/datapacks/zarp")` scans a built-in pack in the caller's jar exactly as ours are, resolved
+  through the anchor class so two jars carrying the same path each find their own (1.2.0,
+  for Threadwork's copy of ZARP). Registries are not an option: they fill in the same pass.
 
 **Not as planned:** the temple door became a village door (jungle and desert temples
 have no doors). A first pass said CityWorld had no bank lot; it has one as a
