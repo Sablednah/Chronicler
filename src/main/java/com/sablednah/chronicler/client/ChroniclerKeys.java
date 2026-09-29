@@ -32,7 +32,7 @@ public final class ChroniclerKeys {
     public static final KeyMapping HUD = new KeyMapping("key.chronicler.hud",
             net.neoforged.neoforge.client.settings.KeyConflictContext.IN_GAME,
             net.neoforged.neoforge.client.settings.KeyModifier.SHIFT,
-            InputConstants.Type.KEYSYM, InputConstants.KEY_GRAVE, CATEGORY);
+            InputConstants.Type.KEYBOARD, InputConstants.KEY_GRAVE, CATEGORY);
 
     static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
