@@ -13,7 +13,7 @@ data model and the build order — **read it before adding a feature.**
 
 | | |
 |---|---|
-| Minecraft | 1.21.11 (`main`), 26.1.2 (`mc26.1`), 26.2 (`mc26.2`) |
+| Minecraft | 1.21.11 (`main`), 26.1.2 (`mc26.1`), 26.2 (`mc26.2`), 26.3 (`mc26.3`, NeoForge beta) |
 | Loader | NeoForge 21.11.42 |
 | Java | 21 (25 on 26.x) |
 | Build | Gradle 9.2.1 + ModDevGradle 2.0.141 |
@@ -333,6 +333,22 @@ predicted removal is undone), and `ItemParser.parse` returns an `ItemInput` reco
 ZombieMod 3.4.0 (in its `build/libs`), Cast 1.0.0 (the instances now carry Standards 1.8.0, LegendQuest 2.5.0, ZombieMod 3.4.1). A fresh 26.2 world starts
 at tick 0 and loads no spawn chunks without a player; the self-test allows for
 both.
+
+**`mc26.3`** (2026-09-29) is 26.3 on **NeoForge 26.3.0.33-beta**, MDG 2.0.147, Java 25, run dir
+`run-mc26.3`. The neo range is floored at the tested build, `[26.3.0.33-beta,26.4)`, not the series:
+`NewDatapackRegistryEvent` only exists from .20-beta and CityWorld crashed at construction below it.
+On top of the 26.2 drift: `DataPackRegistryEvent.NewRegistry`/`dataPackRegistry` ->
+`NewDatapackRegistryEvent`/`worldRegistry` (26.3 also offers `reloadableRegistry`, which could one
+day make content `/reload`-able); `drop(stack, false)` -> `drop(stack, false, Prediction.SERVER_ONLY)`;
+`BlockState#blocksMotion()` -> `is(BlockTags.BLOCKS_MOTION)`; `DisplayInfo` is a record (`hidden()`,
+`type()`); `clearOrCountMatchingItems(pred, countingOnly, amount, craft)`; `Pack.ResourcesSupplier` is
+`openMetadata` + `openResources` (a `Stream`). **The one that compiles and is wrong: 26.3 moved input
+to SDL, which numbers the mouse from 1** (left=1, right=3, back=4), so `JournalScreen` compares
+against `InputConstants.MOUSE_BUTTON_*`, never a literal -- `!= 0` made the journal unclickable on 26.3
+alone, and no self-test can see it (Standards' `CROSS-VERSION.md` has the whole story). Sibling jars
+for this line: Standards, Cast, LegendQuest and ZombieMod from their `build/libs`; CityWorld and the
+JourneyMap API (`26.3-2.0.0`) out of the CurseForge `26.3` instance into `libs/`. The merged jar in
+`build/moddev/artifacts` carries `.java` sources on 26.3 -- `unzip -p` it to read the real API.
 
 ## Releasing
 
