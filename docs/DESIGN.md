@@ -585,7 +585,7 @@ including wild spawns in the first pass; ZARP-flavoured content as well):
   "/datapacks/zarp")` scans a built-in pack in the caller's jar exactly as ours are, resolved
   through the anchor class so two jars carrying the same path each find their own (1.2.0,
   for Threadwork's copy of ZARP). Registries are not an option: they fill in the same pass.
-- **Player flags from another mod**: `Quests.playerFlag` / `setPlayerFlag` (1.2.2+) -- the journal's
+- **Player flags from another mod**: `Quests.playerFlag` / `setPlayerFlag` (1.3.0+) -- the journal's
   own flags, ownerless, so a chapter replay leaves them be. For ZARP's Factions tutorial.
 
 **Not as planned:** the temple door became a village door (jungle and desert temples

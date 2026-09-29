@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 — 2026-09-29
 
 - **Quest tracker HUD** (Chronicler on the client too): your active quests down the left of the screen, the tracked one first, each objective with its count, done ones ticked, and a deadline when there is one. **Shift+`** shows or hides it, and it remembers. Worded server-side like everything else, so `messages.yml` rewrites it (`hud.*`). The server's `tracker.hudMaxQuests` (default 5) caps the list; `chronicler-client.toml` says where it sits and how wide it grows.
 - **Action-bar buttons** with SableCraft Standards 1.8.0+: the quest tracker (toggles the HUD, lit while it is up) and the full journal. A client without Chronicler gets the same buttons as chat, running `/quest` and `/quest journal`.
