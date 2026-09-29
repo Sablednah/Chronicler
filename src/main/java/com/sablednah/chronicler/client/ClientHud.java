@@ -61,7 +61,7 @@ public final class ClientHud {
         Minecraft mc = Minecraft.getInstance();
         HudPayload p = last;
         if (p == null || p.quests().isEmpty() || !shown()) return;
-        if (mc.options.hideGui || mc.getDebugOverlay().showDebugScreen()) return;
+        if (mc.gui.hud.isHidden() || mc.getDebugOverlay().showDebugScreen()) return;
         Font font = mc.font;
         int maxW = ChroniclerClientConfig.HUD_WIDTH.get();
 

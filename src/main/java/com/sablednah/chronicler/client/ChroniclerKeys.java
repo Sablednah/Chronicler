@@ -47,7 +47,7 @@ public final class ChroniclerKeys {
             if (mc.gui.screen() == null) ClientJournal.open();
         }
         while (HUD.consumeClick()) {
-            if (mc.screen == null) ClientHud.toggle();
+            if (mc.gui.screen() == null) ClientHud.toggle();
         }
     }
 
