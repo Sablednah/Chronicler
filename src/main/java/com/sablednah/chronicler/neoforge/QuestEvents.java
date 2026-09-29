@@ -86,8 +86,14 @@ public final class QuestEvents {
         }
     }
 
-    /** A right-click on a giver block accepts (or says why not). Main hand only, or it fires twice. */
-    @SubscribeEvent
+    /**
+     * A right-click on a giver block accepts (or says why not). Main hand only, or it fires twice.
+     * HIGH, not NORMAL: a claims mod (Standards' Factions) cancels every non-member's block click at
+     * NORMAL, and at equal priority registration order decided whether a giver inside a claim worked
+     * at all. This cancels only a click that really was a giver or turn-in, so running first lets a
+     * claim protect everything else and never shows a refusal for the one click it had no business in.
+     */
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGH)
     static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (event.getLevel().isClientSide() || event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) return;
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
