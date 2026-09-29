@@ -78,6 +78,8 @@ public class Chronicler {
             // api/reputation ships in Standards 1.5.0; on an older Standards this
             // is the seam LinkageError takes away, and nothing else.
             optionalIntegration("reputation", com.sablednah.chronicler.neoforge.compat.StandardsReputation::register);
+            // api/actions ships in Standards 1.8.0: the quest tracker and journal buttons.
+            optionalIntegration("action buttons", com.sablednah.chronicler.neoforge.compat.StandardsButtons::register);
         }
         if (ModList.get().isLoaded("legendquest")) {
             optionalIntegration("character", com.sablednah.chronicler.neoforge.compat.LegendQuestCharacter::register);

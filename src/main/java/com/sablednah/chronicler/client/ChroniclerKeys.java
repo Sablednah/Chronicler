@@ -24,9 +24,20 @@ public final class ChroniclerKeys {
     public static final KeyMapping JOURNAL =
             new KeyMapping("key.chronicler.journal", InputConstants.KEY_GRAVE, CATEGORY);
 
+    /**
+     * The quest tracker HUD: Shift + the journal's own key, so the two quest keys sit together and
+     * take nothing another mod is likely to hold (J, M, B, Y, U, K, R, G, H, Z are all spoken for).
+     * NeoForge sends Shift+` here and a bare ` to the journal, never both.
+     */
+    public static final KeyMapping HUD = new KeyMapping("key.chronicler.hud",
+            net.neoforged.neoforge.client.settings.KeyConflictContext.IN_GAME,
+            net.neoforged.neoforge.client.settings.KeyModifier.SHIFT,
+            InputConstants.Type.KEYSYM, InputConstants.KEY_GRAVE, CATEGORY);
+
     static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
         event.register(JOURNAL);
+        event.register(HUD);
     }
 
     static void onClientTick() {
@@ -34,6 +45,9 @@ public final class ChroniclerKeys {
         if (mc.player == null) return;
         while (JOURNAL.consumeClick()) {
             if (mc.gui.screen() == null) ClientJournal.open();
+        }
+        while (HUD.consumeClick()) {
+            if (mc.screen == null) ClientHud.toggle();
         }
     }
 

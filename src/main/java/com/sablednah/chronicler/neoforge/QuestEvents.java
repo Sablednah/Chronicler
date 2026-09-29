@@ -72,6 +72,7 @@ public final class QuestEvents {
             QuestEngine.poll(player);
             Givers.tick(player);
             Waypoints.sync(player);
+            Hud.sync(player);
             EscortBars.sync(player);
         }
         Minis.tick(event.getServer());
@@ -138,6 +139,7 @@ public final class QuestEvents {
         Givers.forget(event.getEntity().getUUID());
         Markers.forget(event.getEntity().getUUID());
         JournalPanel.forget(event.getEntity().getUUID());
+        Hud.forget(event.getEntity().getUUID());
         if (event.getEntity() instanceof ServerPlayer player) EscortBars.forget(player);
     }
 

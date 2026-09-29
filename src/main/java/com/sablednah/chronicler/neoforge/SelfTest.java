@@ -442,6 +442,23 @@ public final class SelfTest {
                 command(server, asSolo, "chronicler flag player @s selftest_set_home maybe", false);
             }
 
+            // The quest tracker HUD: the same answers as /quest, as data for a modded client's left-hand panel.
+            {
+                var hud = Hud.build(solo);
+                var hudHotFoot = hud.quests().stream().filter(q -> q.id().equals(ChroniclerIds.of("hot_foot").toString())).findFirst();
+                check("hud: an active quest is listed, named, with a line per objective",
+                        hudHotFoot.isPresent() && !hudHotFoot.get().name().getString().isBlank() && !hudHotFoot.get().lines().isEmpty());
+                check("hud: nothing in it is a raw message key", hud.quests().stream().allMatch(q ->
+                        !q.name().getString().contains("hud.") && q.lines().stream().noneMatch(l -> l.getString().contains("hud."))));
+                QuestEngine.journal(solo).track(ChroniclerIds.of("hot_foot"));
+                check("hud: the tracked quest comes first, and is marked", !Hud.build(solo).quests().isEmpty()
+                        && Hud.build(solo).quests().getFirst().id().equals(ChroniclerIds.of("hot_foot").toString())
+                        && Hud.build(solo).quests().getFirst().tracked());
+                check("hud: two builds of an unchanged journal are equal (so an unchanged HUD is not resent)", Hud.build(solo).equals(Hud.build(solo)));
+                try { Hud.sync(solo); check("hud: syncing to a player with no client half sends nothing and does not throw", true); }
+                catch (RuntimeException e) { check("hud: sync on a fake player threw " + e, false); }
+            }
+
             // Achievements (2026-09-17): one generated advancement per chapter and per ending, granted
             // through the real vanilla API, never touched directly by the engine otherwise.
             //
