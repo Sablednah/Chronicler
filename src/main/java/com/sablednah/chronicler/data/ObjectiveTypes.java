@@ -262,15 +262,18 @@ public final class ObjectiveTypes {
     }
 
     /** Wait for a flag -- the world's, or the player's own -- to hold. Polled; latching. */
-    public record FlagSet(String name, boolean value, boolean player) implements ObjectiveSpec {
+    public record FlagSet(String name, boolean value, boolean player, Optional<String> label) implements ObjectiveSpec {
+        public FlagSet(String name, boolean value, boolean player) { this(name, value, player, Optional.empty()); }
+        /** {@code label} is the whole line the journal shows ("Found your faction: /f create <name>"); unsaid, the flag's name, prettified. */
         public static final MapCodec<FlagSet> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.STRING.fieldOf("name").forGetter(FlagSet::name),
                 Codec.BOOL.optionalFieldOf("value", true).forGetter(FlagSet::value),
-                Codec.BOOL.optionalFieldOf("player", false).forGetter(FlagSet::player))
+                Codec.BOOL.optionalFieldOf("player", false).forGetter(FlagSet::player),
+                Codec.STRING.optionalFieldOf("label").forGetter(FlagSet::label))
                 .apply(i, FlagSet::new));
         @Override public MapCodec<FlagSet> codec() { return MAP_CODEC; }
         @Override public int required() { return 1; }
-        @Override public String describe() { return Lang.fmt("obj.flag", "flag", Lang.pretty(name)); }
+        @Override public String describe() { return label.orElseGet(() -> Lang.fmt("obj.flag", "flag", Lang.pretty(name))); }
     }
 
     static {

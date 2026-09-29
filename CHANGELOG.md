@@ -4,6 +4,7 @@
 
 - API: `Quests.playerFlag(player, name)` and `Quests.setPlayerFlag(player, name, value)` -- a player's own flags, the same store a `{"type": "flag", "player": true}` reward writes, so another mod can finish a quest that waits on one (Threadwork watching Factions for ZARP's camp tutorial). Set this way, a flag belongs to no chapter, and a replay does not take it back.
 - `/chronicler flag player <player> [<flag> [true|false]]` sets a player's flag, or lists them.
+- A `flag` objective takes `label`, the line the journal shows ("Found your faction: /f create <name>"), like `deliver` and `ritual`; unsaid, the flag's name as before.
 
 ## 1.2.1 — 2026-09-29
 
