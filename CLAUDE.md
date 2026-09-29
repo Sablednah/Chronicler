@@ -336,18 +336,17 @@ both.
 
 ## Releasing
 
-Artwork lives in `docs/`: `wordmark-850.png` (CurseForge caps description images at 850 wide; the store page and README use it), `wordmark.png` (full size), `icon.png` (1254 square), `icon-512.png` and `icon-256.png` (Modrinth rejects icons over 256 KiB; the 256 is under it).
+Artwork lives in `docs/`: `wordmark-850.png` (CurseForge caps description images at 850 wide; the store page and README use it), `wordmark.png` (full size), `icon.png` (1254 square), `icon-512.png` and `icon-256.png`.
 
 `CHANGELOG.md`, `CURSEFORGE.md` (the store page: https://www.curseforge.com/minecraft/mc-mods/sablecraft-chronicler, project 1690352), `mod_version`, tag, GitHub
 release — publishing fires `.github/workflows/curseforge.yml` (live since 1.0.0:
 `CURSEFORGE_TOKEN` and `CURSEFORGE_PROJECT_ID` are set, so a published release
-uploads for real) and `modrinth.yml` (skips until `MODRINTH_TOKEN` /
-`MODRINTH_PROJECT_ID` exist). The workflow's `only` input re-uploads one
+uploads for real). Modrinth is dropped (2026-09-29: it refused every one of Sable's
+projects as AI content), so there is no second store to publish to. The workflow's `only` input re-uploads one
 Minecraft line after a partial failure without duplicating the others
 (CurseForge has 500'd one of three jars twice across these repos). A 200 from CurseForge is acceptance, not
-publication; the changelog sanitiser 500s on blockquotes and autolinks;
-Modrinth rejects AI-looking artwork and icons over 256 KiB. Never handle the
-tokens.
+publication; the changelog sanitiser 500s on blockquotes and autolinks. Never
+handle the tokens.
 
 **A CurseForge project's file list is its identity to every other mod.** The app
 resolves a required dependency to the dependency project's newest APPROVED file
