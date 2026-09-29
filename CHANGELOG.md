@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- API: `Quests.playerFlag(player, name)` and `Quests.setPlayerFlag(player, name, value)` -- a player's own flags, the same store a `{"type": "flag", "player": true}` reward writes, so another mod can finish a quest that waits on one (Threadwork watching Factions for ZARP's camp tutorial). Set this way, a flag belongs to no chapter, and a replay does not take it back.
+- `/chronicler flag player <player> [<flag> [true|false]]` sets a player's flag, or lists them.
+
 ## 1.2.1 — 2026-09-29
 
 - **Minecraft 26.3** (NeoForge 26.3.0.33-beta or newer -- the floor is the build it was tested on, since NeoForge's own registry event only arrived partway through the betas). Needs Cast 1.1.1's 26.3 build.
