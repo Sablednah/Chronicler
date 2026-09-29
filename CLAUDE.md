@@ -196,18 +196,25 @@ neoforge/Journal     the written book; FlagStore = world flags (SavedData, cache
 neoforge/JournalPanel the same journal as one payload for a modded client (journal.panel): text resolved
                      here, buttons are /quest commands the client sends back (RUN runs only "quest ...")
 network/             JournalPayload (clientbound, whole journal) + JournalRequestPayload (open/refresh/run) +
-                     WaypointsPayload (clientbound, once a second: quest targets/givers/led NPCs, for a map)
+                     WaypointsPayload (clientbound, once a second: quest targets/givers/led NPCs, for a map) +
+                     HudPayload (clientbound, only when it changes: active quests and objective lines, worded here)
+neoforge/Hud         builds HudPayload from the same currentObjectives/describe the action bar uses; caps at
+                     tracker.hudMaxQuests with a "+N more" line; remembers what each client was last sent
 neoforge/Waypoints   plain data for WaypointsPayload -- reads the same currentObjectives/Givers/Npcs every
                      tracker and page already reads; knows nothing of JourneyMap or any client at all
 neoforge/EscortBars  a vanilla boss bar per escorted charge in danger, showing hits taken; recomputed
                      each poll like Waypoints, no separate cleanup path when the escort ends
-client/              dist=CLIENT entrypoint: JournalScreen (chapters | quest map or page), ` key (never J: JourneyMap), ClientJournal, ClientWaypoints
+client/              dist=CLIENT entrypoint: JournalScreen (chapters | quest map or page), ` key (never J: JourneyMap), ClientJournal, ClientWaypoints,
+                     ClientHud (the quest tracker HUD, a GUI layer under the chat; Shift+` toggles; decides nothing),
+                     ChroniclerClientConfig (chronicler-client.toml: hud.shown/top/width -- the player's own screen)
 client/compat/       ONE guarded pair for JourneyMap: JourneyMapPlugin (its own annotation-discovered
                      plugin, storing IClientAPI), JourneyMapWaypoints (creates/moves/removes Waypoints).
-                     The client-side twin of neoforge/compat/ -- same "only this may import it" rule
+                     The client-side twin of neoforge/compat/ -- same "only this may import it" rule.
+                     Also StandardsHudButton: Standards' quest-tracker button toggles the HUD, lit while shown
 core/QuestMap        prerequisite-depth layout for the map; loader-light so the self-test checks it
 neoforge/Party|Money|Rep|Sheet|Lots   neutral bridges, "nothing here" without a sibling
-neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEconomy,
+neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEconomy, StandardsButtons (the bar's
+                     quest tracker + journal buttons; they run /quest and /quest journal, so vanilla loses nothing),
                      StandardsReputation, LegendQuestCharacter, CityWorldLots, ZombieModConditions,
                      ZombieModSpawns (Genera bridge: spawn a genus and get the Mob back -- never via the
                      command, which hands nothing back and whose mob no lookup can find this tick)

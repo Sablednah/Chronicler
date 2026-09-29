@@ -30,6 +30,12 @@ in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
   With Chronicler on the client too, the same journal opens as a **panel**
   (the **backtick** key, the item, or `/quest journal`): chapters and their quests on the
   left, a map of what leads to what, a page per quest with its buttons.
+- With Chronicler on the client, a **quest tracker HUD** down the left of the screen lists your
+  active quests (the tracked one first) and where each objective stands. **Shift+`** shows or
+  hides it, and it remembers. With SableCraft Standards' action bar, two buttons: the quest
+  tracker (lit while shown) and the full journal. Without Chronicler on the client, the same
+  buttons say `/quest` and hand over the book. Where it sits and how wide it grows are in
+  `chronicler-client.toml`; how many quests it lists is the server's `tracker.hudMaxQuests`.
 - Choices arrive as buttons in chat and in the book. `/quest replay <chapter>`
   starts a replayable chapter over, keeping the endings you found.
 - With [JourneyMap](https://www.curseforge.com/minecraft/mc-mods/journeymap) installed too, a
