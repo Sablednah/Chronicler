@@ -79,7 +79,7 @@ public final class Journal {
     public static void give(ServerPlayer player) {
         ItemStack book = make(player);
         player.getInventory().add(book);
-        if (!book.isEmpty()) player.drop(book, false);
+        if (!book.isEmpty()) player.drop(book, false, net.minecraft.util.Prediction.SERVER_ONLY);
         QuestEngine.journal(player).markJournalGiven();
         Feedback.chat(player, Lang.get("msg.journal.given"));
     }
@@ -91,7 +91,7 @@ public final class Journal {
         if (log.journalGiven()) return;
         ItemStack book = make(player);
         player.getInventory().add(book);
-        if (!book.isEmpty()) player.drop(book, false);
+        if (!book.isEmpty()) player.drop(book, false, net.minecraft.util.Prediction.SERVER_ONLY);
         log.markJournalGiven();
         Feedback.chat(player, Lang.get("msg.journal.new_player"));
         Achievements.grantOrWarn(player, Achievements.ROOT, "new player's journal");

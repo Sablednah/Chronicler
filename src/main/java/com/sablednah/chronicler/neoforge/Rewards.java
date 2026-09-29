@@ -68,7 +68,7 @@ public final class Rewards {
                     return;
                 }
                 player.getInventory().add(stack);
-                if (!stack.isEmpty()) player.drop(stack, false);
+                if (!stack.isEmpty()) player.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY);
                 Feedback.chat(player, Lang.fmt("msg.reward.given", "line", r.describe()));
                 return;
             }
@@ -83,7 +83,7 @@ public final class Rewards {
                 int n = Math.min(left, holder.get().value().getDefaultMaxStackSize());
                 ItemStack stack = new ItemStack(holder.get(), n);
                 player.getInventory().add(stack);
-                if (!stack.isEmpty()) player.drop(stack, false); // a full pack drops it at the feet
+                if (!stack.isEmpty()) player.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY); // a full pack drops it at the feet
                 left -= n;
             }
             Feedback.chat(player, Lang.fmt("msg.reward.given", "line", r.describe()));

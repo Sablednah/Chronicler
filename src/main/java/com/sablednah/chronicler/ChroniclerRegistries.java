@@ -6,7 +6,7 @@ import com.sablednah.chronicler.data.Quest;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.neoforged.neoforge.registries.DataPackRegistryEvent;
+import net.neoforged.neoforge.registries.NewDatapackRegistryEvent;
 
 /**
  * Registry keys owned by Chronicler.
@@ -34,10 +34,10 @@ public final class ChroniclerRegistries {
             ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath(Chronicler.MODID, "quest"));
 
     /** Registered on the mod event bus. */
-    static void register(DataPackRegistryEvent.NewRegistry event) {
-        event.dataPackRegistry(CHAPTER, Chapter.CODEC, Chapter.CODEC);
-        event.dataPackRegistry(QUEST, Quest.CODEC, Quest.CODEC);
-        event.dataPackRegistry(ITEM, com.sablednah.chronicler.data.QuestItem.CODEC, com.sablednah.chronicler.data.QuestItem.CODEC);
+    static void register(NewDatapackRegistryEvent event) {
+        event.worldRegistry(CHAPTER, Chapter.CODEC, Chapter.CODEC);
+        event.worldRegistry(QUEST, Quest.CODEC, Quest.CODEC);
+        event.worldRegistry(ITEM, com.sablednah.chronicler.data.QuestItem.CODEC, com.sablednah.chronicler.data.QuestItem.CODEC);
     }
 
     private ChroniclerRegistries() {}

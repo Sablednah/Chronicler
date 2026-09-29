@@ -461,7 +461,7 @@ public final class SelfTest {
                             advancements.get(cure) != null && parentOf.apply(cure).map(Achievements.chapterId(zarpFinale)::equals).orElse(false));
                     check("achievements: an ending is hidden and framed as a challenge", advancements.get(cure) != null
                             && advancements.get(cure).value().display()
-                                    .map(d -> d.isHidden() && d.getType() == net.minecraft.advancements.AdvancementType.CHALLENGE).orElse(false));
+                                    .map(d -> d.hidden() && d.type() == net.minecraft.advancements.AdvancementType.CHALLENGE).orElse(false));
                     // reachEnding calls Achievements.grantOrWarn for a fresh ending; it must not throw, and
                     // must not warn (the id it computes has to be exactly the one generated above).
                     int before = FAILURES.size();

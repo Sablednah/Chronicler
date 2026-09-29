@@ -398,8 +398,8 @@ public final class AchievementPack implements PackResources {
 
     public static Pack makePack(boolean zarp, boolean prologue) {
         Pack.ResourcesSupplier supplier = new Pack.ResourcesSupplier() {
-            @Override public PackResources openPrimary(PackLocationInfo location) { return new AchievementPack(zarp, prologue); }
-            @Override public PackResources openFull(PackLocationInfo location, Pack.Metadata metadata) { return new AchievementPack(zarp, prologue); }
+            @Override public net.minecraft.server.packs.PackMetadataResources openMetadata(PackLocationInfo location) { return new AchievementPack(zarp, prologue); }
+            @Override public Stream<PackResources> openResources(PackLocationInfo location, Pack.Metadata metadata) { return Stream.of(new AchievementPack(zarp, prologue)); }
         };
         Pack.Metadata metadata = new Pack.Metadata(
                 Component.literal("Generated achievements: one per chapter, one per ending"),

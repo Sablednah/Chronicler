@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import org.lwjgl.glfw.GLFW;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.sablednah.chronicler.core.QuestMap;
@@ -671,11 +670,13 @@ public final class JournalScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (super.mouseClicked(event, doubleClick)) return true;
-        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_4) {
+        // 26.3 moved input to SDL, which numbers the mouse from 1 (left=1, right=3, back=4): the named
+        // constants follow the backend, a literal 0 does not -- it made the journal unclickable.
+        if (event.button() == InputConstants.MOUSE_BUTTON_4) {
             goBack();
             return true;
         }
-        if (event.button() != 0) return false;
+        if (event.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
         for (Hot hot : List.copyOf(hotspots)) {
             if (!hot.canvas() && event.x() >= hot.x0() && event.x() < hot.x1() && event.y() >= hot.y0() && event.y() < hot.y1()) {
                 hot.action().run();
@@ -694,7 +695,7 @@ public final class JournalScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-        if (pressedInCanvas && event.button() == 0) {
+        if (pressedInCanvas && event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             if (Math.abs(event.x() - pressX) + Math.abs(event.y() - pressY) > 3) dragged = true;
             if (dragged) {
                 panX = clamp(panX - dx, 0, maxPanX);
@@ -707,7 +708,7 @@ public final class JournalScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (pressedInCanvas && event.button() == 0) {
+        if (pressedInCanvas && event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             pressedInCanvas = false;
             if (!dragged) {
                 for (Hot hot : List.copyOf(hotspots)) {

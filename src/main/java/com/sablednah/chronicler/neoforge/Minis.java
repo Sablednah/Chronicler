@@ -316,8 +316,8 @@ public final class Minis {
         for (int y = top; y > bottom; y--) {
             BlockPos pos = new BlockPos(x, y, z);
             if (level.canSeeSky(pos)) continue; // still the roof, or the open air outside it
-            if (level.getBlockState(pos).blocksMotion() || level.getBlockState(pos.above()).blocksMotion()) continue; // not standing room
-            if (!level.getBlockState(pos.below()).blocksMotion()) continue; // no floor
+            if (level.getBlockState(pos).is(net.minecraft.tags.BlockTags.BLOCKS_MOTION) || level.getBlockState(pos.above()).is(net.minecraft.tags.BlockTags.BLOCKS_MOTION)) continue; // not standing room
+            if (!level.getBlockState(pos.below()).is(net.minecraft.tags.BlockTags.BLOCKS_MOTION)) continue; // no floor
             return pos;
         }
         return null;

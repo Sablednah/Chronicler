@@ -188,7 +188,7 @@ public final class ChroniclerCommands {
             return 0;
         }
         target.getInventory().add(stack);
-        if (!stack.isEmpty()) target.drop(stack, false);
+        if (!stack.isEmpty()) target.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY);
         ctx.getSource().sendSuccess(() -> Feedback.colored(Lang.fmt("cmd.item.given", "count", count,
                 "item", com.sablednah.chronicler.data.QuestItem.displayName(key.identifier()), "player", target.getName().getString())), true);
         return 1;

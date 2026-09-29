@@ -94,7 +94,7 @@ public final class Trackers {
             @Override
             public int settle(ServerPlayer player, ObjectiveTypes.Collect spec, int amount) {
                 if (!spec.consume() || amount <= 0) return 0;
-                return player.getInventory().clearOrCountMatchingItems(matcher(spec), amount, player.inventoryMenu.getCraftSlots());
+                return player.getInventory().clearOrCountMatchingItems(matcher(spec), false, amount, player.inventoryMenu.getCraftSlots());
             }
         });
 
@@ -111,7 +111,7 @@ public final class Trackers {
             @Override
             public int settle(ServerPlayer player, ObjectiveTypes.Deliver spec, int amount) {
                 if (amount <= 0) return 0;
-                return player.getInventory().clearOrCountMatchingItems(matcher(spec), amount, player.inventoryMenu.getCraftSlots());
+                return player.getInventory().clearOrCountMatchingItems(matcher(spec), false, amount, player.inventoryMenu.getCraftSlots());
             }
         });
 
