@@ -425,6 +425,10 @@ public final class SelfTest {
                 check("api: a player flag is not a world flag, nor anybody else's", !com.sablednah.chronicler.api.Quests.flag(solo, "selftest_claimed_hut")
                         && !com.sablednah.chronicler.api.Quests.playerFlag(fake(server, "ChroniclerTestD"), "selftest_claimed_hut"));
                 com.sablednah.chronicler.api.Quests.setPlayerFlag(solo, "selftest_claimed_hut", false);
+                var labelled = com.sablednah.chronicler.data.ObjectiveTypes.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,
+                        com.google.gson.JsonParser.parseString("{\"type\": \"flag\", \"name\": \"founded_a_faction\", \"player\": true, \"label\": \"Found your faction: /f create <name>\"}")).result();
+                check("flag: a label is the line the journal shows", labelled.map(o -> o.describe().equals("Found your faction: /f create <name>")).orElse(false));
+                check("flag: unlabelled, the flag's name still reads", !waiting.describe().isBlank() && !waiting.describe().contains("_"));
                 check("api: setPlayerFlag false clears it", !com.sablednah.chronicler.api.Quests.playerFlag(solo, "selftest_claimed_hut"));
                 check("api: Threadwork's reflective lookup finds both by name", java.util.Arrays.stream(Q.getMethods()).map(java.lang.reflect.Method::getName)
                         .filter(n -> n.equals("playerFlag") || n.equals("setPlayerFlag")).count() == 2);
