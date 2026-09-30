@@ -26,9 +26,19 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class CastGivers {
 
+    /** Cast 1.2.0+ can resize an NPC; probed once, since an older Cast simply lacks the method. */
+    private static boolean SCALE;
+    private static boolean scaleWarned;
+
     public static final Identifier ROLE = ChroniclerIds.of("giver");
 
     public static void register() {
+        try {
+            Cast.class.getMethod("setScale", MinecraftServer.class, UUID.class, double.class);
+            SCALE = true;
+        } catch (NoSuchMethodException e) {
+            SCALE = false;
+        }
         Cast.registerRole(ROLE, (player, npc, hand) -> Givers.onUseNpc(player, npc.id()));
         Npcs.install(new Npcs.Provider() {
             @Override public UUID spawnHuman(ServerLevel level, Vec3 pos, float yaw, String name, Optional<String> skin) {
@@ -58,6 +68,14 @@ public final class CastGivers {
             }
             @Override public void setDefyGravity(MinecraftServer server, UUID id, boolean defy) {
                 Cast.setDefyGravity(server, id, defy);
+            }
+            @Override public void setScale(MinecraftServer server, UUID id, double scale) {
+                if (SCALE) { Cast.setScale(server, id, scale); return; }
+                // Cast before 1.2.0 has no setScale: calling it would be a NoSuchMethodError nothing catches.
+                if (scale != 1D && !scaleWarned) {
+                    scaleWarned = true;
+                    Chronicler.LOGGER.warn("Chronicler: an NPC asks for scale {} but this Cast predates 1.2.0 -- everyone stays ordinary size. Update Cast.", scale);
+                }
             }
             @Override public java.util.Map<String, String> equipment(MinecraftServer server, UUID id) {
                 return Cast.equipment(server, id);

@@ -211,6 +211,7 @@ public final class Minis {
                     }
                     placed.add(uid);
                     if (!slot.person().equipment().isEmpty()) Npcs.provider().get().equip(server, uid, slot.person().equipment());
+                    if (slot.person().scale() != 1D) Npcs.provider().get().setScale(server, uid, slot.person().scale());
                     GiverStore store = GiverStore.get(server);
                     store.setNpc(uid, id);
                     store.setMini(uid, id, pending);

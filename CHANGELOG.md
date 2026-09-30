@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- NPC givers and mini-quest persons take `scale` (0.0625 to 16, default 1): a towering Sarge, a small Kit. Through Cast 1.2.0's `setScale`; on an older Cast the NPC stays ordinary size and the log says so once. A scale out of range refuses the file.
+
 ## 1.3.0 — 2026-09-29
 
 - **Quest tracker HUD** (Chronicler on the client too): your active quests down the left of the screen, the tracked one first, each objective with its count, done ones ticked, and a deadline when there is one. **Shift+`** shows or hides it, and it remembers. Worded server-side like everything else, so `messages.yml` rewrites it (`hud.*`). The server's `tracker.hudMaxQuests` (default 5) caps the list; `chronicler-client.toml` says where it sits and how wide it grows.
