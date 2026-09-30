@@ -36,6 +36,8 @@ public final class Npcs {
         default void equip(MinecraftServer server, UUID id, java.util.Map<String, String> equipment) {}
         /** Keep the NPC exactly where placed even with nothing underneath (default: it drops to the ground). */
         default void setDefyGravity(MinecraftServer server, UUID id, boolean defy) {}
+        /** Bigger or smaller (1 is ordinary); a provider that cannot resize ignores it. */
+        default void setScale(MinecraftServer server, UUID id, double scale) {}
         /** What the NPC wears, by slot name. */
         default java.util.Map<String, String> equipment(MinecraftServer server, UUID id) { return java.util.Map.of(); }
         boolean remove(MinecraftServer server, UUID id);

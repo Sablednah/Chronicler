@@ -191,6 +191,7 @@ public final class Givers {
             store.setNpc(existing.get(), questId);
             if (!n.equipment().isEmpty()) cast.equip(server, existing.get(), n.equipment());
             cast.setDefyGravity(server, existing.get(), n.defyGravity());
+            cast.setScale(server, existing.get(), n.scale()); // an edited file's size applies on the next start
             return;
         }
         Identifier dim = n.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
@@ -210,6 +211,7 @@ public final class Givers {
         store.setNpc(id, questId);
         if (!n.equipment().isEmpty()) cast.equip(server, id, n.equipment());
         cast.setDefyGravity(server, id, n.defyGravity());
+        if (n.scale() != 1D) cast.setScale(server, id, n.scale());
         Chronicler.LOGGER.info("Chronicler: placed NPC giver '{}' for {} at {}", n.name(), questId, at);
     }
 

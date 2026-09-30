@@ -176,7 +176,10 @@ override `scope`. Every word a player sees lives in
   `/give` takes them), applied on placement and re-applied on restart if the
   file changes; `/cast equip` does it by hand. NPCs obey gravity (mine the
   block under one and it lands); `defy_gravity: true` keeps one exactly where
-  it was put.
+  it was put. `scale: 1.2` makes one bigger, `0.85` smaller (0.0625 to 16;
+  Cast 1.2.0+, the NPC stays ordinary on an older Cast), on a giver or a mini
+  quest's person. `skin: "zarp:okafor"` wears a skin a datapack ships (Cast 1.2.0+,
+  see Cast's README) instead of an account's.
 - **Availability** takes `race: [immune]` and `class: [doc, combat_medic]`
   (LegendQuest ids, bare or namespaced; any of the list), beside `level_min`.
 - **Endings.** A stage or a choice with `ending: cure` records an ending for

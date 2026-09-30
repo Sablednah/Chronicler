@@ -66,14 +66,20 @@ public record Mini(Map<String, Slot> slots, Optional<Wild> spawn) {
 
     /** The person an {@code npc} slot places: a Cast human (with {@code skin}) or a creature ({@code entity}). */
     public record Person(Optional<String> name, Optional<String> skin, Optional<Identifier> entity,
-            Map<String, String> equipment, Optional<String> greeting, boolean keep) {
+            Map<String, String> equipment, Optional<String> greeting, boolean keep, double scale) {
+        public Person(Optional<String> name, Optional<String> skin, Optional<Identifier> entity,
+                Map<String, String> equipment, Optional<String> greeting, boolean keep) {
+            this(name, skin, entity, equipment, greeting, keep, 1D);
+        }
+        /** {@code scale}: bigger or smaller (Cast 1.2.0+), 1 is ordinary. */
         public static final MapCodec<Person> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.STRING.optionalFieldOf("name").forGetter(Person::name),
                 Codec.STRING.optionalFieldOf("skin").forGetter(Person::skin),
                 Identifier.CODEC.optionalFieldOf("entity").forGetter(Person::entity),
                 Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("equipment", Map.of()).forGetter(Person::equipment),
                 Codec.STRING.optionalFieldOf("greeting").forGetter(Person::greeting),
-                Codec.BOOL.optionalFieldOf("keep", false).forGetter(Person::keep))
+                Codec.BOOL.optionalFieldOf("keep", false).forGetter(Person::keep),
+                Codec.doubleRange(0.0625D, 16D).optionalFieldOf("scale", 1D).forGetter(Person::scale))
                 .apply(i, Person::new));
     }
 
