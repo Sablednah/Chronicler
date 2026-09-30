@@ -9,6 +9,7 @@
   "giver": {
     "type": "npc",
     "name": "&fSarge Kowalski",
+    "scale": 1.15,
     "near_spawn": [
       -3,
       -3

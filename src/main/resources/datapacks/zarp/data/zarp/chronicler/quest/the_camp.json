@@ -9,6 +9,7 @@
   "giver": {
     "type": "npc",
     "name": "&fDr Amara Okafor",
+    "scale": 0.944,
     "near_spawn": [
       6,
       3
