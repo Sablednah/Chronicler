@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.3.1 — 2026-09-30
 
 - NPC givers and mini-quest persons take `scale` (0.0625 to 16, default 1): a towering Sarge, a small Kit. Through Cast 1.2.0's `setScale`; on an older Cast the NPC stays ordinary size and the log says so once. A scale out of range refuses the file.
+- ZARP: Kit is a child (0.65), Sarge Kowalski stands a head taller (1.15), Dr Okafor is 1.7 blocks (0.944).
+- With Cast 1.2.0, a giver or person's `skin` may be a shipped skin, `"zarp:okafor"`, from a datapack's `data/<ns>/cast/skin/<name>.json`: no Mojang account, no network. Nothing changes here; Cast resolves it.
 
 ## 1.3.0 — 2026-09-29
 
