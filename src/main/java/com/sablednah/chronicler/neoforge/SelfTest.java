@@ -364,6 +364,21 @@ public final class SelfTest {
                     && QuestEngine.journal(solo).completions(cull) == 1);
             QuestEngine.abandon(solo, cull);
 
+            // Scale on a person: data only here, so it checks with or without Cast.
+            {
+                var ops = com.mojang.serialization.JsonOps.INSTANCE;
+                var tall = com.sablednah.chronicler.data.GiverTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"type\": \"npc\", \"name\": \"Sarge\", \"near_spawn\": [3, 3], \"scale\": 1.2}")).result();
+                check("npc scale: a giver's scale parses", tall.map(g -> g instanceof com.sablednah.chronicler.data.GiverTypes.NpcGiver n && n.scale() == 1.2D).orElse(false));
+                check("npc scale: left out, it is 1", com.sablednah.chronicler.data.GiverTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"type\": \"npc\", \"name\": \"Mags\", \"near_spawn\": [3, 3]}")).result()
+                        .map(g -> g instanceof com.sablednah.chronicler.data.GiverTypes.NpcGiver n && n.scale() == 1D).orElse(false));
+                check("npc scale: 40 refuses the file, not a silent clamp", com.sablednah.chronicler.data.GiverTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"type\": \"npc\", \"name\": \"Giant\", \"near_spawn\": [3, 3], \"scale\": 40}")).error().isPresent());
+                check("npc scale: a mini person's scale parses", com.sablednah.chronicler.data.Mini.Person.MAP_CODEC.codec().parse(ops,
+                        com.google.gson.JsonParser.parseString("{\"name\": \"Kit\", \"scale\": 0.85}")).result().map(pp -> pp.scale() == 0.85D).orElse(false));
+            }
+
             // NPC givers, when Cast is present: a person hands out a quest on right-click.
             if (Npcs.available()) {
                 var cast = Npcs.provider().get();
@@ -371,6 +386,8 @@ public final class SelfTest {
                 UUID npc = cast.spawnHuman(server.overworld(), solo.position().add(2, 0, 0), 0F, "Test Giver", java.util.Optional.empty());
                 try {
                     GiverStore.get(server).setNpc(npc, firstSteps);
+                    try { cast.setScale(server, npc, 1.2D); cast.setScale(server, npc, 1D); check("npc scale: resizing a real Cast NPC does not throw", true); }
+                    catch (RuntimeException | LinkageError e) { check("npc scale: resizing threw " + e, false); }
                     check("npc giver: first click offers", Givers.onUseNpc(solo, npc) && !QuestEngine.journal(solo).isActive(firstSteps));
                     check("npc giver: second click accepts (logs still in the pack finish it)", Givers.onUseNpc(solo, npc)
                             && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));
