@@ -342,7 +342,11 @@ at tick 0 and loads no spawn chunks without a player; the self-test allows for
 both.
 
 **`mc26.3`** (2026-09-29) is 26.3 on **NeoForge 26.3.0.33-beta**, MDG 2.0.147, Java 25, run dir
-`run-mc26.3`. The neo range is floored at the tested build, `[26.3.0.33-beta,26.4)`, not the series:
+`run-mc26.3`. The neo range is `[26.3.0.33-beta,26.3.0.37-beta)`: floored at the tested build, not the series, and
+**capped below .37-beta** (Sable, 2026-09-30) because FML 12.0.8 there renamed `ModConfig.Type` `COMMON` -> `LOCAL`
+(`SERVER` -> `SYNCED`) and every jar using `COMMON` dies with `NoSuchFieldError` -- a mechanical rename to port once
+NeoForge 26.3 is stable. The cap is written `-beta` on purpose: in Maven order `26.3.0.37-beta` sorts before `26.3.0.37`.
+The floor matters too:
 `NewDatapackRegistryEvent` only exists from .20-beta and CityWorld crashed at construction below it.
 On top of the 26.2 drift: `DataPackRegistryEvent.NewRegistry`/`dataPackRegistry` ->
 `NewDatapackRegistryEvent`/`worldRegistry` (26.3 also offers `reloadableRegistry`, which could one
