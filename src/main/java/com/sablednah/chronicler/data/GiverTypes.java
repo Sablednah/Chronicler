@@ -86,7 +86,14 @@ public final class GiverTypes {
      */
     public record NpcGiver(String name, Optional<String> skin, Optional<Identifier> entity,
             Optional<BlockPos> at, Optional<List<Integer>> nearSpawn, Optional<Identifier> dimension, float yaw,
-            Optional<String> greeting, Optional<Identifier> of, Map<String, String> equipment, boolean defyGravity) implements GiverSpec {
+            Optional<String> greeting, Optional<Identifier> of, Map<String, String> equipment, boolean defyGravity, double scale) implements GiverSpec {
+        /** Before {@code scale}: kept, since a record's canonical constructor is public API. */
+        public NpcGiver(String name, Optional<String> skin, Optional<Identifier> entity,
+                Optional<BlockPos> at, Optional<List<Integer>> nearSpawn, Optional<Identifier> dimension, float yaw,
+                Optional<String> greeting, Optional<Identifier> of, Map<String, String> equipment, boolean defyGravity) {
+            this(name, skin, entity, at, nearSpawn, dimension, yaw, greeting, of, equipment, defyGravity, 1D);
+        }
+        /** {@code scale}: bigger or smaller, vanilla's {@code minecraft:scale} through Cast 1.2.0+ (1 is ordinary). */
         /**
          * {@code at} is a fixed block; {@code near_spawn: [dx, dz]} is an offset
          * from the world spawn, dropped onto the surface the first time the
@@ -105,7 +112,8 @@ public final class GiverTypes {
                 Codec.STRING.optionalFieldOf("greeting").forGetter(NpcGiver::greeting),
                 ChroniclerIds.CODEC.optionalFieldOf("of").forGetter(NpcGiver::of),
                 Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("equipment", Map.of()).forGetter(NpcGiver::equipment),
-                Codec.BOOL.optionalFieldOf("defy_gravity", false).forGetter(NpcGiver::defyGravity))
+                Codec.BOOL.optionalFieldOf("defy_gravity", false).forGetter(NpcGiver::defyGravity),
+                Codec.doubleRange(0.0625D, 16D).optionalFieldOf("scale", 1D).forGetter(NpcGiver::scale))
                 .apply(i, NpcGiver::new)).validate(n -> n.at().isEmpty() && n.nearSpawn().isEmpty() && n.of().isEmpty()
                         ? com.mojang.serialization.DataResult.error(() -> "an npc giver needs 'at' or 'near_spawn'")
                         : com.mojang.serialization.DataResult.success(n));
