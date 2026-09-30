@@ -14,6 +14,7 @@
   "giver": {
     "type": "npc",
     "name": "&cKit",
+    "scale": 0.65,
     "near_spawn": [
       3,
       -3
