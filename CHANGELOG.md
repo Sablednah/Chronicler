@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.2 — 2026-10-01
+
+- **Minecraft 26.3 only** -- the other lines are unchanged and stay on 1.3.1. NeoForge 26.3.0.37-beta and later rename the config types this jar registers (`COMMON` became `LOCAL`), so 1.3.1 crashes on them with `NoSuchFieldError`. This build declares NeoForge **26.3.0.33-beta up to, not including, 26.3.0.37-beta**, so a newer beta now refuses it with a version message instead. Stay on NeoForge 26.3.0.36-beta or earlier until NeoForge 26.3 is stable and the rename is ported.
+
 ## 1.3.1 — 2026-09-30
 
 - NPC givers and mini-quest persons take `scale` (0.0625 to 16, default 1): a towering Sarge, a small Kit. Through Cast 1.2.0's `setScale`; on an older Cast the NPC stays ordinary size and the log says so once. A scale out of range refuses the file.
