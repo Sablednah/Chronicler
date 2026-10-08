@@ -341,11 +341,12 @@ ZombieMod 3.4.0 (in its `build/libs`), Cast 1.0.0 (the instances now carry Stand
 at tick 0 and loads no spawn chunks without a player; the self-test allows for
 both.
 
-**`mc26.3`** (2026-09-29) is 26.3 on **NeoForge 26.3.0.33-beta**, MDG 2.0.147, Java 25, run dir
-`run-mc26.3`. The neo range is `[26.3.0.33-beta,26.3.0.37-beta)`: floored at the tested build, not the series, and
-**capped below .37-beta** (Sable, 2026-09-30) because FML 12.0.8 there renamed `ModConfig.Type` `COMMON` -> `LOCAL`
-(`SERVER` -> `SYNCED`) and every jar using `COMMON` dies with `NoSuchFieldError` -- a mechanical rename to port once
-NeoForge 26.3 is stable. The cap is written `-beta` on purpose: in Maven order `26.3.0.37-beta` sorts before `26.3.0.37`.
+**`mc26.3`** (2026-09-29) is 26.3 on **NeoForge 26.3.0.58-beta** (since 2026-10-08; .33 before), MDG 2.0.147, Java 25, run dir
+`run-mc26.3`. The neo range is `[26.3.0.58-beta,26.4)`, floored at the tested build. FML 12.0.8 (NeoForge
+.37-beta) renamed `ModConfig.Type` `COMMON` -> `LOCAL` (`SERVER` -> `SYNCED`): a jar still saying `COMMON` dies there
+with `NoSuchFieldError` (1.3.2 capped below .37-beta for a week while Sable waited). **`LOCAL`'s default file name is
+`chronicler-local.toml`, so the registration gives `"chronicler-common.toml"` explicitly** -- otherwise every existing
+server silently starts from defaults (the LegendQuest/Standards trick; Cast does the same). `CLIENT` kept its name.
 The floor matters too:
 `NewDatapackRegistryEvent` only exists from .20-beta and CityWorld crashed at construction below it.
 On top of the 26.2 drift: `DataPackRegistryEvent.NewRegistry`/`dataPackRegistry` ->
