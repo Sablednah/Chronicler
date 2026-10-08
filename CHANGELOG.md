@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.3 — 2026-10-08
+
+- **Minecraft 26.3 only, on NeoForge 26.3.0.58-beta or newer** -- the other lines are unchanged and stay on 1.3.1. 1.3.2 was capped below .37-beta, where NeoForge renamed the config types; this one uses the new type and keeps your settings in `chronicler-common.toml` (it would otherwise have become `chronicler-local.toml`, starting every server on defaults). 26.3.0.36-beta and earlier stay on 1.3.2. Wants Cast 1.2.2 on .58.
+
 ## 1.3.2 — 2026-10-01
 
 - **Minecraft 26.3 only** -- the other lines are unchanged and stay on 1.3.1. NeoForge 26.3.0.37-beta and later rename the config types this jar registers (`COMMON` became `LOCAL`), so 1.3.1 crashes on them with `NoSuchFieldError`. This build declares NeoForge **26.3.0.33-beta up to, not including, 26.3.0.37-beta**, so a newer beta now refuses it with a version message instead. Stay on NeoForge 26.3.0.36-beta or earlier until NeoForge 26.3 is stable and the rename is ported.
