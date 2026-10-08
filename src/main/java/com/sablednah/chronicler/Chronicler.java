@@ -42,7 +42,9 @@ public class Chronicler {
     public Chronicler(IEventBus modEventBus, ModContainer modContainer) {
         LOGGER.info("Chronicler {} initialising", BuildInfo.describe());
 
-        modContainer.registerConfig(ModConfig.Type.COMMON, ChroniclerConfig.SPEC);
+        // COMMON became LOCAL in FML 12.0.8 (NeoForge 26.3.0.37-beta). The file name is given, because the default
+        // follows the type, and "chronicler-local.toml" would leave every existing server on default settings.
+        modContainer.registerConfig(ModConfig.Type.LOCAL, ChroniclerConfig.SPEC, "chronicler-common.toml");
 
         // Mod bus: registries, attachments, the YAML front door.
         modEventBus.addListener(ChroniclerRegistries::register);
