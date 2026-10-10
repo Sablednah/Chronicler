@@ -883,7 +883,7 @@ public final class SelfTest {
         if (zarp) {
             int zq = 0;
             for (var h : QuestEngine.quests(server).listElements().toList()) if (h.key().identifier().getNamespace().equals("zarp")) zq++;
-            check("zarp: all 28 quests loaded (" + zq + ")", zq == 28); // 21 since Wrench's Notes (2026-09-15), 26 with the errands, 28 with The Plan and the bank job
+            check("zarp: all 29 quests loaded (" + zq + ")", zq == 29); // 21 since Wrench's Notes (2026-09-15), 26 with the errands, 28 with The Plan and the bank job, 29 with the camp fire's Firewood
             check("zarp: the finale has two endings, survivors two, beyond one",
                     QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "finale")).size() == 2
                     && QuestEngine.endingsOf(server, Identifier.fromNamespaceAndPath("zarp", "survivors")).size() == 2
@@ -978,6 +978,25 @@ public final class SelfTest {
                 for (int dy = 1; dy <= 3; dy++) level.setBlockAndUpdate(g.above(dy), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
             }
             check("zarp: the campfire gives Wake Up", fireAt.flatMap(f -> Givers.questAt(level, f)).map(q -> q.getPath().equals("wake_up")).orElse(false));
+            // Several quests on one block (the camp's job board), shared by "of": the block's own first, then its jobs.
+            var wakeUp = Identifier.fromNamespaceAndPath("zarp", "wake_up");
+            var firewood = Identifier.fromNamespaceAndPath("zarp", "camp_firewood");
+            var atFire = fireAt.map(f -> Givers.questsAt(level, f)).orElse(List.of());
+            check("shared block: the campfire gives Wake Up and then Firewood (" + atFire + ")",
+                    atFire.size() >= 2 && atFire.get(0).equals(wakeUp) && atFire.contains(firewood));
+            check("shared block: Firewood stands where Wake Up does", Givers.positionOf(server, firewood).map(w -> fireAt.map(f -> w.pos().equals(net.minecraft.world.phys.Vec3.atCenterOf(f))).orElse(false)).orElse(false));
+            FakePlayer newcomer = fake(server, "ChroniclerTestE"); // a journal of their own: the main test player's stays as it is
+            QuestEngine.journal(newcomer).clear();
+            check("shared block: a newcomer's click is about Wake Up", Givers.pick(newcomer, atFire).map(wakeUp::equals).orElse(false));
+            QuestEngine.journal(newcomer).complete(wakeUp);
+            check("shared block: once it is done, the click is about the next job", Givers.pick(newcomer, atFire).map(firewood::equals).orElse(false));
+            check("shared block: and a click on the fire offers it (handled, not taken on one click)", fireAt.map(f -> Givers.onUseBlock(newcomer, level, f)).orElse(false)
+                    && !QuestEngine.journal(newcomer).isActive(firewood));
+            var ops = com.mojang.serialization.JsonOps.INSTANCE;
+            check("shared block: a position giver may be only 'of'", com.sablednah.chronicler.data.GiverTypes.CODEC.parse(ops,
+                    com.google.gson.JsonParser.parseString("{\"type\": \"position\", \"of\": \"zarp:wake_up\"}")).result().isPresent());
+            check("shared block: one with no at, near_spawn or of is refused", com.sablednah.chronicler.data.GiverTypes.CODEC.parse(ops,
+                    com.google.gson.JsonParser.parseString("{\"type\": \"position\", \"label\": \"nowhere\"}")).error().isPresent());
             // A delivery: two insulin to Okafor's quest. Held but not handed over is nothing; the click hands it over.
             var bd = Identifier.fromNamespaceAndPath("zarp", "before_dark");
             log.complete(Identifier.fromNamespaceAndPath("zarp", "wake_up")); log.complete(Identifier.fromNamespaceAndPath("zarp", "the_camp"));
