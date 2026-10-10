@@ -386,8 +386,17 @@ public final class SelfTest {
                 UUID npc = cast.spawnHuman(server.overworld(), solo.position().add(2, 0, 0), 0F, "Test Giver", java.util.Optional.empty());
                 try {
                     GiverStore.get(server).setNpc(npc, firstSteps);
-                    try { cast.setScale(server, npc, 1.2D); cast.setScale(server, npc, 1D); check("npc scale: resizing a real Cast NPC does not throw", true); }
-                    catch (RuntimeException | LinkageError e) { check("npc scale: resizing threw " + e, false); }
+                    check("npc mark: an ordinary person's mark sits where it always did (2.35)", Math.abs(Givers.markerHeight(1.8D) - 2.35D) < 1e-9);
+                    try {
+                        double plain = cast.byId(server, npc).map(Npcs.Placed::height).orElse(-1D);
+                        cast.setScale(server, npc, 1.2D);
+                        double tall = cast.byId(server, npc).map(Npcs.Placed::height).orElse(-1D);
+                        check("npc scale: a resized NPC reports its real height (" + plain + " -> " + tall + ")",
+                                plain > 0 && Math.abs(tall - plain * 1.2D) < 0.01D);
+                        check("npc mark: ...and its mark rises with it, clear of the taller nameplate",
+                                Givers.markerHeight(tall) > Givers.markerHeight(plain) + 0.4D);
+                        cast.setScale(server, npc, 1D);
+                    } catch (RuntimeException | LinkageError e) { check("npc scale: resizing threw " + e, false); }
                     check("npc giver: first click offers", Givers.onUseNpc(solo, npc) && !QuestEngine.journal(solo).isActive(firstSteps));
                     check("npc giver: second click accepts (logs still in the pack finish it)", Givers.onUseNpc(solo, npc)
                             && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));

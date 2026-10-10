@@ -19,7 +19,10 @@ import net.minecraft.world.phys.Vec3;
 public final class Npcs {
 
     /** A placed NPC, as much as Chronicler needs to know. */
-    public record Placed(UUID id, String name, Identifier dimension, Vec3 pos) {}
+    /** {@code height}: the body's real height in blocks, scale included (1.8 is a player); what a mark over the head sits on. */
+    public record Placed(UUID id, String name, Identifier dimension, Vec3 pos, double height) {
+        public Placed(UUID id, String name, Identifier dimension, Vec3 pos) { this(id, name, dimension, pos, 1.8D); }
+    }
 
     public interface Provider {
         /** Place a human NPC carrying the giver role; returns its id. */
