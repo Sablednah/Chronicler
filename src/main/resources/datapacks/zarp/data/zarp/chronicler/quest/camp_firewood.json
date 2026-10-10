@@ -1,0 +1,39 @@
+{
+  "name": "Firewood",
+  "description": "The fire is the only thing in camp that never sleeps. It eats a stack of logs a night and says nothing about it.",
+  "chapter": "zarp:board",
+  "order": 4,
+  "requires": [
+    "zarp:wake_up"
+  ],
+  "repeatable": true,
+  "cooldown": 600,
+  "giver": {
+    "type": "position",
+    "of": "zarp:wake_up",
+    "label": "the campfire"
+  },
+  "objectives": [
+    {
+      "type": "collect",
+      "tag": "minecraft:logs",
+      "count": 16,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "money",
+      "amount": 10
+    },
+    {
+      "type": "xp",
+      "amount": 10
+    },
+    {
+      "type": "reputation",
+      "standing": "camp",
+      "delta": 1
+    }
+  ]
+}

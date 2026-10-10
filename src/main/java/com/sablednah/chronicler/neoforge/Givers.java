@@ -43,9 +43,15 @@ public final class Givers {
 
     /** Data givers, indexed once per server start (registries are frozen). */
     private static final List<Entry> DATA = new ArrayList<>();
-    private static final Map<String, Identifier> DATA_BLOCKS = new HashMap<>();
+    /** Block key -> every data quest given there, the block's own quest first, then those that share it by {@code of}. */
+    private static final Map<String, List<Identifier>> DATA_BLOCKS = new HashMap<>();
     /** Where each data position giver actually is (fixed, or dropped near spawn and remembered). */
     private static final Map<Identifier, BlockPos> RESOLVED = new HashMap<>();
+    /** Each resolved quest's block key and dimension, so a quest sharing a block shares both. */
+    private static final Map<Identifier, String> RESOLVED_KEY = new HashMap<>();
+    private static final Map<Identifier, Identifier> RESOLVED_DIM = new HashMap<>();
+    /** Within one index pass: "dim|dx,dz" -> the block a near_spawn offset dropped to, so a second quest naming it shares it. */
+    private static final Map<String, BlockPos> NEAR_SPAWN = new HashMap<>();
     /** Per player: quest -> game time of the last offer, so a giver does not nag. */
     private static final Map<UUID, Map<Identifier, Long>> OFFERED = new HashMap<>();
 
@@ -54,23 +60,56 @@ public final class Givers {
     public static void index(MinecraftServer server) {
         DATA.clear();
         DATA_BLOCKS.clear();
-        QuestEngine.quests(server).listElements().forEach(h -> h.value().giver().ifPresent(g -> {
-            DATA.add(new Entry(h.key().identifier(), h.value(), g));
-            if (g instanceof GiverTypes.Position p) {
-                Identifier dim = p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
-                BlockPos at = resolve(server, h.key().identifier(), p, dim);
-                if (at != null) {
-                    RESOLVED.put(h.key().identifier(), at);
-                    DATA_BLOCKS.put(dim + "|" + at.getX() + "," + at.getY() + "," + at.getZ(), h.key().identifier());
-                }
+        RESOLVED.clear();
+        RESOLVED_KEY.clear();
+        RESOLVED_DIM.clear();
+        NEAR_SPAWN.clear();
+        GiverStore store = GiverStore.get(server);
+        QuestEngine.quests(server).listElements().forEach(h -> h.value().giver().ifPresent(g ->
+                DATA.add(new Entry(h.key().identifier(), h.value(), g))));
+        // Blocks a near_spawn offset already dropped to in an earlier start, first: a quest new to this world
+        // that names the same offset shares that block instead of measuring again -- off the top of the campfire.
+        for (Entry e : DATA) {
+            if (e.giver() instanceof GiverTypes.Position p && p.nearSpawn().isPresent() && p.of().isEmpty()) {
+                store.placedBlock(e.id()).ifPresent(at -> NEAR_SPAWN.putIfAbsent(nearSpawnKey(p), at));
             }
-            if (g instanceof GiverTypes.NpcGiver n && n.of().isEmpty()) placeNpc(server, h.key().identifier(), n);
-        }));
-        // Second pass: quests that share another quest's NPC, once every NPC stands.
+        }
+        for (Entry e : DATA) {
+            if (e.giver() instanceof GiverTypes.Position p && p.of().isEmpty()) {
+                Identifier dim = p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
+                BlockPos at = resolve(server, e.id(), p, dim);
+                if (at != null) addBlock(e.id(), dim, at);
+            }
+            if (e.giver() instanceof GiverTypes.NpcGiver n && n.of().isEmpty()) placeNpc(server, e.id(), n);
+        }
+        // Second pass: quests that share another quest's block or NPC, once every block and NPC is placed.
         for (Entry e : List.copyOf(DATA)) {
             if (e.giver() instanceof GiverTypes.NpcGiver n && n.of().isPresent()) shareNpc(server, e.id(), n.of().get());
+            if (e.giver() instanceof GiverTypes.Position p && p.of().isPresent()) {
+                BlockPos at = RESOLVED.get(p.of().get());
+                if (at == null) {
+                    Chronicler.LOGGER.warn("Chronicler: {} gives from the block of {}, which has no position giver -- it is given from nowhere",
+                            e.id(), p.of().get());
+                    continue;
+                }
+                addBlock(e.id(), RESOLVED_DIM.get(p.of().get()), at);
+            }
         }
         OFFERED.clear();
+    }
+
+    private static void addBlock(Identifier questId, Identifier dim, BlockPos at) {
+        String key = dim + "|" + at.getX() + "," + at.getY() + "," + at.getZ();
+        RESOLVED.put(questId, at);
+        RESOLVED_KEY.put(questId, key);
+        RESOLVED_DIM.put(questId, dim);
+        List<Identifier> here = DATA_BLOCKS.computeIfAbsent(key, k -> new ArrayList<>());
+        if (!here.contains(questId)) here.add(questId);
+    }
+
+    private static String nearSpawnKey(GiverTypes.Position p) {
+        return p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier()) + "|"
+                + p.nearSpawn().get().get(0) + "," + p.nearSpawn().get().get(1);
     }
 
     /** Where a position giver stands, placing its block and decor the first time a near-spawn one is seen. */
@@ -87,12 +126,21 @@ public final class Givers {
             if (p.block().isPresent() && level.isLoaded(known.get())) placeBlock(level, known.get(), p.block().get(), questId);
             return known.get();
         }
+        // Another quest already dropped onto this offset: share its block. Measuring again would land on top of
+        // what it placed (a second campfire on the first), and its decor stands already.
+        BlockPos shared = NEAR_SPAWN.get(nearSpawnKey(p));
+        if (shared != null) {
+            p.block().ifPresent(b -> placeBlock(level, shared, b, questId));
+            store.setPlacedBlock(questId, shared);
+            return shared;
+        }
         var spawn = server.overworld().getRespawnData().globalPos().pos();
         int x = spawn.getX() + p.nearSpawn().get().get(0), z = spawn.getZ() + p.nearSpawn().get().get(1);
         BlockPos at = surface(level, x, z);
         p.block().ifPresent(b -> placeBlock(level, at, b, questId));
         placeDecor(level, at, p.decor(), questId);
         store.setPlacedBlock(questId, at);
+        NEAR_SPAWN.put(nearSpawnKey(p), at);
         Chronicler.LOGGER.info("Chronicler: placed the giver block for {} at {}", questId, at);
         return at;
     }
@@ -230,14 +278,8 @@ public final class Givers {
             Feedback.chat(player, Lang.get("msg.giver.npc_idle"));
             return true;
         }
-        // Several quests on one person: the first the player could take, else the first they are on, else the first.
-        Optional<Identifier> id = Optional.empty();
-        for (Identifier q : quests) {
-            var h = QuestEngine.quest(server, q);
-            if (h.isPresent() && QuestEngine.available(player, q, h.get().value())) { id = Optional.of(q); break; }
-        }
-        if (id.isEmpty()) for (Identifier q : quests) if (QuestEngine.journal(player).isActive(q)) { id = Optional.of(q); break; }
-        if (id.isEmpty()) id = Optional.of(quests.getFirst());
+        // Several quests on one person: the same rule as several on one block.
+        Optional<Identifier> id = pick(player, quests);
         // A hand-over to this person, for any of the quests they give, comes before any offer.
         for (Identifier q : quests) if (QuestEngine.onDeliver(player, q)) return true;
         Optional<Holder.Reference<Quest>> holder = QuestEngine.quest(server, id.get());
@@ -261,19 +303,42 @@ public final class Givers {
         return DATA.size();
     }
 
-    /** The quest a block offers, from data or from the store. */
+    /** The first quest a block offers, from data or from the store; whether it is a giver at all. */
     public static Optional<Identifier> questAt(ServerLevel level, BlockPos pos) {
-        Identifier data = DATA_BLOCKS.get(GiverStore.key(level, pos));
-        if (data != null) return Optional.of(data);
-        return GiverStore.get(level.getServer()).at(level, pos);
+        return questsAt(level, pos).stream().findFirst();
+    }
+
+    /** Every quest a block offers: the data's (its own quest, then those sharing it by {@code of}), then any an op added. */
+    public static List<Identifier> questsAt(ServerLevel level, BlockPos pos) {
+        String key = GiverStore.key(level, pos);
+        List<Identifier> out = new ArrayList<>(DATA_BLOCKS.getOrDefault(key, List.of()));
+        for (Identifier q : GiverStore.get(level.getServer()).questsAt(key)) if (!out.contains(q)) out.add(q);
+        return out;
+    }
+
+    /**
+     * Which of several quests on one giver a click (or standing by it) is about: the first the player can take,
+     * else the first they are on, else the first. One rule for a person and a block alike.
+     */
+    static Optional<Identifier> pick(ServerPlayer player, List<Identifier> quests) {
+        MinecraftServer server = player.level().getServer();
+        for (Identifier q : quests) {
+            var h = QuestEngine.quest(server, q);
+            if (h.isPresent() && QuestEngine.available(player, q, h.get().value())) return Optional.of(q);
+        }
+        for (Identifier q : quests) if (QuestEngine.journal(player).isActive(q)) return Optional.of(q);
+        return quests.stream().findFirst();
     }
 
     /** Once a second for the whole server: the floating markers over every giver. */
     public static void tickMarkers(MinecraftServer server) {
         GiverStore store = GiverStore.get(server);
         Map<String, List<Identifier>> all = new HashMap<>();
-        DATA_BLOCKS.forEach((k, v) -> all.put(k, List.of(v)));
-        store.view().keySet().forEach(k -> all.put(k, store.questsAt(k)));
+        DATA_BLOCKS.forEach((k, v) -> all.put(k, new ArrayList<>(v)));
+        store.view().keySet().forEach(k -> {
+            List<Identifier> here = all.computeIfAbsent(k, x -> new ArrayList<>());
+            for (Identifier q : store.questsAt(k)) if (!here.contains(q)) here.add(q);
+        });
         Markers.sync(server, all,
                 key -> markerPosition(server, key),
                 key -> {
@@ -314,9 +379,7 @@ public final class Givers {
     public static Optional<Where> positionOf(MinecraftServer server, Identifier questId) {
         BlockPos fixed = RESOLVED.get(questId);
         if (fixed != null) {
-            Identifier dim = QuestEngine.quest(server, questId).map(h -> h.value().giver().orElse(null))
-                    .map(g -> g instanceof GiverTypes.Position p ? p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier()) : null)
-                    .orElse(net.minecraft.world.level.Level.OVERWORLD.identifier());
+            Identifier dim = RESOLVED_DIM.getOrDefault(questId, net.minecraft.world.level.Level.OVERWORLD.identifier());
             return Optional.of(new Where(dim, Vec3.atCenterOf(fixed)));
         }
         if (!Npcs.available()) return Optional.empty();
@@ -374,7 +437,18 @@ public final class Givers {
     /** The tracker tick: offer whatever this player is standing near or in. */
     public static void tick(ServerPlayer player) {
         MinecraftServer server = player.level().getServer();
+        java.util.Set<String> blocksOffered = new java.util.HashSet<>();
         for (Entry e : DATA) {
+            String key = RESOLVED_KEY.get(e.id());
+            if (key != null) {
+                // Several quests on one block (a camp's job board): one offer, the one a click would make.
+                if (!blocksOffered.add(key) || !present(player, e.id(), e.giver())) continue;
+                pick(player, DATA_BLOCKS.getOrDefault(key, List.of())).ifPresent(id -> {
+                    var h = QuestEngine.quest(server, id);
+                    if (h.isPresent() && QuestEngine.available(player, id, h.get().value())) offer(player, id, h.get().value(), describe(server, h.get().value()));
+                });
+                continue;
+            }
             if (!QuestEngine.available(player, e.id(), e.quest())) continue;
             if (present(player, e.id(), e.giver())) offer(player, e.id(), e.quest(), describe(server, e.quest()));
         }
@@ -398,8 +472,9 @@ public final class Givers {
     private static boolean present(ServerPlayer player, Identifier id, GiverSpec giver) {
         if (giver instanceof GiverTypes.NpcGiver) return false; // the person is the presence; they offer on right-click
         if (giver instanceof GiverTypes.Position p) {
-            if (p.dimension().isPresent() && !p.dimension().get().equals(player.level().dimension().identifier())) return false;
-            if (p.dimension().isEmpty() && !player.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD)) return false;
+            // Where it was resolved (an "of" quest's dimension is its host's), else what the data says.
+            Identifier dim = RESOLVED_DIM.getOrDefault(id, p.dimension().orElse(net.minecraft.world.level.Level.OVERWORLD.identifier()));
+            if (!dim.equals(player.level().dimension().identifier())) return false;
             double r = p.radius();
             BlockPos at = RESOLVED.get(id);
             if (at == null) at = p.at().orElse(null);
@@ -439,9 +514,11 @@ public final class Givers {
             var q = Minis.pendingQuestAtBlock(level, pos);
             if (q.isPresent()) return useGiver(player, wild.get(), q.get());
         }
-        Optional<Identifier> id = questAt(level, pos);
-        if (id.isEmpty()) return false;
-        if (QuestEngine.onDeliver(player, id.get())) return true;
+        List<Identifier> here = questsAt(level, pos);
+        if (here.isEmpty()) return false;
+        // A hand-over for any quest given here comes before any offer, as at a person.
+        for (Identifier q : here) if (QuestEngine.onDeliver(player, q)) return true;
+        Optional<Identifier> id = pick(player, here);
         Optional<Holder.Reference<Quest>> holder = QuestEngine.quest(level.getServer(), id.get());
         if (holder.isEmpty()) {
             Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));
