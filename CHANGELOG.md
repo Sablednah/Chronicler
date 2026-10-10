@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Several quests on one giver block**: a position giver can be `"of": "<quest>"`, giving from that quest's block -- ZARP's camp fire now keeps a rota of jobs (Firewood is the first). A click, or standing by the fire, is about the first quest you can take (cooldowns respected), else the one you are on; a hand-over for any of them comes first -- the same rule as several quests on one person. Two quests naming the same `near_spawn` share its block instead of the second landing on top of the first's campfire.
 - Fix: the "!" over an NPC giver sat at an ordinary person's height whatever their scale -- in a big man's name (Sarge), or a metre over a child's head (Kit). It now sits just over the nameplate, which rises and falls with them.
 
 ## 1.3.3 — 2026-10-08
