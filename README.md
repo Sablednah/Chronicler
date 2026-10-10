@@ -206,6 +206,11 @@ override `scope`. Every word a player sees lives in
   `block` (a campfire) with `decor` around it, once, remembered -- a camp on any
   seed, offering the first quest on approach. A fixed seed or a schematic can
   replace it later without touching the quest.
+- **Several quests on one block**: `"giver": { "type": "position", "of": "zarp:wake_up" }`
+  gives from that quest's block, wherever it was put -- a camp fire with a rota of jobs. It places
+  nothing of its own. A click (or standing by it) is about the first quest you can take, else the
+  one you are on; a hand-over for any of them comes first. Two quests naming the same `near_spawn`
+  share its block too, and only the first places anything.
 - **NPC givers** can stand `near_spawn: [dx, dz]` instead of `at`, dropped onto
   the surface on any seed, and `of: zarp:the_camp` makes one person give
   several quests (their mark shows whichever matters now). `npc_say` and

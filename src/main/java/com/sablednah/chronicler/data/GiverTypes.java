@@ -24,7 +24,17 @@ public final class GiverTypes {
      * {@code label} is what the player is told ("Dr Okafor's desk").
      */
     public record Position(Optional<BlockPos> at, Optional<List<Integer>> nearSpawn, Optional<Identifier> dimension,
-            double radius, Optional<String> label, Optional<String> block, List<Decor> decor) implements GiverSpec {
+            double radius, Optional<String> label, Optional<String> block, List<Decor> decor, Optional<Identifier> of) implements GiverSpec {
+        /** Before {@code of}: kept, since a record's canonical constructor is public API. */
+        public Position(Optional<BlockPos> at, Optional<List<Integer>> nearSpawn, Optional<Identifier> dimension,
+                double radius, Optional<String> label, Optional<String> block, List<Decor> decor) {
+            this(at, nearSpawn, dimension, radius, label, block, decor, Optional.empty());
+        }
+        /*
+         * {@code of: <quest>} gives from the same block as that quest's position giver, wherever it was
+         * resolved -- several quests on one campfire, the way {@code of} shares an NPC. It places
+         * nothing of its own; the block and decor are the other quest's.
+         */
         /**
          * {@code at} is a fixed block; {@code near_spawn: [dx, dz]} is an offset from the
          * world spawn, dropped onto the surface the first time the server sees the quest
@@ -46,9 +56,10 @@ public final class GiverTypes {
                 Codec.DOUBLE.optionalFieldOf("radius", 4.0D).forGetter(Position::radius),
                 Codec.STRING.optionalFieldOf("label").forGetter(Position::label),
                 Codec.STRING.optionalFieldOf("block").forGetter(Position::block),
-                Decor.CODEC.listOf().optionalFieldOf("decor", List.of()).forGetter(Position::decor))
-                .apply(i, Position::new)).validate(p -> p.at().isEmpty() && p.nearSpawn().isEmpty()
-                        ? com.mojang.serialization.DataResult.error(() -> "a position giver needs 'at' or 'near_spawn'")
+                Decor.CODEC.listOf().optionalFieldOf("decor", List.of()).forGetter(Position::decor),
+                ChroniclerIds.CODEC.optionalFieldOf("of").forGetter(Position::of))
+                .apply(i, Position::new)).validate(p -> p.at().isEmpty() && p.nearSpawn().isEmpty() && p.of().isEmpty()
+                        ? com.mojang.serialization.DataResult.error(() -> "a position giver needs 'at', 'near_spawn' or 'of' (another quest's block)")
                         : com.mojang.serialization.DataResult.success(p));
 
         public Position(BlockPos at, Optional<Identifier> dimension, double radius, Optional<String> label) {
