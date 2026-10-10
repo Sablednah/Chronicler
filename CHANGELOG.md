@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix: the "!" over an NPC giver sat at an ordinary person's height whatever their scale -- in a big man's name (Sarge), or a metre over a child's head (Kit). It now sits just over the nameplate, which rises and falls with them.
+
 ## 1.3.3 — 2026-10-08
 
 - **Minecraft 26.3 only, on NeoForge 26.3.0.58-beta or newer** -- the other lines are unchanged and stay on 1.3.1. 1.3.2 was capped below .37-beta, where NeoForge renamed the config types; this one uses the new type and keeps your settings in `chronicler-common.toml` (it would otherwise have become `chronicler-local.toml`, starting every server on defaults). 26.3.0.36-beta and earlier stay on 1.3.2. Wants Cast 1.2.2 on .58.
