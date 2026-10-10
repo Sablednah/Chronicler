@@ -287,12 +287,19 @@ public final class Givers {
                 });
     }
 
+    /** How far above an NPC's feet its mark floats: the nameplate's height (scaled with the body) plus a hair. */
+    public static double markerHeight(double bodyHeight) {
+        return bodyHeight * (2.3D / 1.8D) + 0.05D;
+    }
+
     /** Above a block, or above an NPC's head; null when the NPC is not loaded. */
     private static Vec3 markerPosition(MinecraftServer server, String key) {
         if (key.startsWith("npc|")) {
             try {
                 UUID id = UUID.fromString(key.substring(4));
-                return Npcs.provider().flatMap(c -> c.byId(server, id)).map(p -> p.pos().add(0, 2.35, 0)).orElse(null);
+                // Just over the nameplate, which vanilla raises with the body's scale: 2.35 for an ordinary 1.8,
+                // so a child's mark is not left floating a metre above them and a big man's is not in his name.
+                return Npcs.provider().flatMap(c -> c.byId(server, id)).map(p -> p.pos().add(0, markerHeight(p.height()), 0)).orElse(null);
             } catch (IllegalArgumentException e) {
                 return null;
             }

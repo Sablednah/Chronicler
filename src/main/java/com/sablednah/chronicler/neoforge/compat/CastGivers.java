@@ -49,7 +49,9 @@ public final class CastGivers {
             }
             @Override public Optional<Npcs.Placed> byId(MinecraftServer server, UUID id) {
                 // The live body's position when there is one: a possessed NPC walks, and the mark should walk with it.
-                return Cast.byId(server, id).map(n -> new Npcs.Placed(n.id(), n.name(), n.dimension(), n.entity().map(e -> e.position()).orElse(n.pos())));
+                // Its height too, scale included, so the mark sits over a towering Sarge's head and not in his name.
+                return Cast.byId(server, id).map(n -> new Npcs.Placed(n.id(), n.name(), n.dimension(), n.entity().map(e -> e.position()).orElse(n.pos()),
+                        n.entity().map(e -> (double) e.getBbHeight()).orElse(1.8D)));
             }
             @Override public Optional<UUID> lookedAt(ServerPlayer player, double reach) {
                 return Cast.npcAt(player, reach).map(Npc::id);
