@@ -1,6 +1,7 @@
 {
   "name": "Hold the Line",
   "description": "The signal brought survivors. It brought other things too. Tonight the camp finds out which it brought more of.",
+  "recap": "The signal brought survivors, and the other things. The fence held. The Brute did not.",
   "chapter": "zarp:streets",
   "order": 3,
   "requires": [

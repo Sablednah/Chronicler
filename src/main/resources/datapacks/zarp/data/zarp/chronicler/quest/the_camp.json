@@ -1,6 +1,7 @@
 {
   "name": "The Camp",
   "description": "Dr Okafor runs the camp because nobody else would. She wants to know if you can be trusted with anything at all.",
+  "recap": "Okafor wanted to know if {player} could be trusted. The dead at the fence said yes.",
   "chapter": "zarp:prologue",
   "order": 2,
   "requires": [

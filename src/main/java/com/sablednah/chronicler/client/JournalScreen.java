@@ -85,6 +85,8 @@ public final class JournalScreen extends Screen {
     private final Map<String, ItemStack> icons = new HashMap<>();
     private JournalPayload laidOutFor;
 
+    /** The home page, in the chapter slot: not a chapter id any pack could use. */
+    private static final String HOME = "~home";
     private String chapterId = "";
     private String questId = ""; // empty: the chapter's map
     private double listScroll, maxListScroll;
@@ -118,13 +120,8 @@ public final class JournalScreen extends Screen {
             return;
         }
         if (!chapterId.isEmpty()) return; // already open: leave the reader where they are
-        for (ChapterView c : p.chapters()) {
-            for (QuestView q : c.quests()) if (q.tracked()) { goTo(c.id(), q.id(), false); return; }
-        }
-        for (ChapterView c : p.chapters()) {
-            for (QuestView q : c.quests()) if (q.status() == JournalPayload.ACTIVE) { goTo(c.id(), q.id(), false); return; }
-        }
-        if (!p.chapters().isEmpty()) goTo(p.chapters().getFirst().id(), "", false);
+        // Asked for nothing in particular: the home page, which says what is on the go and on offer.
+        goTo(HOME, "", false);
     }
 
     private void goTo(String chapter, String quest, boolean remember) {
@@ -249,6 +246,7 @@ public final class JournalScreen extends Screen {
 
     private List<Row> rows(JournalPayload p) {
         List<Row> out = new ArrayList<>();
+        out.add(new Row(null, null)); // home
         for (ChapterView c : p.chapters()) {
             out.add(new Row(c, null));
             if (!collapsed.contains(c.id())) for (QuestView q : c.quests()) out.add(new Row(c, q));
@@ -281,7 +279,7 @@ public final class JournalScreen extends Screen {
             laidOutFor = p;
         }
         // A refresh can take away what was open (an abandoned quest that is only listed once found).
-        if (chapterById(chapterId) == null) {
+        if (!HOME.equals(chapterId) && chapterById(chapterId) == null) {
             chapterId = "";
             questId = "";
             focus("");
@@ -308,6 +306,11 @@ public final class JournalScreen extends Screen {
             return;
         }
         renderList(g, p, mouseX, mouseY);
+        if (HOME.equals(chapterId)) {
+            canvasX1 = canvasX0;
+            renderHome(g, p, mouseX, mouseY);
+            return;
+        }
         ChapterView ch = chapterById(chapterId);
         if (ch == null) return;
         if (questId.isEmpty()) {
@@ -331,7 +334,13 @@ public final class JournalScreen extends Screen {
             if (ry + ROW_H > top && ry - 2 < bottom) {
                 int y0 = Math.max(ry - 2, top), y1 = Math.min(ry + ROW_H - 2, bottom);
                 boolean hover = mouseX >= lx && mouseX < lx + lw && mouseY >= y0 && mouseY < y1;
-                if (row.quest() == null) {
+                if (row.chapter() == null) {
+                    boolean selected = HOME.equals(chapterId);
+                    if (selected) g.fill(lx + 1, ry - 2, lx + lw - 1, ry + ROW_H - 2, SELECTED);
+                    else if (hover) g.fill(lx + 1, ry - 2, lx + lw - 1, ry + ROW_H - 2, HOVER);
+                    drawName(g, label("panel.home"), lx + 4, ry, lw - 8, GOLD, hover || selected);
+                    hotspots.add(new Hot(lx, y0, lx + lw, y1, () -> goTo(HOME, "", true), false));
+                } else if (row.quest() == null) {
                     ChapterView c = row.chapter();
                     boolean selected = questId.isEmpty() && c.id().equals(chapterId);
                     if (selected) g.fill(lx + 1, ry - 2, lx + lw - 1, ry + ROW_H - 2, SELECTED);
@@ -467,6 +476,54 @@ public final class JournalScreen extends Screen {
         }
         g.disableScissor();
         if (tooltip != null) g.setTooltipForNextFrame(font, tooltip, Optional.empty(), mouseX, mouseY);
+    }
+
+    /** On the go, on offer, the story so far: every line was worded by the server; a quest line is a link to its page. */
+    private void renderHome(GuiGraphics g, JournalPayload p, int mouseX, int mouseY) {
+        int px = paneX(), pw = paneW() - 6, top = top(), bottom = bottom();
+        g.enableScissor(px, top, px + pw, bottom);
+        int y = top + 1 - (int) pageScroll;
+        var home = p.home();
+
+        g.drawString(font, bold(label("panel.home.active")), px, y, GOLD);
+        y += 12;
+        if (home.active().isEmpty()) y = paragraph(g, label("panel.home.nothing_active"), px, y, pw);
+        for (var e : home.active()) y = entry(g, e, px, y, pw, mouseX, mouseY, top, bottom);
+
+        y += 6;
+        g.drawString(font, bold(label("panel.home.offers")), px, y, GOLD);
+        y += 12;
+        if (home.offers().isEmpty()) y = paragraph(g, label("panel.home.nothing_offered"), px, y, pw);
+        for (var e : home.offers()) y = entry(g, e, px, y, pw, mouseX, mouseY, top, bottom);
+
+        y += 6;
+        g.drawString(font, bold(label("panel.home.recap")), px, y, GOLD);
+        y += 12;
+        if (home.recap().isEmpty()) y = paragraph(g, label("panel.home.no_recap"), px, y, pw);
+        for (Component line : home.recap()) y = paragraph(g, line, px, y, pw) + 4;
+
+        g.disableScissor();
+        int contentH = y + (int) pageScroll - top;
+        maxPageScroll = Math.max(0, contentH + 4 - (bottom - top));
+        pageScroll = clamp(pageScroll, 0, maxPageScroll);
+        scrollbar(g, px + pw + 3, top, bottom, pageScroll, maxPageScroll, contentH + 4);
+    }
+
+    /** A home-page line: a link to the quest's page when it names one, wrapped to the pane. */
+    private int entry(GuiGraphics g, JournalPayload.Entry e, int x, int y, int w, int mouseX, int mouseY, int clipTop, int clipBottom) {
+        ChapterView c = e.questId().isEmpty() ? null : chapterOf(e.questId());
+        if (c == null) return paragraph(g, e.line(), x, y, w);
+        String chapter = c.id(), id = e.questId();
+        link(g, e.line(), x, y, w, mouseX, mouseY, clipTop, clipBottom, () -> goTo(chapter, id, true));
+        return y + 11;
+    }
+
+    private int paragraph(GuiGraphics g, Component text, int x, int y, int w) {
+        for (FormattedCharSequence s : font.split(text, w)) {
+            g.drawString(font, s, x, y, TEXT);
+            y += 10;
+        }
+        return y;
     }
 
     private void renderPage(GuiGraphics g, ChapterView ch, QuestView q, int mouseX, int mouseY) {
@@ -727,7 +784,7 @@ public final class JournalScreen extends Screen {
         if (super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)) return true;
         if (mouseX < paneX() - 4) {
             listScroll = clamp(listScroll - scrollY * ROW_H, 0, maxListScroll);
-        } else if (questId.isEmpty()) {
+        } else if (questId.isEmpty() && !HOME.equals(chapterId)) {
             panY = clamp(panY - scrollY * 16, 0, maxPanY);
             panX = clamp(panX - scrollX * 16, 0, maxPanX);
         } else {

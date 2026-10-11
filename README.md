@@ -31,7 +31,12 @@ in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
   (the **backtick** key, the item, or `/quest journal`): chapters and their quests on the
   left, a map of what leads to what, a page per quest with its buttons.
 - With Chronicler on the client, a **quest tracker HUD** down the left of the screen lists your
-  active quests (the tracked one first) and where each objective stands. **Shift+`** shows or
+  active quests (the tracked one first) and where each objective stands, then **Nearby**: what
+  is on offer within `tracker.hudOfferRadius` blocks (default 24), nearest first. The panel opens
+  on a **home page** -- on the go, on offer (nearest first), and **the story so far**, a recap
+  told from the `recap` lines of the quests you have finished (`/quest recap` says the same in
+  chat). A person or block with several quests you could take lists them all, each with Accept
+  and Info, rather than the first alone; a hand-in they are waiting for still comes first. **Shift+`** shows or
   hides it, and it remembers. With SableCraft Standards' action bar, two buttons: the quest
   tracker (lit while shown) and the full journal. Without Chronicler on the client, the same
   buttons say `/quest` and hand over the book. Where it sits and how wide it grows are in
@@ -227,6 +232,10 @@ override `scope`. Every word a player sees lives in
   see Cast's README) instead of an account's.
 - **Availability** takes `race: [immune]` and `class: [doc, combat_medic]`
   (LegendQuest ids, bare or namespaced; any of the list), beside `level_min`.
+- **Recap.** `recap: "{player} climbed the tower, and the city heard the camp."` on a quest is
+  its line in the story so far, shown once it is done, in chapter and quest order; `recap_endings:
+  { cure: "...", mercy: "..." }` adds a line per ending the player reached through that quest.
+  Past tense, a sentence or two; `{player}` is the reader. Optional: a pack with none has no recap.
 - **Endings.** A stage or a choice with `ending: cure` records an ending for
   the chapter; `end: true` on a stage finishes the quest there. A chapter with
   `replayable: true` can be started over with `/quest replay <chapter>` --
@@ -339,6 +348,7 @@ ZARP world is not offered two kinds of log run.
 | `/quest list` (`/quests list`) | everyone |
 | `/quest info <quest>` | everyone |
 | `/quest log` | everyone |
+| `/quest recap` | everyone — the story so far, from finished quests' `recap` lines |
 | `/quest accept <quest>` | everyone |
 | `/quest abandon <quest>` | everyone |
 | `/quest track <quest>` | everyone — follow it on the action bar |

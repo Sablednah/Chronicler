@@ -13,6 +13,7 @@ import com.sablednah.chronicler.Chronicler;
 import com.sablednah.chronicler.ChroniclerConfig;
 import com.sablednah.chronicler.data.GiverSpec;
 import com.sablednah.chronicler.data.GiverTypes;
+import com.sablednah.chronicler.core.QuestLog;
 import com.sablednah.chronicler.data.Quest;
 
 import net.minecraft.core.BlockPos;
@@ -278,10 +279,12 @@ public final class Givers {
             Feedback.chat(player, Lang.get("msg.giver.npc_idle"));
             return true;
         }
-        // Several quests on one person: the same rule as several on one block.
-        Optional<Identifier> id = pick(player, quests);
         // A hand-over to this person, for any of the quests they give, comes before any offer.
         for (Identifier q : quests) if (QuestEngine.onDeliver(player, q)) return true;
+        // More than one thing to take from this person: all of them, not the first.
+        if (offerAll(player, npcName(npcId.toString()), quests)) return true;
+        // Several quests on one person: the same rule as several on one block.
+        Optional<Identifier> id = pick(player, quests);
         Optional<Holder.Reference<Quest>> holder = QuestEngine.quest(server, id.get());
         if (holder.isEmpty()) {
             Feedback.chat(player, Lang.fmt("msg.giver.gone", "id", id.get()));
@@ -434,6 +437,95 @@ public final class Givers {
         return g.describe();
     }
 
+    /** A quest this player could take right now, and where its giver is. {@code distance} is NaN when nowhere is known. */
+    public record Offer(Identifier id, Quest quest, String where, double distance) {
+        public boolean placed() { return !Double.isNaN(distance); }
+    }
+
+    /**
+     * Everything on offer to this player: visible, takeable now, with its giver's whereabouts. Within
+     * {@code radius} blocks of the player (nearest first) -- or, with a negative radius, every one,
+     * the placed ones nearest first and the unplaced (ambient, or a person who is not standing) after.
+     * What the HUD's Nearby section and the journal's home page list.
+     */
+    public static List<Offer> offers(ServerPlayer player, double radius) {
+        MinecraftServer server = player.level().getServer();
+        Identifier here = player.level().dimension().identifier();
+        Map<Identifier, Offer> out = new java.util.LinkedHashMap<>();
+        QuestEngine.quests(server).listElements().forEach(h -> {
+            Identifier id = h.key().identifier();
+            if (!QuestEngine.visible(player, id, h.value()) || !QuestEngine.available(player, id, h.value())) return;
+            Quest q = QuestEngine.questFor(player, id).orElse(h.value());
+            var where = positionOf(server, id);
+            double d = where.filter(w -> w.level().equals(here)).map(w -> player.position().distanceTo(w.pos())).orElse(Double.NaN);
+            if (radius >= 0 && (Double.isNaN(d) || d > radius)) return;
+            out.put(id, new Offer(id, q, describe(server, q), d));
+        });
+        // Op-placed blocks: known by block, not by quest.
+        GiverStore store = GiverStore.get(server);
+        for (var entry : store.view().entrySet()) {
+            if (!entry.getKey().startsWith(here + "|")) continue;
+            BlockPos pos = parse(entry.getKey());
+            if (pos == null) continue;
+            double d = player.position().distanceTo(Vec3.atCenterOf(pos));
+            if (radius >= 0 && d > radius) continue;
+            for (Identifier id : store.questsAt(entry.getKey())) {
+                var h = QuestEngine.quest(server, id);
+                if (h.isEmpty() || !QuestEngine.visible(player, id, h.get().value()) || !QuestEngine.available(player, id, h.get().value())) continue;
+                Offer known = out.get(id);
+                if (known != null && known.placed() && known.distance() <= d) continue;
+                out.put(id, new Offer(id, h.get().value(), Lang.fmt("giver.position", "x", pos.getX(), "y", pos.getY(), "z", pos.getZ()), d));
+            }
+        }
+        List<Offer> list = new ArrayList<>(out.values());
+        list.sort(java.util.Comparator.comparingDouble((Offer o) -> o.placed() ? o.distance() : Double.MAX_VALUE).thenComparing(o -> o.id().toString()));
+        return list;
+    }
+
+    /** How many quests the last click listed at once; the self-test's window onto the menu. */
+    static int lastMenuSize;
+
+    /**
+     * Several quests a player could take from one giver: say them all, each with its buttons, rather
+     * than the first alone (which hid the rest of a camp's board behind one offer). Also names what they
+     * are already on here, so the one click answers "what is there for me" in full. Returns false when
+     * there is not more than one to list, and the caller carries on as for a single quest.
+     */
+    private static boolean offerAll(ServerPlayer player, String who, List<Identifier> quests) {
+        MinecraftServer server = player.level().getServer();
+        QuestLog log = QuestEngine.journal(player);
+        List<Identifier> takeable = new ArrayList<>();
+        List<Identifier> active = new ArrayList<>();
+        for (Identifier q : quests) {
+            var h = QuestEngine.quest(server, q);
+            if (h.isEmpty()) continue;
+            if (log.isActive(q)) active.add(q);
+            else if (QuestEngine.available(player, q, h.get().value())) takeable.add(q);
+        }
+        lastMenuSize = takeable.size();
+        if (takeable.size() < 2) return false;
+        Feedback.chat(player, Lang.fmt("msg.giver.menu.header", "who", who, "count", takeable.size()));
+        for (Identifier id : takeable) {
+            Quest q = QuestEngine.questFor(player, id).orElseGet(() -> QuestEngine.quest(server, id).get().value());
+            Feedback.chatWithButtons(player, Lang.fmt("msg.giver.menu.entry", "name", q.name(), "hook", q.description().orElse("")),
+                    Feedback.button(Lang.get("button.accept"), "/quest accept " + id, Lang.get("button.accept.tip")),
+                    Feedback.button(Lang.get("button.info"), "/quest info " + id, Lang.get("button.info.tip")));
+        }
+        for (Identifier id : active) {
+            Quest q = QuestEngine.questFor(player, id).orElseGet(() -> QuestEngine.quest(server, id).get().value());
+            QuestLog.Entry e = log.entry(id);
+            String objective = "";
+            if (e != null) {
+                var objectives = QuestEngine.currentObjectives(q, e);
+                for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
+                    if (!e.objectiveDone(n)) { objective = objectives.get(n).describe(); break; }
+                }
+            }
+            Feedback.chat(player, Lang.fmt("msg.giver.menu.active", "name", q.name(), "objective", objective));
+        }
+        return true;
+    }
+
     /** The tracker tick: offer whatever this player is standing near or in. */
     public static void tick(ServerPlayer player) {
         MinecraftServer server = player.level().getServer();
@@ -518,6 +610,8 @@ public final class Givers {
         if (here.isEmpty()) return false;
         // A hand-over for any quest given here comes before any offer, as at a person.
         for (Identifier q : here) if (QuestEngine.onDeliver(player, q)) return true;
+        String who = QuestEngine.quest(level.getServer(), here.getFirst()).map(h -> describe(level.getServer(), h.value())).orElse(Lang.get("giver.someone"));
+        if (offerAll(player, who, here)) return true;
         Optional<Identifier> id = pick(player, here);
         Optional<Holder.Reference<Quest>> holder = QuestEngine.quest(level.getServer(), id.get());
         if (holder.isEmpty()) {

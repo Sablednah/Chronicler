@@ -1,6 +1,7 @@
 {
   "name": "Patient Zero",
   "description": "Living fire, a thing that never lived, and the sample it all came from. Okafor can make a cure. It needs one more thing. She does not say what.",
+  "recap_endings": {"cure": "Living fire, a thing that never lived, the first sample: Okafor made a cure. The city is not saved, but now it can be.", "mercy": "Okafor made something gentler than a cure. The ward went quiet."},
   "chapter": "zarp:finale",
   "order": 1,
   "requires": [

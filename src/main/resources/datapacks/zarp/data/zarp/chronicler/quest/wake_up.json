@@ -1,6 +1,7 @@
 {
   "name": "Wake Up",
   "description": "You are awake. That is the first surprise. Somebody kept a fire going. Find out who.",
+  "recap": "{player} woke up. That was the first surprise. Somebody had kept a fire going: Dr Amara Okafor, who runs the camp because nobody else would.",
   "chapter": "zarp:prologue",
   "order": 1,
   "stages": [
