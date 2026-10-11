@@ -60,8 +60,13 @@ public final class ClientHud {
     private static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
         HudPayload p = last;
-        if (p == null || p.quests().isEmpty() || !shown()) return;
-        if (mc.gui.hud.isHidden() || mc.getDebugOverlay().showDebugScreen()) return;
+        if (p == null || (p.quests().isEmpty() && p.nearby().isEmpty()) || !shown()) return;
+        if (mc.gui.hud.isHidden()) return;
+        // Step aside for the debug CHARTS, which reach down the screen -- not for showDebugScreen(), which
+        // is also true whenever a debug line is pinned from F3+F6, and then the HUD was gone all session
+        // (Sable, with one line pinned; LegendQuest's HUD paid for the same thing).
+        var debug = mc.getDebugOverlay();
+        if (debug.showFpsCharts() || debug.showNetworkCharts() || debug.showProfilerChart()) return;
         Font font = mc.font;
         int maxW = ChroniclerClientConfig.HUD_WIDTH.get();
 
@@ -74,6 +79,12 @@ public final class ClientHud {
         }
         boolean more = !p.more().getString().isEmpty();
         if (more) { w = Math.max(w, Math.min(maxW, font.width(p.more()))); h += LINE_H; }
+        if (!p.nearby().isEmpty()) {
+            if (!p.quests().isEmpty()) h += GAP;
+            w = Math.max(w, Math.min(maxW, font.width(p.nearbyHeader())));
+            for (Component line : p.nearby()) w = Math.max(w, Math.min(maxW - INDENT, font.width(line)) + INDENT);
+            h += LINE_H * (1 + p.nearby().size()) + GAP;
+        }
         h -= GAP;
 
         int x = LEFT, y = (int) (g.guiHeight() * ChroniclerClientConfig.HUD_TOP.get());
@@ -92,7 +103,15 @@ public final class ClientHud {
             }
             ty += GAP;
         }
-        if (more) line(g, font, p.more(), x + PAD, ty - GAP, maxW);
+        if (more) { line(g, font, p.more(), x + PAD, ty - GAP, maxW); ty += LINE_H; }
+        if (!p.nearby().isEmpty()) {
+            line(g, font, p.nearbyHeader(), x + PAD, ty, maxW);
+            ty += LINE_H;
+            for (Component l : p.nearby()) {
+                line(g, font, l, x + PAD + INDENT, ty, maxW - INDENT);
+                ty += LINE_H;
+            }
+        }
     }
 
     /** One line, cut short with an ellipsis rather than running off into the world. */

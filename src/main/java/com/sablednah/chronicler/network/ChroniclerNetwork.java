@@ -13,7 +13,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 public final class ChroniclerNetwork {
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1").optional();
+        PayloadRegistrar registrar = event.registrar("2").optional();
         // The client class is named only inside the enqueued lambda, so a dedicated server never loads it.
         registrar.playToClient(JournalPayload.TYPE, JournalPayload.CODEC, (payload, context) ->
                 context.enqueueWork(() -> com.sablednah.chronicler.client.ClientJournal.accept(payload)));

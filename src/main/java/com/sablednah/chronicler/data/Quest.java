@@ -67,7 +67,13 @@ public record Quest(
      * @param icon       an item id drawn for the quest in the journal panel
      */
     public record Extras(Optional<Boolean> counts, Optional<String> locked,
-            Optional<QuestVisibility> visibility, Optional<Identifier> icon, Optional<Mini> mini, Optional<JsonElement> template) {
+            Optional<QuestVisibility> visibility, Optional<Identifier> icon, Optional<Mini> mini, Optional<JsonElement> template,
+            Optional<String> recap, java.util.Map<String, String> recapEndings) {
+        /** Before {@code recap}: kept, since a record's canonical constructor is public API. */
+        public Extras(Optional<Boolean> counts, Optional<String> locked, Optional<QuestVisibility> visibility, Optional<Identifier> icon,
+                Optional<Mini> mini, Optional<JsonElement> template) {
+            this(counts, locked, visibility, icon, mini, template, Optional.empty(), java.util.Map.of());
+        }
         /**
          * @param mini     present on a mini quest: its slots and wild spawning
          * @param template the file as written, holes and all, kept to be filled when it starts. Never
@@ -81,8 +87,10 @@ public record Quest(
                 Codec.STRING.optionalFieldOf("locked").forGetter(Extras::locked),
                 QuestVisibility.CODEC.optionalFieldOf("visibility").forGetter(Extras::visibility),
                 Identifier.CODEC.optionalFieldOf("icon").forGetter(Extras::icon),
-                Mini.CODEC.optionalFieldOf("mini").forGetter(Extras::mini))
-                .apply(i, (c, l, v, ic, m) -> new Extras(c, l, v, ic, m, Optional.empty())));
+                Mini.CODEC.optionalFieldOf("mini").forGetter(Extras::mini),
+                Codec.STRING.optionalFieldOf("recap").forGetter(Extras::recap),
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("recap_endings", java.util.Map.of()).forGetter(Extras::recapEndings))
+                .apply(i, (c, l, v, ic, m, r, re) -> new Extras(c, l, v, ic, m, Optional.empty(), r, re)));
         public static final Extras NONE = new Extras(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
@@ -96,10 +104,18 @@ public record Quest(
     public Optional<Mini> mini() { return extras.mini(); }
     /** A mini quest's file with its holes, to be filled at start. */
     public Optional<JsonElement> template() { return extras.template(); }
+    /**
+     * The story so far, once this quest is done: a sentence or two in the past tense for the journal's
+     * recap ({@code {player}} is the reader). {@code recap_endings} adds a line per ending the player
+     * reached through this quest, by the ending's name. Optional; a pack with none has no recap.
+     */
+    public Optional<String> recap() { return extras.recap(); }
+    public java.util.Map<String, String> recapEndings() { return extras.recapEndings(); }
 
     private Quest withTemplate(JsonElement raw) {
         return new Quest(name, description, chapter, requires, objectives, rewards, repeatable, hidden, order, scope, scale, giver,
-                stages, availability, cooldown, new Extras(extras.counts(), extras.locked(), extras.visibility(), extras.icon(), extras.mini(), Optional.of(raw)));
+                stages, availability, cooldown, new Extras(extras.counts(), extras.locked(), extras.visibility(), extras.icon(), extras.mini(), Optional.of(raw),
+                        extras.recap(), extras.recapEndings()));
     }
 
     /** Does finishing this move the progress figure? Unsaid: main-chapter quests that are not repeatable. */

@@ -1,6 +1,8 @@
 {
   "name": "Night Watch",
   "description": "Somebody has to keep the fire lit. Tonight that is you.",
+  "recap": "Somebody had to keep the fire lit. That night it was {player}.",
+  "recap_endings": {"kindness": "A stranger came to the fire and left warmer.", "cold": "A stranger came to the fire and was turned away."},
   "chapter": "prologue",
   "order": 3,
   "requires": [

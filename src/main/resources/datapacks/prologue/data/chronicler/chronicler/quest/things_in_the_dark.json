@@ -1,6 +1,7 @@
 {
   "name": "Things in the Dark",
   "description": "They come out at night. Make it fewer of them.",
+  "recap": "The first night, the things that come out after dark came out. Fewer of them went back.",
   "chapter": "prologue",
   "order": 1,
   "requires": [ "first_steps" ],

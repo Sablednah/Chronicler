@@ -1,6 +1,7 @@
 {
   "name": "Fence Power",
   "description": "Wrench needs a redstone block and eight iron ingots for the generator, before dark. Or he needs somebody else.",
+  "recap_endings": {"fence_up": "The generator ran before dark. Wrench said nothing, which from Wrench is thanks.", "fence_down": "The fence stayed dead that night. Wrench found somebody else."},
   "chapter": "zarp:survivors",
   "order": 1,
   "requires": [

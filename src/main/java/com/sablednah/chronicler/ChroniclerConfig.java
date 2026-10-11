@@ -18,6 +18,8 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.BooleanValue TRACKER_ACTION_BAR;
     public static final ModConfigSpec.IntValue TRACKER_INTERVAL_TICKS;
     public static final ModConfigSpec.IntValue HUD_MAX_QUESTS;
+    public static final ModConfigSpec.DoubleValue HUD_OFFER_RADIUS;
+    public static final ModConfigSpec.IntValue HUD_MAX_OFFERS;
     public static final ModConfigSpec.BooleanValue SHOW_HIDDEN_TO_OPS;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> PARTY_GROUP_KINDS;
     public static final ModConfigSpec.BooleanValue JOURNAL_GIVE_NEW;
@@ -58,6 +60,13 @@ public final class ChroniclerConfig {
                         "tracked one first); the rest are a \"+N more\" line. The player toggles the",
                         "HUD itself, with Shift+` or the action bar.")
                 .defineInRange("hudMaxQuests", 5, 1, 20);
+        HUD_OFFER_RADIUS = BUILDER
+                .comment("How near (blocks) a quest's giver must be for the HUD to list it under Nearby:",
+                        "what is on offer around you, before you walk up to anyone. 0 turns the section off.")
+                .defineInRange("hudOfferRadius", 24.0D, 0D, 512D);
+        HUD_MAX_OFFERS = BUILDER
+                .comment("How many nearby offers the HUD lists, nearest first.")
+                .defineInRange("hudMaxOffers", 6, 1, 20);
         BUILDER.pop();
 
         BUILDER.comment("Visibility").push("visibility");

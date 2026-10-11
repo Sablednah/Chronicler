@@ -1,6 +1,7 @@
 {
   "name": "Living Fire",
   "description": "The culture will not take. It needs heat that does not die. Okafor says the word 'Nether' like it is a diagnosis.",
+  "recap": "The culture needed heat that does not die. {player} brought it back from the Nether.",
   "chapter": "zarp:below",
   "order": 1,
   "requires": [

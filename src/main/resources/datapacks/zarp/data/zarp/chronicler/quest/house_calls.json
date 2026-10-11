@@ -1,6 +1,7 @@
 {
   "name": "House Calls",
   "description": "The voice on the radio came from the hospital. So, Okafor is fairly sure, did the first case.",
+  "recap": "The voice on the radio came from the hospital. So did the first case. {player} went in, and came out with the samples.",
   "chapter": "zarp:hospital",
   "order": 1,
   "requires": [

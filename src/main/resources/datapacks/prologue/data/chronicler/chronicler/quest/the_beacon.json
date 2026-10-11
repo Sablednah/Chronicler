@@ -1,6 +1,7 @@
 {
   "name": "The Beacon",
   "description": "Something is drawn to a fire built the old way. Build one, and see what comes.",
+  "recap": "A fire built the old way drew what such fires draw. It did not leave on its own.",
   "chapter": "prologue",
   "order": 4,
   "requires": [

@@ -203,6 +203,9 @@ public final class Lang {
         def("msg.giver.offer.prompt", "&7Right-click again to accept, or:");
         def("msg.giver.set_npc", "{prefix}&7They now offer &f{name}&7.");
         def("msg.giver.protected", "&7That block gives a {term.quest}. It stays. (Admins: sneak to break it.)");
+        def("msg.giver.menu.header", "{prefix}&7{who} has &f{count}&7 things for you:");
+        def("msg.giver.menu.entry", "  &e&l{name}&r&7 -- {hook}");
+        def("msg.giver.menu.active", "  &b◆ &f{name}&7: {objective}");
         def("msg.giver.npc_idle", "{prefix}&7They have nothing for you right now.");
         def("giver.npc", "{name}");
         def("msg.giver.removed", "{prefix}&7That block offers nothing now.");
@@ -264,6 +267,8 @@ public final class Lang {
         def("hud.objective_done", "&a\u2714 &8{objective}");
         def("hud.deadline", "&c{time} left");
         def("hud.more", "&8+{count} more");
+        def("hud.nearby", "&6Nearby");
+        def("hud.offer", "&e! &f{quest} &7-- {where}, {distance}m");
         def("waypoint.giver", "{quest} (quest)");
         def("waypoint.npc", "{name} ({quest})");
         def("msg.mini.unresolved", "{prefix}&7Not now: &f{name}&7 -- {why}.");
@@ -395,6 +400,19 @@ public final class Lang {
     static {
         def("panel.title", "&6&l{term.journal}");
         def("panel.progress", "&7{percent}% of the story");
+        def("panel.home", "&6&lHome");
+        def("panel.home.active", "&6On the go");
+        def("panel.home.active_line", "&b◆ &f{name}&7: {objective}");
+        def("panel.home.nothing_active", "&7Nothing on the go. Somebody out there needs something doing.");
+        def("panel.home.offers", "&6On offer");
+        def("panel.home.offer_near", "&e! &f{name}&7 -- {where}, {distance}m");
+        def("panel.home.offer_far", "&e! &f{name}&7 -- {where}");
+        def("panel.home.nothing_offered", "&7Nothing on offer right now.");
+        def("panel.home.recap", "&6The story so far");
+        def("panel.home.no_recap", "&8Nothing to tell yet.");
+        def("cmd.recap.header", "{prefix}&6The story so far:");
+        def("cmd.recap.line", "&7{line}");
+        def("cmd.recap.none", "{prefix}&7Nothing to tell yet.");
         def("panel.back", "«");
         def("panel.close", "✕");
         def("panel.empty", "&7Nothing written here yet. Somebody out there needs something doing.");
