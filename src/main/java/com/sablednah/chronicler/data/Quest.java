@@ -68,11 +68,16 @@ public record Quest(
      */
     public record Extras(Optional<Boolean> counts, Optional<String> locked,
             Optional<QuestVisibility> visibility, Optional<Identifier> icon, Optional<Mini> mini, Optional<JsonElement> template,
-            Optional<String> recap, java.util.Map<String, String> recapEndings) {
+            Optional<String> recap, java.util.Map<String, String> recapEndings, java.util.Map<String, String> recapFlags) {
         /** Before {@code recap}: kept, since a record's canonical constructor is public API. */
         public Extras(Optional<Boolean> counts, Optional<String> locked, Optional<QuestVisibility> visibility, Optional<Identifier> icon,
                 Optional<Mini> mini, Optional<JsonElement> template) {
-            this(counts, locked, visibility, icon, mini, template, Optional.empty(), java.util.Map.of());
+            this(counts, locked, visibility, icon, mini, template, Optional.empty(), java.util.Map.of(), java.util.Map.of());
+        }
+        /** Before {@code recap_flags}. */
+        public Extras(Optional<Boolean> counts, Optional<String> locked, Optional<QuestVisibility> visibility, Optional<Identifier> icon,
+                Optional<Mini> mini, Optional<JsonElement> template, Optional<String> recap, java.util.Map<String, String> recapEndings) {
+            this(counts, locked, visibility, icon, mini, template, recap, recapEndings, java.util.Map.of());
         }
         /**
          * @param mini     present on a mini quest: its slots and wild spawning
@@ -89,8 +94,9 @@ public record Quest(
                 Identifier.CODEC.optionalFieldOf("icon").forGetter(Extras::icon),
                 Mini.CODEC.optionalFieldOf("mini").forGetter(Extras::mini),
                 Codec.STRING.optionalFieldOf("recap").forGetter(Extras::recap),
-                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("recap_endings", java.util.Map.of()).forGetter(Extras::recapEndings))
-                .apply(i, (c, l, v, ic, m, r, re) -> new Extras(c, l, v, ic, m, Optional.empty(), r, re)));
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("recap_endings", java.util.Map.of()).forGetter(Extras::recapEndings),
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("recap_flags", java.util.Map.of()).forGetter(Extras::recapFlags))
+                .apply(i, (c, l, v, ic, m, r, re, rf) -> new Extras(c, l, v, ic, m, Optional.empty(), r, re, rf)));
         public static final Extras NONE = new Extras(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
@@ -111,11 +117,17 @@ public record Quest(
      */
     public Optional<String> recap() { return extras.recap(); }
     public java.util.Map<String, String> recapEndings() { return extras.recapEndings(); }
+    /**
+     * {@code recap_flags}: a line per flag, shown after the quest's line (and its endings') when the
+     * reader's player flag is set -- a mid-quest choice that should tell in the story without being a
+     * chapter ending. A key starting {@code world:} reads a world flag instead.
+     */
+    public java.util.Map<String, String> recapFlags() { return extras.recapFlags(); }
 
     private Quest withTemplate(JsonElement raw) {
         return new Quest(name, description, chapter, requires, objectives, rewards, repeatable, hidden, order, scope, scale, giver,
                 stages, availability, cooldown, new Extras(extras.counts(), extras.locked(), extras.visibility(), extras.icon(), extras.mini(), Optional.of(raw),
-                        extras.recap(), extras.recapEndings()));
+                        extras.recap(), extras.recapEndings(), extras.recapFlags()));
     }
 
     /** Does finishing this move the progress figure? Unsaid: main-chapter quests that are not repeatable. */
