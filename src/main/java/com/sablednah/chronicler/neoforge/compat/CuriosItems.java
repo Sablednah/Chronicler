@@ -47,6 +47,7 @@ public final class CuriosItems {
             return;
         }
         Pockets.install(player -> slots(inventory, equipped, size, get, set, player));
+        Chronicler.LOGGER.info("Chronicler: Curios pockets wired -- items in its slots count for collect and deliver");
     }
 
     private static Optional<Pockets.Slots> slots(MethodHandle inventory, MethodHandle equipped, MethodHandle size, MethodHandle get, MethodHandle set,
