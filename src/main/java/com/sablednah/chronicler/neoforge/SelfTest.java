@@ -784,6 +784,20 @@ public final class SelfTest {
             check("home: the story so far reaches the panel", JournalPanel.build(solo, false, "").home().recap().size() == Recap.of(solo).size());
             var withEndings = com.sablednah.chronicler.data.Quest.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, com.google.gson.JsonParser.parseString(
                     "{\"name\": \"x\", \"chapter\": \"errands\", \"recap\": \"Done.\", \"recap_endings\": {\"cure\": \"Cured.\"}}")).result();
+            // recap_flags: a mid-quest choice that tells in the story without being a chapter ending (ZARP's hospital).
+            // Night Watch's "Give it" sets the player flag gave_the_torch, and its file hangs a line on it.
+            log.setFlag("gave_the_torch", false);
+            check("recap: a flag line waits on the flag", Recap.of(solo).stream().noneMatch(l -> l.contains("the torch")));
+            log.setFlag("gave_the_torch", true);
+            var told = Recap.of(solo);
+            int questLine = -1, flagLine = -1;
+            for (int n = 0; n < told.size(); n++) { if (told.get(n).contains("fire lit")) questLine = n; if (told.get(n).contains("the torch")) flagLine = n; }
+            check("recap: once set, the flag's line follows its quest's line and names the reader (" + questLine + " < " + flagLine + ")",
+                    questLine >= 0 && flagLine > questLine && told.get(flagLine).contains(solo.getName().getString()));
+            log.setFlag("gave_the_torch", false);
+            var flagged = com.sablednah.chronicler.data.Quest.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, com.google.gson.JsonParser.parseString(
+                    "{\"name\": \"x\", \"chapter\": \"errands\", \"recap_flags\": {\"a\": \"A.\", \"world:b\": \"B.\"}}")).result();
+            check("recap: recap_flags parses, world: keys included", flagged.map(q -> q.recapFlags().size() == 2 && q.recapFlags().containsKey("world:b")).orElse(false));
             check("recap: recap and recap_endings parse", withEndings.map(q -> q.recap().orElse("").equals("Done.") && "Cured.".equals(q.recapEndings().get("cure"))).orElse(false));
             check("recap: /quest recap parses", server.getCommands().getDispatcher().parse("quest recap", server.createCommandSourceStack().withEntity(solo))
                     .getContext().getLastChild().getCommand() != null);
