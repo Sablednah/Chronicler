@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Journal home page.** The panel opens on Home: what you are on (tracked first, each with its current objective), what is on offer (nearest first, with where and how far), and **the story so far** -- a recap told from the `recap` lines of the quests you have finished, plus `recap_endings` lines for the endings you reached and `recap_flags` lines for the player flags you set (a `world:` prefix reads a world flag) -- a mid-quest choice that tells in the story without being a chapter ending. Optional per quest; a pack with none has no recap. `/quest recap` says the same in chat. The prologue and ZARP carry recap lines.
+- **Curios pockets**: with Curios installed, items in its slots count for `collect` and `deliver`, and are taken (after the main inventory) when a quest consumes them -- Kit's Scarf worn in a head slot meets "carry Kit's Scarf". A soft seam, reached by name, so nothing is needed to build it; `/chronicler status` reports it.
 - **HUD: Nearby.** What is on offer within `tracker.hudOfferRadius` blocks (default 24, 0 off), nearest first, capped by `tracker.hudMaxOffers`.
 - A person or block with several quests you could take now lists them all, each with Accept and Info, and names what you are already on there -- not the first alone, which hid the rest of the camp's board. A hand-in they are waiting for still comes first.
 - Fix: the HUD vanished for anyone with a debug line pinned (F3+F6): `showDebugScreen()` is true then too. It now steps aside only for the debug charts.

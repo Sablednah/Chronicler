@@ -139,6 +139,8 @@ public final class Lang {
         def("cmd.status.siblings", "&7Siblings: &f{list}");
         def("cmd.status.party", "&7Party membership: &f{provider}");
         def("cmd.status.character", "&7Character sheets: &f{provider}");
+        def("cmd.status.pockets", "&7Pockets: &fCurios slots count for collect and deliver");
+        def("cmd.status.pockets.none", "&7Pockets: &fnone (the main inventory alone)");
     }
 
     // --- journal.* : the written book. Parchment, so dark colours; every page an unstyled root ---

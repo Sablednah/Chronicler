@@ -611,7 +611,7 @@ public final class ChroniclerCommands {
         Registry<Chapter> chapters = source.registryAccess().lookupOrThrow(ChroniclerRegistries.CHAPTER);
         Registry<Quest> quests = source.registryAccess().lookupOrThrow(ChroniclerRegistries.QUEST);
         List<String> siblings = new ArrayList<>();
-        for (String id : List.of("legendquest", "standards", "zombiemod", "cityworld", "cast", "storyteller")) {
+        for (String id : List.of("legendquest", "standards", "zombiemod", "cityworld", "cast", "storyteller", "curios")) {
             if (ModList.get().isLoaded(id)) siblings.add(id);
         }
         String lines = String.join("\n",
@@ -621,7 +621,8 @@ public final class ChroniclerCommands {
                 Lang.fmt("cmd.status.config", "path", FMLPaths.CONFIGDIR.get().resolve(Chronicler.MODID).toAbsolutePath()),
                 Lang.fmt("cmd.status.siblings", "list", siblings.isEmpty() ? "none" : String.join(", ", siblings)),
                 Lang.fmt("cmd.status.party", "provider", Party.providerName()),
-                Lang.fmt("cmd.status.character", "provider", Sheet.providerName()));
+                Lang.fmt("cmd.status.character", "provider", Sheet.providerName()),
+                Lang.get(Pockets.available() ? "cmd.status.pockets" : "cmd.status.pockets.none"));
         source.sendSuccess(() -> Feedback.colored(lines), false);
         return quests.size();
     }
