@@ -1,6 +1,7 @@
 {
   "name": "First Steps",
   "description": "Find your bearings. Anything with a roof will do for now, and four logs of any wood will start one.",
+  "recap": "{player} found a roof and four logs, and called it a start.",
   "chapter": "prologue",
   "order": 0,
   "objectives": [

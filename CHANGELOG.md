@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Journal home page.** The panel opens on Home: what you are on (tracked first, each with its current objective), what is on offer (nearest first, with where and how far), and **the story so far** -- a recap told from the `recap` lines of the quests you have finished, plus `recap_endings` lines for the endings you reached. Optional per quest; a pack with none has no recap. `/quest recap` says the same in chat. The prologue and ZARP carry recap lines.
+- **HUD: Nearby.** What is on offer within `tracker.hudOfferRadius` blocks (default 24, 0 off), nearest first, capped by `tracker.hudMaxOffers`.
+- A person or block with several quests you could take now lists them all, each with Accept and Info, and names what you are already on there -- not the first alone, which hid the rest of the camp's board. A hand-in they are waiting for still comes first.
+- Fix: the HUD vanished for anyone with a debug line pinned (F3+F6): `showDebugScreen()` is true then too. It now steps aside only for the debug charts.
 - **Several quests on one giver block**: a position giver can be `"of": "<quest>"`, giving from that quest's block -- ZARP's camp fire now keeps a rota of jobs (Firewood is the first). A click, or standing by the fire, is about the first quest you can take (cooldowns respected), else the one you are on; a hand-over for any of them comes first -- the same rule as several quests on one person. Two quests naming the same `near_spawn` share its block instead of the second landing on top of the first's campfire.
 - Fix: the "!" over an NPC giver sat at an ordinary person's height whatever their scale -- in a big man's name (Sarge), or a metre over a child's head (Kit). It now sits just over the nameplate, which rises and falls with them.
 

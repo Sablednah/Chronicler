@@ -60,7 +60,18 @@ public final class Hud {
             more = Feedback.colored(Lang.fmt("hud.more", "count", quests.size() - cap));
             quests = new ArrayList<>(quests.subList(0, cap));
         }
-        return new HudPayload(quests, more);
+        // What is on offer around the player, before they walk up to anyone: nearest first, capped.
+        List<Component> nearby = new ArrayList<>();
+        double radius = com.sablednah.chronicler.ChroniclerConfig.HUD_OFFER_RADIUS.get();
+        if (radius > 0) {
+            int maxOffers = com.sablednah.chronicler.ChroniclerConfig.HUD_MAX_OFFERS.get();
+            for (Givers.Offer o : Givers.offers(player, radius)) {
+                if (nearby.size() >= maxOffers) break;
+                nearby.add(Feedback.colored(Lang.fmt("hud.offer", "quest", o.quest().name(), "where", o.where(), "distance", (int) Math.round(o.distance()))));
+            }
+        }
+        Component header = nearby.isEmpty() ? Component.empty() : Feedback.colored(Lang.get("hud.nearby"));
+        return new HudPayload(quests, more, header, nearby);
     }
 
     /** On the polled sweep: send this player's HUD if their client draws one and it has changed. */

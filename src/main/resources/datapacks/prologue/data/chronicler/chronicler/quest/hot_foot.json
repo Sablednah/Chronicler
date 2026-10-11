@@ -1,6 +1,7 @@
 {
   "name": "Hot Foot",
   "description": "You went somewhere you should not have. Bring back proof.",
+  "recap": "{player} went somewhere they should not have, and came back with proof.",
   "chapter": "prologue",
   "order": 2,
   "hidden": true,
