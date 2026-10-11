@@ -94,7 +94,7 @@ public final class Trackers {
             @Override
             public int settle(ServerPlayer player, ObjectiveTypes.Collect spec, int amount) {
                 if (!spec.consume() || amount <= 0) return 0;
-                return player.getInventory().clearOrCountMatchingItems(matcher(spec), amount, player.inventoryMenu.getCraftSlots());
+                return take(player, matcher(spec), amount);
             }
         });
 
@@ -111,7 +111,7 @@ public final class Trackers {
             @Override
             public int settle(ServerPlayer player, ObjectiveTypes.Deliver spec, int amount) {
                 if (amount <= 0) return 0;
-                return player.getInventory().clearOrCountMatchingItems(matcher(spec), amount, player.inventoryMenu.getCraftSlots());
+                return take(player, matcher(spec), amount);
             }
         });
 
@@ -217,13 +217,14 @@ public final class Trackers {
 
     /** Items of this id across the main inventory (hotbar, storage, armour, offhand). */
     public static int count(ServerPlayer player, Identifier item) {
-        int total = 0;
-        var inv = player.getInventory();
-        for (int i = 0; i < inv.getContainerSize(); i++) {
-            ItemStack s = inv.getItem(i);
-            if (!s.isEmpty() && item.equals(BuiltInRegistries.ITEM.getKey(s.getItem()))) total += s.getCount();
-        }
-        return total;
+        return count(player, s -> !s.isEmpty() && item.equals(BuiltInRegistries.ITEM.getKey(s.getItem())));
+    }
+
+    /** Take up to {@code amount} matching items: the main inventory (and crafting grid) first, then the pockets. */
+    public static int take(ServerPlayer player, Predicate<ItemStack> match, int amount) {
+        int taken = player.getInventory().clearOrCountMatchingItems(match, amount, player.inventoryMenu.getCraftSlots());
+        if (taken < amount) taken += Pockets.take(player, match, amount - taken);
+        return taken;
     }
 
     /**
@@ -272,6 +273,7 @@ public final class Trackers {
     /** Entity tags a {@code spawn} effect writes and a {@code kill} objective's {@code tag} reads. */
     public static final String TAG_PREFIX = "chronicler:";
 
+    /** What the player has: the main inventory, plus whatever pockets an accessory mod gives them. */
     public static int count(ServerPlayer player, Predicate<ItemStack> match) {
         int total = 0;
         var inv = player.getInventory();
@@ -279,7 +281,7 @@ public final class Trackers {
             ItemStack s = inv.getItem(i);
             if (match.test(s)) total += s.getCount();
         }
-        return total;
+        return total + Pockets.count(player, match);
     }
 
     /** Touch the class so the built-ins are registered before anything asks. */

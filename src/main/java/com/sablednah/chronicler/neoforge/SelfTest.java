@@ -704,6 +704,39 @@ public final class SelfTest {
         check("quest item carries its mark", com.sablednah.chronicler.data.QuestItem.markOf(stack).map(ember::equals).orElse(false));
         check("quest item is named", stack.getHoverName().getString().contains("Ember"));
         check("a plain blaze powder is not the quest item", !com.sablednah.chronicler.data.QuestItem.is(new ItemStack(Items.BLAZE_POWDER), ember));
+        // Pockets: an accessory mod's slots (Curios) count, and are taken from AFTER the main inventory. A stand-in
+        // handler proves the bridge; the Curios end is two method handles that only a server with Curios can exercise.
+        {
+            var pocket = new net.neoforged.neoforge.items.ItemStackHandler(2);
+            pocket.setStackInSlot(0, com.sablednah.chronicler.data.QuestItem.build(registries, ember, 2));
+            java.util.function.Predicate<ItemStack> isEmber = st -> com.sablednah.chronicler.data.QuestItem.is(st, ember);
+            int bare = Trackers.count(solo, isEmber);
+            solo.getInventory().clearContent();
+            solo.getInventory().add(com.sablednah.chronicler.data.QuestItem.build(registries, ember, 1));
+            Pockets.Provider real = Pockets.current(); // Curios, when this server has it
+            if (real != null) {
+                // The real seam, on a FakePlayer: the two method handles resolve and answer (nothing worn) rather than throw.
+                try { check("pockets: Curios answers for a player with nothing worn", Pockets.count(solo, isEmber) == 0); }
+                catch (RuntimeException e) { check("pockets: Curios threw " + e, false); }
+            } else {
+                check("pockets: without a provider, only the inventory counts", Trackers.count(solo, isEmber) == 1);
+            }
+            Pockets.install(p -> java.util.Optional.of(pocket));
+            try {
+                check("pockets: a worn quest item counts (1 held + 2 in pockets)", Pockets.available() && Trackers.count(solo, isEmber) == 3);
+                check("pockets: taking two empties the hand first, then one from the pockets", Trackers.take(solo, isEmber, 2) == 2
+                        && Trackers.count(solo, isEmber) == 1 && pocket.getStackInSlot(0).getCount() == 1
+                        && solo.getInventory().countItem(Items.BLAZE_POWDER) == 0);
+                var scarf = new com.sablednah.chronicler.data.ObjectiveTypes.Collect(Identifier.withDefaultNamespace("air"), 1, false,
+                        java.util.Optional.of(ember), java.util.Optional.empty());
+                check("pockets: a collect (consume: false) is met by a worn item alone", Trackers.of(scarf).poll(solo, scarf).orElse(-1) >= 1);
+                check("pockets: asking for more than there is takes what there is", Trackers.take(solo, isEmber, 5) == 1 && Trackers.count(solo, isEmber) == 0);
+            } finally {
+                Pockets.install(real);
+            }
+            check("pockets: the stand-in is gone again", Pockets.current() == real && Trackers.count(solo, isEmber) == 0);
+            solo.getInventory().clearContent();
+        }
         check("unknown quest item builds nothing", com.sablednah.chronicler.data.QuestItem.build(registries, ChroniclerIds.of("no_such_item"), 1).isEmpty());
         check("quest item on a consumable base is not consumable", !com.sablednah.chronicler.data.QuestItem.build(registries, ember, 1).has(net.minecraft.core.component.DataComponents.CONSUMABLE)
                 && new ItemStack(Items.HONEY_BOTTLE).has(net.minecraft.core.component.DataComponents.CONSUMABLE));

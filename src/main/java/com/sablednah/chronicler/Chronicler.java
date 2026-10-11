@@ -95,6 +95,10 @@ public class Chronicler {
         if (ModList.get().isLoaded("cityworld")) {
             optionalIntegration("lots", com.sablednah.chronicler.neoforge.compat.CityWorldLots::register);
         }
+        if (ModList.get().isLoaded("curios")) {
+            // Not one of ours: reached by method handles, so no jar is needed to build against (see CuriosItems).
+            optionalIntegration("curios pockets", com.sablednah.chronicler.neoforge.compat.CuriosItems::register);
+        }
     }
 
     /** Wire one optional sibling feature, surviving a sibling too old to have it. */
