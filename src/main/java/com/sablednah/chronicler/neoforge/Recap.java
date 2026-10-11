@@ -43,6 +43,11 @@ public final class Recap {
                         out.add(line.replace("{player}", name));
                     }
                 }
+                q.recapFlags().forEach((flag, line) -> {
+                    if (line == null || line.isBlank()) return;
+                    boolean set = flag.startsWith("world:") ? FlagStore.get(server).is(flag.substring("world:".length())) : log.hasFlag(flag);
+                    if (set) out.add(line.replace("{player}", name));
+                });
             }
         }
         return out;
