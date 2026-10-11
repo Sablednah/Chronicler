@@ -50,6 +50,8 @@ public final class JournalPanel {
     /** Every label the client draws that is not part of a chapter or quest. */
     private static final List<String> LABELS = List.of(
             "panel.back", "panel.close", "panel.empty", "panel.to_map", "panel.requires",
+            "panel.home", "panel.home.active", "panel.home.nothing_active", "panel.home.offers", "panel.home.nothing_offered",
+            "panel.home.recap", "panel.home.no_recap",
             "panel.map.hint", "panel.map.none",
             "panel.glyph.locked", "panel.glyph.available", "panel.glyph.active", "panel.glyph.complete",
             "panel.glyph.cooldown", "panel.glyph.tracked", "panel.glyph.open", "panel.glyph.closed",
@@ -163,7 +165,40 @@ public final class JournalPanel {
                 ? Feedback.colored(Lang.fmt("panel.progress", "percent", overall.percent()))
                 : Component.empty();
         return new JournalPayload(open, focus == null ? "" : focus, Feedback.colored(Lang.get("panel.title")),
-                progress, labels, chapters);
+                progress, labels, chapters, home(player, log));
+    }
+
+    /** The home page: on the go (tracked first), on offer (nearest first), the story so far. */
+    private static JournalPayload.Home home(ServerPlayer player, QuestLog log) {
+        List<JournalPayload.Entry> active = new ArrayList<>();
+        Identifier tracked = log.tracked().orElse(null);
+        for (var e : log.activeView().entrySet()) {
+            Identifier id = e.getKey();
+            var found = QuestEngine.questFor(player, id);
+            if (found.isEmpty()) continue;
+            Quest q = found.get();
+            String objective = "";
+            var objectives = QuestEngine.currentObjectives(q, e.getValue());
+            for (int n = 0; n < objectives.size() && n < e.getValue().targets.size(); n++) {
+                if (!e.getValue().objectiveDone(n)) {
+                    int target = e.getValue().targets.get(n);
+                    objective = target > 1 ? Lang.fmt("hud.objective", "objective", objectives.get(n).describe(), "done", e.getValue().progress.get(n), "target", target)
+                            : objectives.get(n).describe();
+                    break;
+                }
+            }
+            var entry = new JournalPayload.Entry(id.toString(), Feedback.colored(Lang.fmt("panel.home.active_line", "name", q.name(), "objective", objective)));
+            if (id.equals(tracked)) active.addFirst(entry); else active.add(entry);
+        }
+        List<JournalPayload.Entry> offers = new ArrayList<>();
+        for (Givers.Offer o : Givers.offers(player, -1)) {
+            String line = o.placed()
+                    ? Lang.fmt("panel.home.offer_near", "name", o.quest().name(), "where", o.where(), "distance", (int) Math.round(o.distance()))
+                    : Lang.fmt("panel.home.offer_far", "name", o.quest().name(), "where", o.where());
+            offers.add(new JournalPayload.Entry(o.id().toString(), Feedback.colored(line)));
+        }
+        List<Component> recap = Recap.of(player).stream().map(Feedback::colored).toList();
+        return new JournalPayload.Home(active, offers, recap);
     }
 
     static byte status(ServerPlayer player, QuestLog log, Identifier id, Quest q) {

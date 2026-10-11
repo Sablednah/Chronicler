@@ -1,6 +1,7 @@
 {
   "name": "Never Lived",
   "description": "Fire that does not die, and now something that never lived. The End. She says it without irony.",
+  "recap_endings": {"truce": "In the End, {player} found something that never lived, and came to terms with it."},
   "chapter": "zarp:beyond",
   "order": 1,
   "requires": [

@@ -26,7 +26,14 @@ import net.minecraft.resources.Identifier;
  * already on screen. {@code focus} is a quest id to open at, or empty.</p>
  */
 public record JournalPayload(boolean open, String focus, Component title, Component progress,
-        Map<String, Component> labels, List<ChapterView> chapters) implements CustomPacketPayload {
+        Map<String, Component> labels, List<ChapterView> chapters, Home home) implements CustomPacketPayload {
+    /** A line on the home page that leads somewhere: a quest, by id (empty: just a line). */
+    public record Entry(String questId, Component line) {}
+    /**
+     * The home page: what the reader is on, what is on offer (nearest first), and the story so far
+     * (empty for a pack that wrote no {@code recap} lines).
+     */
+    public record Home(List<Entry> active, List<Entry> offers, List<Component> recap) {}
 
     public static final byte LOCKED = 0, AVAILABLE = 1, ACTIVE = 2, COMPLETE = 3, COOLDOWN = 4;
 
@@ -83,6 +90,21 @@ public record JournalPayload(boolean open, String focus, Component title, Compon
                 buf.writeUtf(e.icon());
             }
         }
+        entries(buf, p.home.active());
+        entries(buf, p.home.offers());
+        texts(buf, p.home.recap());
+    }
+
+    private static void entries(RegistryFriendlyByteBuf buf, List<Entry> entries) {
+        buf.writeVarInt(entries.size());
+        for (Entry e : entries) { buf.writeUtf(e.questId()); text(buf, e.line()); }
+    }
+
+    private static List<Entry> entries(RegistryFriendlyByteBuf buf) {
+        int n = buf.readVarInt();
+        List<Entry> out = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) out.add(new Entry(buf.readUtf(), text(buf)));
+        return out;
     }
 
     private static JournalPayload decode(RegistryFriendlyByteBuf buf) {
@@ -121,7 +143,8 @@ public record JournalPayload(boolean open, String focus, Component title, Compon
             }
             chapters.add(new ChapterView(id, name, icon, lines, buttons, quests, externals));
         }
-        return new JournalPayload(open, focus, title, progress, labels, chapters);
+        Home home = new Home(entries(buf), entries(buf), texts(buf));
+        return new JournalPayload(open, focus, title, progress, labels, chapters, home);
     }
 
     private static void text(RegistryFriendlyByteBuf buf, Component c) {

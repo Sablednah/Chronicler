@@ -1,6 +1,7 @@
 {
   "name": "Before Dark",
   "description": "Priya went out for insulin and did not come back. Okafor gives you ten minutes, because that is what Priya has.",
+  "recap": "Priya went out for insulin and did not come back. {player} did, with Priya's case, inside Okafor's ten minutes.",
   "chapter": "zarp:streets",
   "order": 2,
   "requires": [

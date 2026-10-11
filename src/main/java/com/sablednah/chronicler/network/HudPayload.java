@@ -23,8 +23,10 @@ import net.minecraft.resources.Identifier;
  *
  * @param quests tracked first, then the rest in the journal's own order, up to the server's cap
  * @param more   "+N more" past the cap, or empty
+ * @param nearbyHeader the Nearby section's heading (worded server-side), empty when there is nothing near
+ * @param nearby what is on offer within {@code tracker.hudOfferRadius}, nearest first
  */
-public record HudPayload(List<Quest> quests, Component more) implements CustomPacketPayload {
+public record HudPayload(List<Quest> quests, Component more, Component nearbyHeader, List<Component> nearby) implements CustomPacketPayload {
 
     /**
      * @param lines one per current objective, finished ones included (drawn dim), then a deadline
@@ -48,6 +50,9 @@ public record HudPayload(List<Quest> quests, Component more) implements CustomPa
             for (Component line : q.lines()) ComponentSerialization.STREAM_CODEC.encode(buf, line);
         }
         ComponentSerialization.STREAM_CODEC.encode(buf, p.more);
+        ComponentSerialization.STREAM_CODEC.encode(buf, p.nearbyHeader);
+        buf.writeVarInt(p.nearby.size());
+        for (Component line : p.nearby) ComponentSerialization.STREAM_CODEC.encode(buf, line);
     }
 
     private static HudPayload decode(RegistryFriendlyByteBuf buf) {
@@ -62,7 +67,12 @@ public record HudPayload(List<Quest> quests, Component more) implements CustomPa
             for (int l = 0; l < lineCount; l++) lines.add(ComponentSerialization.STREAM_CODEC.decode(buf));
             quests.add(new Quest(id, name, tracked, lines));
         }
-        return new HudPayload(quests, ComponentSerialization.STREAM_CODEC.decode(buf));
+        Component more = ComponentSerialization.STREAM_CODEC.decode(buf);
+        Component nearbyHeader = ComponentSerialization.STREAM_CODEC.decode(buf);
+        int nearCount = buf.readVarInt();
+        List<Component> nearby = new ArrayList<>(nearCount);
+        for (int n = 0; n < nearCount; n++) nearby.add(ComponentSerialization.STREAM_CODEC.decode(buf));
+        return new HudPayload(quests, more, nearbyHeader, nearby);
     }
 
     @Override

@@ -106,6 +106,7 @@ public final class ChroniclerCommands {
                 .executes(root.endsWith("s") ? ChroniclerCommands::list : ChroniclerCommands::now)
                 .then(Commands.literal("list").executes(ChroniclerCommands::list))
                 .then(Commands.literal("log").executes(ChroniclerCommands::log))
+                .then(Commands.literal("recap").executes(ChroniclerCommands::recap))
                 .then(Commands.literal("info").then(questArg().executes(ChroniclerCommands::info)))
                 .then(Commands.literal("accept").then(questArg().executes(ChroniclerCommands::accept)))
                 .then(Commands.literal("abandon").then(questArg().executes(ChroniclerCommands::abandon)))
@@ -555,6 +556,16 @@ public final class ChroniclerCommands {
         for (Component b : buttonsFor(player, id, q)) out.append(" ").append(b);
         player.sendSystemMessage(out);
         return 1;
+    }
+
+    /** The story so far, for a vanilla client: the same lines the panel's home page shows. */
+    private static int recap(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        List<String> lines = Recap.of(player);
+        if (lines.isEmpty()) { Feedback.chat(player, Lang.get("cmd.recap.none")); return 0; }
+        Feedback.chat(player, Lang.get("cmd.recap.header"));
+        for (String line : lines) Feedback.chat(player, Lang.fmt("cmd.recap.line", "line", line));
+        return lines.size();
     }
 
     private static int log(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

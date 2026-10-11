@@ -1,6 +1,7 @@
 {
   "name": "The Signal",
   "description": "Sarge says the radio has been dead since day three. There is a tower somewhere in the city. Somebody has to climb it.",
+  "recap": "The radio had been dead since day three. {player} climbed the tower, and the city heard the camp.",
   "chapter": "zarp:streets",
   "order": 1,
   "requires": [

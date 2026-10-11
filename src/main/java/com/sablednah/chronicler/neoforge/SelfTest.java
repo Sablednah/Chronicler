@@ -402,6 +402,15 @@ public final class SelfTest {
                             && (QuestEngine.journal(solo).isActive(firstSteps) || QuestEngine.journal(solo).isComplete(firstSteps)));
                     GiverStore.get(server).removeNpc(npc);
                     check("npc giver: an NPC with no quest is idle, not an error", Givers.onUseNpc(solo, npc));
+                    // Two things to take from one person: the click lists both with buttons, takes neither.
+                    GiverStore.get(server).setNpc(npc, firstSteps);
+                    GiverStore.get(server).setNpc(npc, ChroniclerIds.of("hot_foot"));
+                    QuestEngine.journal(solo).clear();
+                    boolean handled = Givers.onUseNpc(solo, npc);
+                    check("npc giver: several on offer are all listed (" + Givers.lastMenuSize + ")", handled && Givers.lastMenuSize == 2
+                            && !QuestEngine.journal(solo).isActive(firstSteps) && !QuestEngine.journal(solo).isActive(ChroniclerIds.of("hot_foot")));
+                    check("npc giver: a second click still lists, never takes one blind", Givers.onUseNpc(solo, npc) && QuestEngine.journal(solo).activeCount() == 0);
+                    GiverStore.get(server).removeNpc(npc);
                     // npc_remove with leave: what is left of them stands where they did, and gives a quest.
                     Identifier leaveQuest = ChroniclerIds.of("selftest_leave");
                     var standing = cast.byId(server, npc).map(p -> net.minecraft.core.BlockPos.containing(p.pos()));
@@ -759,6 +768,26 @@ public final class SelfTest {
         log.complete(ChroniclerIds.of("first_steps"));
         log.complete(ChroniclerIds.of("things_in_the_dark"));
         log.complete(ChroniclerIds.of("night_watch"));
+        // The story so far: finished quests' recap lines, in order, {player} filled; an ending's line only once reached.
+        {
+            var story = Recap.of(solo);
+            check("recap: finished quests tell their lines in order (" + story.size() + ")", story.size() >= 3
+                    && story.get(0).contains("roof") && story.get(1).contains("first night") && story.get(2).contains("fire lit"));
+            check("recap: {player} is the reader", story.get(0).contains(solo.getName().getString()) && story.stream().noneMatch(l -> l.contains("{player}")));
+            // Endings reached earlier in this run (Night Watch is a choice quest) show; the rest do not.
+            var reached = log.endings(ChroniclerIds.of("prologue"));
+            check("recap: an ending's line shows exactly when it was reached (" + reached + ")",
+                    story.stream().anyMatch(l -> l.contains("left warmer")) == reached.contains("kindness")
+                    && story.stream().anyMatch(l -> l.contains("turned away")) == reached.contains("cold"));
+            log.addEnding(ChroniclerIds.of("prologue"), "kindness");
+            check("recap: a reached ending adds its line", Recap.of(solo).stream().anyMatch(l -> l.contains("left warmer")));
+            check("home: the story so far reaches the panel", JournalPanel.build(solo, false, "").home().recap().size() == Recap.of(solo).size());
+            var withEndings = com.sablednah.chronicler.data.Quest.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, com.google.gson.JsonParser.parseString(
+                    "{\"name\": \"x\", \"chapter\": \"errands\", \"recap\": \"Done.\", \"recap_endings\": {\"cure\": \"Cured.\"}}")).result();
+            check("recap: recap and recap_endings parse", withEndings.map(q -> q.recap().orElse("").equals("Done.") && "Cured.".equals(q.recapEndings().get("cure"))).orElse(false));
+            check("recap: /quest recap parses", server.getCommands().getDispatcher().parse("quest recap", server.createCommandSourceStack().withEntity(solo))
+                    .getContext().getLastChild().getCommand() != null);
+        }
         check("beacon: accepted once night watch is done", com.sablednah.chronicler.api.Quests.accept(solo, beacon).isEmpty());
         QuestLog.Entry be = log.entry(beacon);
         QuestEngine.poll(solo);
@@ -993,6 +1022,22 @@ public final class SelfTest {
             check("shared block: and a click on the fire offers it (handled, not taken on one click)", fireAt.map(f -> Givers.onUseBlock(newcomer, level, f)).orElse(false)
                     && !QuestEngine.journal(newcomer).isActive(firewood));
             var ops = com.mojang.serialization.JsonOps.INSTANCE;
+            // What is on offer around a newcomer at spawn: the fire, with a distance; and the HUD's Nearby section says so.
+            QuestEngine.journal(newcomer).clear(); // a newcomer again: Wake Up was finished for the check above
+            var near = Givers.offers(newcomer, 24);
+            check("offers: a newcomer at spawn sees Wake Up on offer at the fire, with a distance (" + near.size() + ")",
+                    !near.isEmpty() && near.getFirst().id().equals(wakeUp) && near.getFirst().placed() && near.getFirst().distance() < 12
+                    && !near.getFirst().where().isBlank());
+            check("offers: every quest on offer, nearest first, placed before unplaced", Givers.offers(newcomer, -1).size() >= near.size()
+                    && Givers.offers(newcomer, -1).getFirst().id().equals(wakeUp));
+            check("offers: a radius of one block finds nothing at the fire", Givers.offers(newcomer, 1).stream().noneMatch(o -> o.id().equals(wakeUp)));
+            var hudNear = Hud.build(newcomer);
+            check("hud: Nearby lists the fire, worded (" + hudNear.nearby().size() + ")", !hudNear.nearby().isEmpty()
+                    && !hudNear.nearbyHeader().getString().isBlank() && hudNear.nearby().stream().noneMatch(l -> l.getString().contains("hud.")));
+            var homeNew = JournalPanel.build(newcomer, false, "").home();
+            check("home: a newcomer's home page offers Wake Up and is on nothing", homeNew.active().isEmpty()
+                    && homeNew.offers().stream().anyMatch(e -> e.questId().equals(wakeUp.toString())) && homeNew.recap().isEmpty());
+            QuestEngine.journal(newcomer).clear();
             check("shared block: a position giver may be only 'of'", com.sablednah.chronicler.data.GiverTypes.CODEC.parse(ops,
                     com.google.gson.JsonParser.parseString("{\"type\": \"position\", \"of\": \"zarp:wake_up\"}")).result().isPresent());
             check("shared block: one with no at, near_spawn or of is refused", com.sablednah.chronicler.data.GiverTypes.CODEC.parse(ops,
