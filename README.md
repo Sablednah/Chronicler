@@ -201,6 +201,10 @@ override `scope`. Every word a player sees lives in
 - **`collect`** takes `tag: minecraft:logs` or `quest_item: zarp:insulin`.
 - **`place`** takes `any: [ { lot: Hospital }, { structure: "#minecraft:village" } ]`
   -- alternatives, so a CityWorld lot has a vanilla fallback.
+- **Pockets.** With [Curios](https://www.curseforge.com/minecraft/mc-mods/curios) installed, what a
+  player wears or keeps in its slots counts for `collect` and `deliver` and is taken when they
+  consume, after the main inventory -- a scarf worn in a head slot meets "carry Kit's Scarf".
+  Reached by name, so no build-time dependency; `/chronicler status` says whether it is wired.
 - **Quest items** live in `chronicler:item` (`data/<pack>/chronicler/item/<name>.json`
   or `config/chronicler/items/`): `{ item: minecraft:nether_star, name: "&5The Origin
   Sample", lore: [...], glint: true, max_stack: 1 }`. They are marked invisibly
