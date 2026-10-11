@@ -707,8 +707,12 @@ public final class SelfTest {
         // Pockets: an accessory mod's slots (Curios) count, and are taken from AFTER the main inventory. A stand-in
         // handler proves the bridge; the Curios end is two method handles that only a server with Curios can exercise.
         {
-            var pocket = new net.neoforged.neoforge.items.ItemStackHandler(2);
-            pocket.setStackInSlot(0, com.sablednah.chronicler.data.QuestItem.build(registries, ember, 2));
+            ItemStack[] worn = { com.sablednah.chronicler.data.QuestItem.build(registries, ember, 2), ItemStack.EMPTY };
+            Pockets.Slots pocket = new Pockets.Slots() {
+                @Override public int size() { return worn.length; }
+                @Override public ItemStack get(int slot) { return worn[slot]; }
+                @Override public void set(int slot, ItemStack stack) { worn[slot] = stack; }
+            };
             java.util.function.Predicate<ItemStack> isEmber = st -> com.sablednah.chronicler.data.QuestItem.is(st, ember);
             int bare = Trackers.count(solo, isEmber);
             solo.getInventory().clearContent();
@@ -725,7 +729,7 @@ public final class SelfTest {
             try {
                 check("pockets: a worn quest item counts (1 held + 2 in pockets)", Pockets.available() && Trackers.count(solo, isEmber) == 3);
                 check("pockets: taking two empties the hand first, then one from the pockets", Trackers.take(solo, isEmber, 2) == 2
-                        && Trackers.count(solo, isEmber) == 1 && pocket.getStackInSlot(0).getCount() == 1
+                        && Trackers.count(solo, isEmber) == 1 && pocket.get(0).getCount() == 1
                         && solo.getInventory().countItem(Items.BLAZE_POWDER) == 0);
                 var scarf = new com.sablednah.chronicler.data.ObjectiveTypes.Collect(Identifier.withDefaultNamespace("air"), 1, false,
                         java.util.Optional.of(ember), java.util.Optional.empty());

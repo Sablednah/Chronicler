@@ -5,7 +5,6 @@ import java.util.function.Predicate;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 /**
  * Where else a player keeps things: the extra slots an accessory mod gives them (Curios, through
@@ -15,12 +14,22 @@ import net.neoforged.neoforge.items.IItemHandlerModifiable;
  *
  * <p>Taking goes main inventory first, then pockets: what is worn is what the player chose to keep
  * out of the way, so it goes last.</p>
+ *
+ * <p>{@link Slots} is deliberately ours, not NeoForge's item-handler type: that type was replaced on
+ * 26.3, and a bridge that named it would need a shape per line. Three methods are all a pocket is.</p>
  */
 public final class Pockets {
 
+    /** The extra slots, read and written one at a time. */
+    public interface Slots {
+        int size();
+        ItemStack get(int slot);
+        void set(int slot, ItemStack stack);
+    }
+
     public interface Provider {
-        /** The extra slots, as one handler; empty when this player has none. */
-        Optional<IItemHandlerModifiable> handler(ServerPlayer player);
+        /** This player's extra slots; empty when they have none. */
+        Optional<Slots> slots(ServerPlayer player);
     }
 
     private static volatile Provider provider;
@@ -38,9 +47,9 @@ public final class Pockets {
         return provider != null;
     }
 
-    private static Optional<IItemHandlerModifiable> of(ServerPlayer player) {
+    private static Optional<Slots> of(ServerPlayer player) {
         Provider p = provider;
-        return p == null ? Optional.empty() : p.handler(player);
+        return p == null ? Optional.empty() : p.slots(player);
     }
 
     /** How many matching items the pockets hold. */
@@ -48,8 +57,8 @@ public final class Pockets {
         var h = of(player);
         if (h.isEmpty()) return 0;
         int total = 0;
-        for (int i = 0; i < h.get().getSlots(); i++) {
-            ItemStack s = h.get().getStackInSlot(i);
+        for (int i = 0; i < h.get().size(); i++) {
+            ItemStack s = h.get().get(i);
             if (!s.isEmpty() && match.test(s)) total += s.getCount();
         }
         return total;
@@ -60,13 +69,13 @@ public final class Pockets {
         var h = of(player);
         if (h.isEmpty() || amount <= 0) return 0;
         int taken = 0;
-        for (int i = 0; i < h.get().getSlots() && taken < amount; i++) {
-            ItemStack s = h.get().getStackInSlot(i);
+        for (int i = 0; i < h.get().size() && taken < amount; i++) {
+            ItemStack s = h.get().get(i);
             if (s.isEmpty() || !match.test(s)) continue;
             int n = Math.min(s.getCount(), amount - taken);
             ItemStack left = s.copy();
             left.shrink(n);
-            h.get().setStackInSlot(i, left);
+            h.get().set(i, left);
             taken += n;
         }
         return taken;
