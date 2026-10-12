@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.4 — 2026-10-12
 
 - **Journal home page.** The panel opens on Home: what you are on (tracked first, each with its current objective), what is on offer (nearest first, with where and how far), and **the story so far** -- a recap told from the `recap` lines of the quests you have finished, plus `recap_endings` lines for the endings you reached and `recap_flags` lines for the player flags you set (a `world:` prefix reads a world flag) -- a mid-quest choice that tells in the story without being a chapter ending. A chapter's own `recap` is the act as one paragraph, standing in for its quests' lines once every quest in `recap_covers` is done (unsaid: every quest that counts toward it); their ending and flag lines still follow. Optional per quest and chapter; a pack with none has no recap. `/quest recap` says the same in chat. The prologue and ZARP carry recap lines.
 - **Curios pockets**: with Curios installed, items in its slots count for `collect` and `deliver`, and are taken (after the main inventory) when a quest consumes them -- Kit's Scarf worn in a head slot meets "carry Kit's Scarf". A soft seam, reached by name, so nothing is needed to build it; `/chronicler status` reports it.
