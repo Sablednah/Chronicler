@@ -239,7 +239,10 @@ override `scope`. Every word a player sees lives in
 - **Recap.** `recap: "{player} climbed the tower, and the city heard the camp."` on a quest is
   its line in the story so far, shown once it is done, in chapter and quest order; `recap_endings:
   { cure: "...", mercy: "..." }` adds a line per ending the player reached through that quest.
-  `recap_flags: { sold_a_sample: "..." }` adds a line per player flag that is set (a mid-quest
+  A chapter's own `recap` is the act as one paragraph: once every quest in its `recap_covers`
+  (unsaid: every quest that counts toward the chapter) is done, the paragraph stands in for
+  those quests' lines; uncovered quests keep theirs after it, and the covered ones' ending and
+  flag lines still follow. `recap_flags: { sold_a_sample: "..." }` adds a line per player flag that is set (a mid-quest
   choice that should tell in the story without being a chapter ending; a `world:` prefix reads
   a world flag). Past tense, a sentence or two; `{player}` is the reader. Optional: a pack
   with none has no recap.

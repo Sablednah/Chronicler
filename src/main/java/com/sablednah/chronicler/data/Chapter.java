@@ -24,8 +24,22 @@ public record Chapter(
         Optional<Identifier> icon,
         boolean main,
         QuestScope scope,
-        boolean replayable) {
+        boolean replayable,
+        Optional<String> recap,
+        List<Identifier> recapCovers) {
 
+    /** Before {@code recap}: kept, since a record's canonical constructor is public API. */
+    public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
+            boolean main, QuestScope scope, boolean replayable) {
+        this(name, description, order, requires, icon, main, scope, replayable, Optional.empty(), List.of());
+    }
+
+    /**
+     * {@code recap}: the act as one paragraph, shown in the story so far in place of the covered quests'
+     * own lines once every one of them is done ({@code {player}} is the reader). {@code recap_covers}
+     * names them; unsaid, every quest that counts toward the chapter's progress. The covered quests'
+     * {@code recap_endings} and {@code recap_flags} lines still follow, since they carry the choices.
+     */
     public static final Codec<Chapter> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.fieldOf("name").forGetter(Chapter::name),
             Codec.STRING.optionalFieldOf("description").forGetter(Chapter::description),
@@ -34,6 +48,8 @@ public record Chapter(
             Identifier.CODEC.optionalFieldOf("icon").forGetter(Chapter::icon),
             Codec.BOOL.optionalFieldOf("main", false).forGetter(Chapter::main),
             QuestScope.CODEC.optionalFieldOf("scope", QuestScope.SOLO).forGetter(Chapter::scope),
-            Codec.BOOL.optionalFieldOf("replayable", false).forGetter(Chapter::replayable))
+            Codec.BOOL.optionalFieldOf("replayable", false).forGetter(Chapter::replayable),
+            Codec.STRING.optionalFieldOf("recap").forGetter(Chapter::recap),
+            ChroniclerIds.CODEC.listOf().optionalFieldOf("recap_covers", List.of()).forGetter(Chapter::recapCovers))
             .apply(i, Chapter::new));
 }
