@@ -808,9 +808,23 @@ public final class SelfTest {
         // The story so far: finished quests' recap lines, in order, {player} filled; an ending's line only once reached.
         {
             var story = Recap.of(solo);
-            check("recap: finished quests tell their lines in order (" + story.size() + ")", story.size() >= 3
-                    && story.get(0).contains("roof") && story.get(1).contains("first night") && story.get(2).contains("fire lit"));
-            check("recap: {player} is the reader", story.get(0).contains(solo.getName().getString()) && story.stream().noneMatch(l -> l.contains("{player}")));
+            // The prologue's chapter paragraph covers first_steps and things_in_the_dark (both done): it stands in for
+            // their lines; night_watch is not covered and keeps its own, after it.
+            check("recap: a finished act reads as its chapter's paragraph, {player} filled (" + story.size() + ")", story.size() >= 2
+                    && story.get(0).contains("first days") && story.get(0).contains(solo.getName().getString()));
+            check("recap: the covered quests' own lines are gone, an uncovered one stays after the paragraph",
+                    story.stream().noneMatch(l -> l.contains("roof and four logs") || l.contains("first night")) && story.get(1).contains("fire lit"));
+            check("recap: nothing reads {player}", story.stream().noneMatch(l -> l.contains("{player}")));
+            FakePlayer partWay = fake(server, "ChroniclerTestF");
+            QuestEngine.journal(partWay).clear();
+            QuestEngine.journal(partWay).complete(ChroniclerIds.of("first_steps"));
+            var early = Recap.of(partWay);
+            check("recap: an act not yet finished still reads as its quests' lines", early.size() == 1 && early.get(0).contains("roof and four logs"));
+            QuestEngine.journal(partWay).clear();
+            var chapterJson = com.sablednah.chronicler.data.Chapter.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, com.google.gson.JsonParser.parseString(
+                    "{\"name\": \"x\", \"recap\": \"All of it.\", \"recap_covers\": [\"a\", \"zarp:b\"]}")).result();
+            check("recap: a chapter's recap and recap_covers parse (bare ids are ours)", chapterJson.map(c -> c.recap().orElse("").equals("All of it.")
+                    && c.recapCovers().size() == 2 && c.recapCovers().get(0).getNamespace().equals("chronicler")).orElse(false));
             // Endings reached earlier in this run (Night Watch is a choice quest) show; the rest do not.
             var reached = log.endings(ChroniclerIds.of("prologue"));
             check("recap: an ending's line shows exactly when it was reached (" + reached + ")",

@@ -25,7 +25,9 @@ public final class Recap {
         QuestLog log = QuestEngine.journal(player);
         String name = player.getName().getString();
         TreeMap<Identifier, List<net.minecraft.core.Holder.Reference<Quest>>> byChapter = new TreeMap<>(QuestEngine.chapterOrder(server));
+        TreeMap<Identifier, List<net.minecraft.core.Holder.Reference<Quest>>> allByChapter = new TreeMap<>(QuestEngine.chapterOrder(server));
         QuestEngine.quests(server).listElements().forEach(h -> {
+            allByChapter.computeIfAbsent(h.value().chapter(), k -> new ArrayList<>()).add(h);
             if (log.isComplete(h.key().identifier())) byChapter.computeIfAbsent(h.value().chapter(), k -> new ArrayList<>()).add(h);
         });
         List<String> out = new ArrayList<>();
@@ -33,9 +35,27 @@ public final class Recap {
             var mine = entry.getValue();
             mine.sort(java.util.Comparator.comparingInt((net.minecraft.core.Holder.Reference<Quest> h) -> h.value().order())
                     .thenComparing(h -> h.key().identifier().toString()));
+            // The act as one paragraph, once everything it covers is done: it replaces those quests' own lines.
+            java.util.Set<Identifier> covered = new java.util.HashSet<>();
+            var chapter = QuestEngine.chapters(server).get(net.minecraft.resources.ResourceKey.create(
+                    com.sablednah.chronicler.ChroniclerRegistries.CHAPTER, entry.getKey())).map(c -> c.value());
+            if (chapter.isPresent() && chapter.get().recap().filter(r -> !r.isBlank()).isPresent()) {
+                List<Identifier> covers = chapter.get().recapCovers();
+                if (covers.isEmpty()) {
+                    for (var h : allByChapter.getOrDefault(entry.getKey(), List.of())) {
+                        if (h.value().countsToward(chapter.get())) covers = append(covers, h.key().identifier());
+                    }
+                }
+                if (!covers.isEmpty() && covers.stream().allMatch(log::isComplete)) {
+                    covered.addAll(covers);
+                    out.add(chapter.get().recap().get().replace("{player}", name));
+                }
+            }
             for (var h : mine) {
                 Quest q = QuestEngine.questFor(player, h.key().identifier()).orElse(h.value());
-                q.recap().filter(r -> !r.isBlank()).ifPresent(r -> out.add(r.replace("{player}", name)));
+                if (!covered.contains(h.key().identifier())) {
+                    q.recap().filter(r -> !r.isBlank()).ifPresent(r -> out.add(r.replace("{player}", name)));
+                }
                 var reached = log.endings(entry.getKey());
                 for (String ending : q.endings()) {
                     String line = q.recapEndings().get(ending);
@@ -50,6 +70,12 @@ public final class Recap {
                 });
             }
         }
+        return out;
+    }
+
+    private static List<Identifier> append(List<Identifier> list, Identifier id) {
+        List<Identifier> out = new ArrayList<>(list);
+        out.add(id);
         return out;
     }
 
