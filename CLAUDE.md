@@ -121,7 +121,7 @@ kill <the JVM whose cmdline has Chronicler/build/classes>; rm run/mods/*.jar
   `build.gradle` for the same reason.
 - **Boot with every sibling AND with only the required two** (Standards and Cast; without
   them NeoForge refuses to start). The compat classes only link when the mod is present, and
-  both counts matter (192 and 166 at 1.0.0; 280 and 252 with mini quests).
+  both counts matter (192 and 166 at 1.0.0; 280 and 252 with mini quests; 373 and 328 at 1.3.4).
 - **`libs/` (gitignored) holds a sibling jar that has no `build/libs` for this
   line** -- ZombieMod's 26.1.2 jar is copied there from the CurseForge `26.1.2`
   instance (its 1.21.11 jar does build in `../ZombieMod/ZombieMod/build/libs`
@@ -191,15 +191,29 @@ core/QuestLog        the player's journal (attachment, copyOnDeath): entries wit
 neoforge/QuestEngine accept / measure / advance / choose / fail / complete / reward
 neoforge/Trackers    how an objective is measured (poll or event), keyed by spec class
 neoforge/Rewards     how a reward or effect is granted, keyed by spec class
-neoforge/Givers      offers near a block or in a kind of place; GiverStore = op-placed (SavedData)
+neoforge/Givers      offers near a block or in a kind of place; GiverStore = op-placed (SavedData). Several quests
+                     share one block (position "of": <quest>, resolved in a second pass): ONE proximity offer per
+                     block, chosen by pick (hand-in first, then first takeable, then active), and a click lists
+                     every offer (offerAll). offers(player, radius) feeds the HUD's Nearby and the journal's home
+                     page. The "!" sits at bodyHeight*2.3/1.8+0.05, so a scaled Cast NPC keeps it over the nameplate
+neoforge/Recap       "the story so far": chapters in order; a chapter's recap paragraph replaces its covered quests'
+                     recap lines once every one is complete; then recap_endings for reached endings and recap_flags
+                     per set player flag (world: prefix = FlagStore). /quest recap and the home page both read it
+neoforge/Pockets     where else a player keeps things (Curios slots): count/take for collect and deliver, main
+                     inventory first. Its OWN three-method Slots interface, never NeoForge's item handler (gone on
+                     26.3); installed only by compat/CuriosItems; nothing without it
 neoforge/Journal     the written book; FlagStore = world flags (SavedData, cached for off-thread)
 neoforge/JournalPanel the same journal as one payload for a modded client (journal.panel): text resolved
-                     here, buttons are /quest commands the client sends back (RUN runs only "quest ...")
+                     here, buttons are /quest commands the client sends back (RUN runs only "quest ...");
+                     home(player, log) is the Home the panel opens on: active, on offer (nearest first), recap
 network/             JournalPayload (clientbound, whole journal) + JournalRequestPayload (open/refresh/run) +
                      WaypointsPayload (clientbound, once a second: quest targets/givers/led NPCs, for a map) +
-                     HudPayload (clientbound, only when it changes: active quests and objective lines, worded here)
+                     HudPayload (clientbound, only when it changes: active quests and objective lines, worded here).
+                     The channel version is the registrar string in ChroniclerNetwork ("2"): bump it whenever a
+                     payload's wire shape changes, or an old client decodes the new bytes as garbage
 neoforge/Hud         builds HudPayload from the same currentObjectives/describe the action bar uses; caps at
-                     tracker.hudMaxQuests with a "+N more" line; remembers what each client was last sent
+                     tracker.hudMaxQuests with a "+N more" line; Nearby = Givers.offers within tracker.hudOfferRadius
+                     (0 = off), capped by hudMaxOffers; remembers what each client was last sent
 neoforge/Waypoints   plain data for WaypointsPayload -- reads the same currentObjectives/Givers/Npcs every
                      tracker and page already reads; knows nothing of JourneyMap or any client at all
 neoforge/EscortBars  a vanilla boss bar per escorted charge in danger, showing hits taken; recomputed
@@ -217,7 +231,10 @@ neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEc
                      quest tracker + journal buttons; they run /quest and /quest journal, so vanilla loses nothing),
                      StandardsReputation, LegendQuestCharacter, CityWorldLots, ZombieModConditions,
                      ZombieModSpawns (Genera bridge: spawn a genus and get the Mob back -- never via the
-                     command, which hands nothing back and whose mob no lookup can find this tick)
+                     command, which hands nothing back and whose mob no lookup can find this tick),
+                     CuriosItems (Curios slots as Pockets, by METHOD HANDLES: Curios is not ours and only the ZARP
+                     26.2 instance has its jar, so it is named by string, resolved at register, and stands down
+                     with one log line if the API moved; "Curios pockets wired" when it binds)
 api/Quests           the door for other mods (StoryTeller): offer / accept / flags / registries
 yaml/                YAML -> JSON pack
 data/QuestItem       chronicler:item registry; marked stacks built at use time; QuestItemLoot function
@@ -489,13 +506,43 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
   backslash while the launcher passes `--gameDir` unquoted, so it captured "26.2 --assetsDir C:"
   and refused nothing (now it also stops at `" --"`). Windows happened to lock the jar that day;
   do not count on it.
+- **`showDebugScreen()` is true whenever an F3+F6 debug line is pinned, not only while F3 is up.**
+  The HUD hid behind it and was gone all session for Sable (one pinned line). `ClientHud` steps
+  aside only for the charts (`showFpsCharts`/`showNetworkCharts`/`showProfilerChart`); LegendQuest's
+  HUD paid for the same thing.
+- **A payload's wire shape changed without the channel version moving lets an old client decode the
+  new bytes as garbage.** `JournalPayload` growing a home page and `HudPayload` a Nearby section took
+  `ChroniclerNetwork`'s registrar from `"1"` to `"2"`; do the same next time.
+- **Cherry-picking client code to 26.x conflicts on `renderPage(GuiGraphics`** (26.x draws with
+  `GuiGraphicsExtractor`/`text()`). Resolve on `mc26.1` by hand, then pick 26.2/26.3 FROM the mc26.1
+  commit so the fix travels. 26.2/26.3 also want `mc.gui.hud.isHidden()`; 26.3 wants
+  `clearOrCountMatchingItems(match, false, amount, ...)` and `InputConstants.Type.KEYBOARD`.
+- A `gradlew build` run in the seconds after killing the dev server failed once with no error line
+  (transient). Re-run it, and read `Build-Commit` from the manifest before copying any jar anywhere.
+- **A choice `ending` is a whole chapter ending** (fanfare, advancement, N-of-M count, replay
+  prompt), never a mid-quest fork note; ZARP wrote three before finding out. A mid-quest outcome worth
+  a line in the story is a `recap_flags` entry on the quest. Achievement ids are
+  `chronicler:chapter/<ns>/<chapter>` and `chronicler:ending/<ns>/<chapter>/<slug>` (README has them;
+  one was quoted wrong from memory to the ZARP session once -- look it up).
+- **Click order on a giver with several quests:** `Givers.pick` is hand-in first, then first takeable,
+  then active. Sable saw Wrench offer an available quest instead of finishing an open one (not a
+  choice beat; combination unknown, 2026-10-10) -- unreproduced; the every-offer click menu (1.3.4)
+  may already cover it. If it recurs, get the quest pair before touching `pick`.
 - `git cherry-pick` has no `-q`; it errors, and a `| tail -1` behind it hides the error while the
   loop moves on and reports the OLD head. Show cherry-pick output, and check the head moved.
-- **Release day, as run (1.0.0, 2026-09-13):** edit template mods.toml + `mod_version` + dated
-  CHANGELOG heading + rot sweep (`grep -rn "0\.1\.0\|not yet\|to come"` over docs), build, the
-  two self-test boots, commit main, cherry-pick to `mc26.1`/`mc26.2` (docs conflicts: `--ours`
-  on CLAUDE.md/README.md, `rm` CURSEFORGE.md, which 26.x does not carry), build a jar per branch
-  and read `Build-Commit` from each manifest (no `-dirty`), `git tag -a`, `gh release create`
-  with the three jars and the CHANGELOG section as notes, watch `gh run list
-  --workflow=curseforge.yml`, then `./deploy.sh` on each branch.
+- **Release day, as run (1.0.0, 2026-09-13; four lines since 1.2.1, last 1.3.4 on 2026-10-12):** edit
+  template mods.toml + `mod_version` + dated CHANGELOG heading + rot sweep (`grep -rn "0\.1\.0\|not
+  yet\|to come"` over docs), build, the two self-test boots, commit main, cherry-pick to
+  `mc26.1`/`mc26.2`/`mc26.3` (docs conflicts: `--ours` on CLAUDE.md/README.md/docs/DESIGN.md, `rm`
+  CURSEFORGE.md, which only main carries), build a jar per branch with the right JDK (`--no-daemon` on
+  26.x) and read `Build-Commit`/`Build-Branch` from each manifest (equal to that branch's head, no
+  `-dirty`), `git tag -a`, push every branch and the tag, `gh release create` with the four jars and the
+  CHANGELOG section as notes, watch `gh run list --workflow=curseforge.yml` (one ">> Uploading" per
+  jar), then `./deploy.sh` on each branch. `deploy.sh` REBUILDS: a sibling whose `build/libs` lacks
+  this line's jar breaks it after the release build passed (`libs/` is the fallback; copy the released
+  jar by hand after `cmp` against the GitHub asset). It skips the **LegendQuest ZARP** instance
+  (`.sablecraft-no-deploy`, which stays): Sable allows hand-copied jars there until that pack rolls
+  out, when every jar must come from CurseForge -- copy after a running check, never a dev build
+  once a release covers 26.2. A 26.3-only fix is a 26.3-only point release: version bumped on every
+  branch, one jar attached, the other lines stay where they were on CurseForge.
 - Never edit a sibling's `CLAUDE.md`; raise it with Sable instead.
