@@ -66,3 +66,4 @@ run-mc*/
 
 ### compile-only sibling jars that have no build/libs on this line ###
 /libs/
+server.log

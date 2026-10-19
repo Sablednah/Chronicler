@@ -25,6 +25,9 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class Hud {
 
+    /** Longer than this and the HUD says a decision is waiting rather than listing the options. */
+    private static final int DECIDE_FULL_MAX = 48;
+
     /** What each player's client was last sent, so an unchanged HUD is not resent. */
     private static final Map<UUID, HudPayload> LAST = new ConcurrentHashMap<>();
 
@@ -46,6 +49,12 @@ public final class Hud {
                 String key = entry.objectiveDone(n) ? "hud.objective_done" : target > 1 ? "hud.objective" : "hud.objective_single";
                 lines.add(Feedback.colored(Lang.fmt(key, "objective", what, "done", Math.min(done, target), "target", target)));
             }
+            QuestEngine.decisionAt(player, id).ifPresent(stage -> {
+                String options = QuestEngine.decisionLabels(stage);
+                lines.add(Feedback.colored(options.length() <= DECIDE_FULL_MAX
+                        ? Lang.fmt("hud.decide", "options", options)
+                        : Lang.get("hud.decide_short")));
+            });
             if (entry.deadlineAt >= 0) {
                 lines.add(Feedback.colored(Lang.fmt("hud.deadline",
                         "time", QuestEngine.clock(entry.deadlineAt - player.level().getGameTime()))));

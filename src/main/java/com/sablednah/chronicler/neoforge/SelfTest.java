@@ -319,6 +319,23 @@ public final class SelfTest {
             check("choices: finishing beat 2 lands on the decision, not the end", decide != null && decide.stage == 2
                     && !QuestEngine.journal(solo).isComplete(night));
             check("choices: an option out of range is refused", !QuestEngine.choose(solo, night, 3));
+            // The decision must still be findable once its chat has scrolled away (Sable, House Calls).
+            check("decision: decisionAt sees the beat", QuestEngine.decisionAt(solo, night).isPresent()
+                    && QuestEngine.decisionAt(solo, firstSteps).isEmpty());
+            {
+                var hudDecide = Hud.build(solo).quests().stream().filter(q -> q.id().equals(night.toString())).findFirst();
+                check("decision: the HUD carries a line for it, naming the options", hudDecide.isPresent()
+                        && hudDecide.get().lines().stream().anyMatch(l -> l.getString().contains("Decide")
+                                && l.getString().contains(QuestEngine.decisionAt(solo, night).get().choices().getFirst().label())));
+                net.minecraft.core.BlockPos decideBlock = here.above(45);
+                GiverStore.get(server).set(server.overworld(), decideBlock, night);
+                int before = QuestEngine.choicesPresented;
+                check("decision: clicking the quest's giver says the choices again", Givers.onUseBlock(solo, server.overworld(), decideBlock)
+                        && QuestEngine.choicesPresented == before + 1 && QuestEngine.journal(solo).isActive(night));
+                GiverStore.get(server).remove(server.overworld(), decideBlock);
+                check("decision: presentDecision is a no-op off a decision", !QuestEngine.presentDecision(solo, firstSteps)
+                        && QuestEngine.choicesPresented == before + 1);
+            }
             check("choices: option 1 ends the quest", QuestEngine.choose(solo, night, 1) && QuestEngine.journal(solo).isComplete(night));
             check("choices: the effects fired (player flag)", QuestEngine.journal(solo).hasFlag("gave_the_torch"));
             check("stages: shield reward landed", Trackers.count(solo, Identifier.parse("minecraft:shield")) == 1);
