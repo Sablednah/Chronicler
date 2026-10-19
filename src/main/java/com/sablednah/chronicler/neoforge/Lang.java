@@ -268,6 +268,8 @@ public final class Lang {
         def("hud.objective_single", "&7{objective}");
         def("hud.objective_done", "&a\u2714 &8{objective}");
         def("hud.deadline", "&c{time} left");
+        def("hud.decide", "&eDecide: &f{options}");
+        def("hud.decide_short", "&eA decision is waiting &7-- /quest, or the journal");
         def("hud.more", "&8+{count} more");
         def("hud.nearby", "&6Nearby");
         def("hud.offer", "&e! &f{quest} &7-- {where}, {distance}m");
@@ -376,6 +378,8 @@ public final class Lang {
         def("msg.choice.made", "{prefix}&7You chose: &f{label}");
         def("msg.choice.text", "{prefix}&e{text}");
         def("msg.choice.none", "{prefix}&7There is nothing to choose right now.");
+        def("msg.decision.pending", "&ea decision is waiting");
+        def("msg.decision.bar", "&e{quest}&7: decide &f{options} &8-- /quest");
         def("msg.choice.bad", "{prefix}&7That is not one of the options.");
         def("msg.deadline.set", "{prefix}&cYou have {time} for this.");
         def("msg.deadline.bar", "&e{quest}&7: {objective} &f({done}/{target}) &c{time}");

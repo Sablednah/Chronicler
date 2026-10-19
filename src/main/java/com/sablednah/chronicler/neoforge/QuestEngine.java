@@ -304,7 +304,40 @@ public final class QuestEngine {
         }
     }
 
+    /** How many times the choices have been put in front of anyone; the self-test's window onto a re-presentation. */
+    static int choicesPresented;
+
+    /**
+     * The decision beat this player is waiting at on {@code id}, if that is where they are. The one
+     * question every place that names a quest asks before saying "nothing to do here": the giver click,
+     * the HUD, the tracker bar and the chat menu all read it, so a choice made once in chat and then
+     * scrolled away is never the only trace of it (Sable, in House Calls, with the samples in hand).
+     */
+    public static Optional<Stage> decisionAt(ServerPlayer player, Identifier id) {
+        var holder = questFor(player, id);
+        QuestLog.Entry e = journal(player).entry(id);
+        if (holder.isEmpty() || e == null) return Optional.empty();
+        List<Stage> beats = holder.get().beats();
+        if (beats.isEmpty()) return Optional.empty();
+        Stage stage = beats.get(Math.min(e.stage, beats.size() - 1));
+        return stage.isDecision() ? Optional.of(stage) : Optional.empty();
+    }
+
+    /** Say the choices again, with their buttons, if the player is at a decision on {@code id}. */
+    public static boolean presentDecision(ServerPlayer player, Identifier id) {
+        var stage = decisionAt(player, id);
+        if (stage.isEmpty()) return false;
+        presentChoices(player, id, questFor(player, id).get(), stage.get());
+        return true;
+    }
+
+    /** The options as one line, {@code A / B}, for a bar or a HUD line. */
+    public static String decisionLabels(Stage stage) {
+        return stage.choices().stream().map(c -> c.label()).collect(java.util.stream.Collectors.joining(" / "));
+    }
+
     private static void presentChoices(ServerPlayer player, Identifier id, Quest quest, Stage stage) {
+        choicesPresented++;
         Feedback.chat(player, Lang.get("msg.choice.header"));
         for (int n = 0; n < stage.choices().size(); n++) {
             String label = stage.choices().get(n).label();
@@ -934,6 +967,14 @@ public final class QuestEngine {
         QuestLog.Entry e = journal(player).entry(id);
         if (holder.isEmpty() || e == null) return;
         Quest quest = holder.get();
+        List<Stage> beats = quest.beats();
+        if (!beats.isEmpty() && beats.get(Math.min(e.stage, beats.size() - 1)).isDecision()) {
+            // No objective to count, but not nothing to do: the bar says a choice is waiting and where to make it.
+            if (journal(player).tracked().map(t -> !t.equals(id)).orElse(false)) return;
+            Feedback.actionBar(player, Lang.fmt("msg.decision.bar", "quest", quest.name(),
+                    "options", decisionLabels(beats.get(Math.min(e.stage, beats.size() - 1)))));
+            return;
+        }
         List<ObjectiveSpec> objectives = currentObjectives(quest, e);
         for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
             if (!e.objectiveDone(n)) {
