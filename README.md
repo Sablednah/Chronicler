@@ -93,7 +93,9 @@ finishing a questline changes what spawns. `/chronicler flag set|list` for admin
 A stage with `choices` and no objectives is a **decision**: the options are
 put to the player as clickable buttons (and in the journal), each with its
 own `text`, `effects`, and either `next: <stage number>`, `end: true`, or
-nothing (the following stage). A stage with a `deadline` (seconds) shows a
+nothing (the following stage). A decision waits visibly: the HUD and the
+action bar say `Decide: ...`, and clicking the quest's giver again, `/quest`
+or the journal puts the buttons back up. A stage with a `deadline` (seconds) shows a
 countdown on the action bar and, when it runs out, fires `on_fail` and falls
 back to stage `fail` or drops the quest.
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **A decision is never only a scrolled-away chat line.** At a decision beat, the quest tracker HUD shows `Decide: <option> / <option>` under the quest (or "A decision is waiting" when the options are long), the action-bar tracker says the same for the tracked quest, right-clicking the quest's giver puts the choices and their buttons up again (as does the several-quests menu, which also names the decision in the quest's line), and `/quest` and the journal still carry the buttons. Sable walked back to Okafor in House Calls with the samples and found nothing that said a choice was waiting.
+
 ## 1.3.4 — 2026-10-12
 
 - **Journal home page.** The panel opens on Home: what you are on (tracked first, each with its current objective), what is on offer (nearest first, with where and how far), and **the story so far** -- a recap told from the `recap` lines of the quests you have finished, plus `recap_endings` lines for the endings you reached and `recap_flags` lines for the player flags you set (a `world:` prefix reads a world flag) -- a mid-quest choice that tells in the story without being a chapter ending. A chapter's own `recap` is the act as one paragraph, standing in for its quests' lines once every quest in `recap_covers` is done (unsaid: every quest that counts toward it); their ending and flag lines still follow. Optional per quest and chapter; a pack with none has no recap. `/quest recap` says the same in chat. The prologue and ZARP carry recap lines.

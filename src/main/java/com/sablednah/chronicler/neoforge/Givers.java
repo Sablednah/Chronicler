@@ -515,13 +515,16 @@ public final class Givers {
             Quest q = QuestEngine.questFor(player, id).orElseGet(() -> QuestEngine.quest(server, id).get().value());
             QuestLog.Entry e = log.entry(id);
             String objective = "";
-            if (e != null) {
+            boolean deciding = QuestEngine.decisionAt(player, id).isPresent();
+            if (deciding) objective = Lang.get("msg.decision.pending");
+            else if (e != null) {
                 var objectives = QuestEngine.currentObjectives(q, e);
                 for (int n = 0; n < objectives.size() && n < e.targets.size(); n++) {
                     if (!e.objectiveDone(n)) { objective = objectives.get(n).describe(); break; }
                 }
             }
             Feedback.chat(player, Lang.fmt("msg.giver.menu.active", "name", q.name(), "objective", objective));
+            if (deciding) QuestEngine.presentDecision(player, id);
         }
         return true;
     }
@@ -636,6 +639,8 @@ public final class Givers {
         if (log.isActive(id)) {
             Feedback.chat(player, Lang.fmt("msg.giver.active", "name", quest.name()));
             QuestEngine.track(player, id);
+            // At a decision, the giver is where a player comes back to: the choices again, not "Tracking it" alone.
+            QuestEngine.presentDecision(player, id);
             return true;
         }
         var why = QuestEngine.refusal(player, id, quest);
