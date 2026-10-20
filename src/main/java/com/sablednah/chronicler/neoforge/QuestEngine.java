@@ -823,6 +823,11 @@ public final class QuestEngine {
         return true;
     }
 
+    /** The server stopped: every settle clock belonged to that world. */
+    static void clearSession() { SETTLING.clear(); }
+
+    static int settlingCount() { return SETTLING.size(); }
+
     /** A quest ended for this player one way or another: forget any settle timers it was running. */
     private static void clearSettling(ServerPlayer player, Identifier id) {
         String prefix = player.getUUID() + "|" + id + "|";

@@ -87,6 +87,7 @@ public final class JourneyMapWaypoints {
             try { api.removeAllWaypoints(MOD_ID); } catch (Exception ignored) {}
         }
         SHOWN.clear();
+        group = null; // found or made again in the next world: JourneyMap keeps waypoints per world, and so may groups
     }
 
     private static int colorOf(byte kind) {

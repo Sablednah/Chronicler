@@ -368,6 +368,9 @@ public final class Rewards {
 
     public static void forget(net.minecraft.world.entity.Entity entity) { SPAWNED.remove(entity.getUUID()); }
 
+    /** The server stopped: the mobs this remembers were in a world that is gone (the next one re-reads on_enter). */
+    public static void clearSession() { SPAWNED.clear(); }
+
     public static int spawnedCount() { return SPAWNED.size(); }
 
     /** Spawn one more of what this was, for the same player: the one that got away comes back. */
