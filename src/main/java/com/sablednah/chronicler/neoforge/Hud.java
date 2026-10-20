@@ -96,5 +96,10 @@ public final class Hud {
         LAST.remove(player);
     }
 
+    /** The server stopped: what any client was last sent is about a world that is gone. */
+    public static void clearSession() { LAST.clear(); }
+
+    static int sessionStateCount() { return LAST.size(); }
+
     private Hud() {}
 }

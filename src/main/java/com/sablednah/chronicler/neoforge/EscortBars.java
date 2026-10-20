@@ -66,6 +66,12 @@ public final class EscortBars {
     /** How many bars exist right now, across every player -- the self-test's window onto {@link #BARS}. */
     public static int activeCount() { return BARS.size(); }
 
+    /** The server stopped: every bar was about a charge in a world that is gone. */
+    public static void clearSession() {
+        for (ServerBossEvent bar : BARS.values()) bar.removeAllPlayers();
+        BARS.clear();
+    }
+
     /** A player gone for good (logout): nothing left to show them. */
     public static void forget(ServerPlayer player) {
         String prefix = player.getUUID() + "|";

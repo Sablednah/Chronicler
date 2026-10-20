@@ -130,8 +130,41 @@ public final class QuestEvents {
 
     @SubscribeEvent
     static void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
-        Markers.clear(event.getServer());
+        Markers.clear(event.getServer()); // needs the players still connected, to hide their marks
         Minis.clear();
+    }
+
+    /**
+     * The server is gone. Everything this mod keeps in a static map is about THAT world, and the JVM
+     * outlives it: a singleplayer client quits to the title and opens another world with the same
+     * player UUID, the same quest ids and a game clock starting over -- so a stamp, a cooldown, a
+     * settle clock or a cached store left behind here is wrong in the next world, not merely stale
+     * (Threadwork paid for it: a "flags already set this session" set made world B's tutorial never
+     * complete). Per-player {@code forget} on logout is not enough to lean on; this is the backstop.
+     */
+    @SubscribeEvent
+    static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+        clearSession();
+    }
+
+    /** Every in-memory record that belongs to one world. {@code ServerStartedEvent} rebuilds the indexes. */
+    static void clearSession() {
+        Givers.clearSession();
+        Hud.clearSession();
+        JournalPanel.clearSession();
+        EscortBars.clearSession();
+        Rewards.clearSession();
+        QuestEngine.clearSession();
+        Minis.clear();
+        FlagStore.forget();
+        com.sablednah.chronicler.data.QuestItem.CURRENT = null;
+    }
+
+    /** How much per-world in-memory state is held right now; the self-test's window onto {@link #clearSession}. */
+    static int sessionStateCount() {
+        return Givers.sessionStateCount() + Hud.sessionStateCount() + JournalPanel.sessionStateCount()
+                + EscortBars.activeCount() + Rewards.spawnedCount() + QuestEngine.settlingCount()
+                + (FlagStore.cached() == null ? 0 : 1) + (com.sablednah.chronicler.data.QuestItem.CURRENT == null ? 0 : 1);
     }
 
     @SubscribeEvent
