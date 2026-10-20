@@ -276,6 +276,14 @@ datapacks/zarp/      the ZARP questline, a built-in pack (AddPackFindersEvent; p
   survives death). World flags, reputation and givers go in **SavedData** when
   built — they must answer for offline players. Pending offers and countdowns
   are static maps; surviving a restart would be worse than losing them.
+  **Every such map is cleared in `QuestEvents.clearSession` on `ServerStoppedEvent`**, and a new
+  one must be added there (the self-test counts them through `sessionStateCount`): a singleplayer
+  client opens the next world in the same JVM with the same player UUID, the same quest ids and a
+  game clock starting over, so a stamp, a cooldown, a cached SavedData reference or an "already
+  done this session" guard left behind is wrong in world B, not merely stale (Threadwork's tutorial
+  never completed in a second world for exactly this; ZARP's audit, 2026-10-20). Per-player
+  `forget` on logout is the tidy path, not the guarantee. Client side the same rule is
+  `ClientPlayerNetworkEvent.LoggingOut` in `ChroniclerClient`.
 - **Commands live at their plain names** (`/quest`, `/quests`); `/chronicler`
   administers the mod and nothing else lives under it. `/quests` is a second
   literal, not a redirect: a redirect's requirement ANDs with every child and

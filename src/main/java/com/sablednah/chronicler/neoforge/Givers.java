@@ -679,6 +679,14 @@ public final class Givers {
         CLICKED.remove(player);
     }
 
+    /** The server stopped: offer cooldowns and click windows are game-time stamps from a world that is gone. */
+    public static void clearSession() {
+        OFFERED.clear();
+        CLICKED.clear();
+    }
+
+    static int sessionStateCount() { return OFFERED.size() + CLICKED.size(); }
+
     private static BlockPos parse(String key) {
         try {
             String[] xyz = key.substring(key.indexOf('|') + 1).split(",");

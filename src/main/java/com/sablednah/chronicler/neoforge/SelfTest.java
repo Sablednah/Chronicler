@@ -688,6 +688,17 @@ public final class SelfTest {
         command(server, source, "chronicler flag set selftest_cmd_flag false", true);
         command(server, source, "quest giver set first_steps", false); // console has no eyes
 
+        // Last: a second world in the same game session must start from nothing (ZARP's audit, 2026-10-20).
+        // A settle clock is started on purpose so the "cleared" check has a positive control.
+        QuestEngine.settled(solo, firstSteps, 0, 0, true, server.overworld().getGameTime(), 30);
+        check("session state: something is held before the server stops (" + QuestEvents.sessionStateCount() + ")",
+                QuestEvents.sessionStateCount() > 0 && QuestEngine.settlingCount() > 0);
+        QuestEvents.clearSession();
+        check("session state: ServerStopped clears every per-world record", QuestEvents.sessionStateCount() == 0
+                && FlagStore.cached() == null);
+        // This server is still running: put back what ServerStartedEvent primed.
+        FlagStore.get(server);
+        com.sablednah.chronicler.data.QuestItem.CURRENT = server.registryAccess();
         Chronicler.LOGGER.info("=== Chronicler SelfTest: {} PASSED, {} FAILED ===", passed, FAILURES.size());
         for (String f : FAILURES) {
             Chronicler.LOGGER.error("  FAILED: {}", f);
