@@ -53,6 +53,15 @@ public final class FlagStore extends SavedData {
         return cached;
     }
 
+    /**
+     * The server stopped: the cache was that world's flags. Left in place, a singleplayer client that
+     * opens a second world in the same game session would answer its spawn conditions off the first
+     * world's flags until {@code ServerStartedEvent} re-primed it.
+     */
+    public static void forget() {
+        cached = null;
+    }
+
     public static String normalise(String name) {
         return name.trim().toLowerCase(java.util.Locale.ROOT);
     }

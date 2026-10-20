@@ -90,6 +90,10 @@ public final class JournalPanel {
         }
     }
 
+    public static void clearSession() { LAST_REFRESH.clear(); }
+
+    static int sessionStateCount() { return LAST_REFRESH.size(); }
+
     public static void forget(UUID player) {
         LAST_REFRESH.remove(player);
     }
