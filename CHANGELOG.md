@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.5 — 2026-10-21
 
 - Fix: a second world opened in the same game session (quit to the title, make another world without restarting) started with the first world's leftovers in memory: giver offer cooldowns and click windows, settle clocks, HUD and journal-panel "last sent" records, escort bars, the own-kill spawn record and the cached world-flag store the ZombieMod spawn condition reads -- all keyed by a player UUID that is the same in every singleplayer world, several stamped with a game clock that starts over. Everything of the kind is now cleared when the server stops, and the JourneyMap waypoint folder is found again per world. Found by the ZARP session's audit after Threadwork's own version of it.
 - **A decision is never only a scrolled-away chat line.** At a decision beat, the quest tracker HUD shows `Decide: <option> / <option>` under the quest (or "A decision is waiting" when the options are long), the action-bar tracker says the same for the tracked quest, right-clicking the quest's giver puts the choices and their buttons up again (as does the several-quests menu, which also names the decision in the quest's line), and `/quest` and the journal still carry the buttons. Sable walked back to Okafor in House Calls with the samples and found nothing that said a choice was waiting.
