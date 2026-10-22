@@ -622,6 +622,7 @@ public final class ChroniclerCommands {
                 Lang.fmt("cmd.status.siblings", "list", siblings.isEmpty() ? "none" : String.join(", ", siblings)),
                 Lang.fmt("cmd.status.party", "provider", Party.providerName()),
                 Lang.fmt("cmd.status.character", "provider", Sheet.providerName()),
+                Lang.fmt("cmd.status.claims", "provider", Claims.providerName()),
                 Lang.get(Pockets.available() ? "cmd.status.pockets" : "cmd.status.pockets.none"));
         source.sendSuccess(() -> Feedback.colored(lines), false);
         return quests.size();

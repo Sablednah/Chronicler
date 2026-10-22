@@ -290,6 +290,12 @@ public final class SelfTest {
                             : com.sablednah.chronicler.ChroniclerConfig.GIVER_MARKER_ACTIVE.get()));
             check("giver block: again while active is not an error", Givers.onUseBlock(solo, server.overworld(), here));
             check("giver block: a plain block is not a giver", !Givers.onUseBlock(solo, server.overworld(), here.above(40)));
+            check("giver block: a click on a door, trapdoor or gate giver lets it swing; on a stone one it does not",
+                    !Givers.blocksUse(net.minecraft.world.level.block.Blocks.OAK_DOOR.defaultBlockState())
+                    && !Givers.blocksUse(net.minecraft.world.level.block.Blocks.SPRUCE_TRAPDOOR.defaultBlockState())
+                    && !Givers.blocksUse(net.minecraft.world.level.block.Blocks.OAK_FENCE_GATE.defaultBlockState())
+                    && Givers.blocksUse(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
+                    && Givers.blocksUse(net.minecraft.world.level.block.Blocks.CAMPFIRE.defaultBlockState()));
             check("giver store removes", store.remove(server.overworld(), here) && Givers.questAt(server.overworld(), here).isEmpty());
             Givers.tickMarkers(server);
             check("the mark goes with the giver", Markers.textShownTo(solo.getUUID(), giverKey).isEmpty());
@@ -732,6 +738,27 @@ public final class SelfTest {
         check("quest item carries its mark", com.sablednah.chronicler.data.QuestItem.markOf(stack).map(ember::equals).orElse(false));
         check("quest item is named", stack.getHoverName().getString().contains("Ember"));
         check("a plain blaze powder is not the quest item", !com.sablednah.chronicler.data.QuestItem.is(new ItemStack(Items.BLAZE_POWDER), ember));
+        // And the other way round: a quest item never stands in for the plain item it is built on (Hale's Pager,
+        // a compass underneath, counted for Two Cities' plain "a compass" and would have been handed to Wrench).
+        {
+            solo.getInventory().clearContent();
+            solo.getInventory().add(com.sablednah.chronicler.data.QuestItem.build(registries, ember, 2));
+            Identifier blaze = Identifier.withDefaultNamespace("blaze_powder");
+            var plainDeliver = new com.sablednah.chronicler.data.ObjectiveTypes.Deliver(java.util.Optional.empty(), blaze, java.util.Optional.empty(), 1,
+                    beacon, 0D, java.util.Optional.empty());
+            var plainCollect = new com.sablednah.chronicler.data.ObjectiveTypes.Collect(blaze, 1, false);
+            check("quest item: does not count for a plain collect of its base item", Trackers.of(plainCollect).poll(solo, plainCollect).orElse(-1) == 0);
+            check("quest item: does not count for a plain deliver of its base item", Trackers.count(solo, Trackers.matcher(plainDeliver)) == 0
+                    && Trackers.count(solo, blaze) == 0);
+            check("quest item: a plain collect does not take it either", Trackers.take(solo, Trackers.matcher(plainDeliver), 1) == 0
+                    && Trackers.count(solo, st -> com.sablednah.chronicler.data.QuestItem.is(st, ember)) == 2);
+            solo.getInventory().add(new ItemStack(Items.BLAZE_POWDER, 1));
+            check("quest item: the plain one beside it counts, once", Trackers.of(plainCollect).poll(solo, plainCollect).orElse(-1) == 1
+                    && Trackers.count(solo, Trackers.matcher(plainDeliver)) == 1);
+            check("quest item: taking the plain one leaves the quest item", Trackers.take(solo, Trackers.matcher(plainDeliver), 1) == 1
+                    && Trackers.count(solo, st -> com.sablednah.chronicler.data.QuestItem.is(st, ember)) == 2 && Trackers.count(solo, blaze) == 0);
+            solo.getInventory().clearContent();
+        }
         // Pockets: an accessory mod's slots (Curios) count, and are taken from AFTER the main inventory. A stand-in
         // handler proves the bridge; the Curios end is two method handles that only a server with Curios can exercise.
         {
@@ -1310,6 +1337,16 @@ public final class SelfTest {
         level.setBlockAndUpdate(doorAt, doorState);
         level.setBlockAndUpdate(doorAt.above(), doorState.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DOUBLE_BLOCK_HALF,
                 net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
+        // A block slot skips claimed land (the Rusted Door picked the door of Sable's own hut): a stand-in claims everything.
+        {
+            var realClaims = Claims.current();
+            check("block slot: the door is found on nobody's land (" + Claims.providerName() + ")",
+                    Minis.nearestBlock(level, doorAt, "#minecraft:doors", 3, true).map(doorAt::equals).orElse(false));
+            Claims.install("selftest", (l, p) -> true);
+            check("block slot: on claimed land it is skipped by default", Minis.nearestBlock(level, doorAt, "#minecraft:doors", 3, true).isEmpty());
+            check("block slot: unclaimed: false still takes it", Minis.nearestBlock(level, doorAt, "#minecraft:doors", 3, false).map(doorAt::equals).orElse(false));
+            Claims.install(Claims.providerName().equals("selftest") ? "none" : Claims.providerName(), realClaims);
+        }
         try {
             var jam = Minis.start(solo, door, java.util.Map.of("count", "2"), Minis.Anchor.of(solo), false);
             QuestLog.Entry de = log.entry(door);

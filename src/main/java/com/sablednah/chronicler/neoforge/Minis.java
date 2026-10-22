@@ -160,7 +160,7 @@ public final class Minis {
                     Slots.putPlace(v, name, label, dim, at.get().getX(), at.get().getY(), at.get().getZ());
                 }
                 case "block" -> {
-                    Optional<BlockPos> at = nearestBlock(level, from.pos(), slot.find().block().get(), Math.min(48, slot.searchRadius()));
+                    Optional<BlockPos> at = nearestBlock(level, from.pos(), slot.find().block().get(), Math.min(48, slot.searchRadius()), slot.find().unclaimed());
                     if (at.isEmpty()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.block", "what", label, "radius", Math.min(48, slot.searchRadius()))); }
                     Slots.putPlace(v, name, label, dim, at.get().getX(), at.get().getY(), at.get().getZ());
                 }
@@ -374,8 +374,12 @@ public final class Minis {
         return Optional.empty();
     }
 
-    /** The nearest matching block within a cube; for a two-block-tall one (a door) its lower half. Loaded chunks only. */
-    static Optional<BlockPos> nearestBlock(ServerLevel level, BlockPos from, String want, int radius) {
+    /**
+     * The nearest matching block within a cube; for a two-block-tall one (a door) its lower half. Loaded
+     * chunks only. {@code unclaimedOnly} skips claimed land ({@link Claims}): the Rusted Door once picked
+     * the door of Sable's own hut at camp, and he was shut in behind the offer.
+     */
+    static Optional<BlockPos> nearestBlock(ServerLevel level, BlockPos from, String want, int radius, boolean unclaimedOnly) {
         BlockPos best = null;
         double bestD = Double.MAX_VALUE;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
@@ -386,6 +390,7 @@ public final class Minis {
                 for (int dy = -radius; dy <= radius; dy++) {
                     p.set(x, from.getY() + dy, z);
                     if (!QuestEngine.blockMatches(level, p, want)) continue;
+                    if (unclaimedOnly && Claims.claimed(level, p)) continue;
                     var state = level.getBlockState(p);
                     if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.DOUBLE_BLOCK_HALF)
                             && state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DOUBLE_BLOCK_HALF)

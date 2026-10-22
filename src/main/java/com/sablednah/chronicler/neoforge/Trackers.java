@@ -81,9 +81,9 @@ public final class Trackers {
                 if (spec.questItem().isPresent()) return s -> QuestItem.is(s, spec.questItem().get());
                 if (spec.tag().isPresent()) {
                     var key = TagKey.create(Registries.ITEM, spec.tag().get());
-                    return s -> !s.isEmpty() && s.is(key);
+                    return s -> plain(s) && s.is(key);
                 }
-                return s -> !s.isEmpty() && spec.item().equals(BuiltInRegistries.ITEM.getKey(s.getItem()));
+                return s -> plain(s) && spec.item().equals(BuiltInRegistries.ITEM.getKey(s.getItem()));
             }
 
             @Override
@@ -215,9 +215,19 @@ public final class Trackers {
         });
     }
 
-    /** Items of this id across the main inventory (hotbar, storage, armour, offhand). */
+    /** Plain items of this id across the main inventory (hotbar, storage, armour, offhand); a quest item is not one. */
     public static int count(ServerPlayer player, Identifier item) {
-        return count(player, s -> !s.isEmpty() && item.equals(BuiltInRegistries.ITEM.getKey(s.getItem())));
+        return count(player, s -> plain(s) && item.equals(BuiltInRegistries.ITEM.getKey(s.getItem())));
+    }
+
+    /**
+     * A stack an {@code item} or {@code tag} objective may count or take: not empty, and NOT a quest item.
+     * A quest item belongs to its quest -- Hale's Pager is a compass underneath, and Two Cities' plain
+     * "a compass" collect counted it, with the deliver about to hand it to Wrench (Sable, in play).
+     * Only a {@code quest_item} objective matches a marked stack.
+     */
+    public static boolean plain(ItemStack s) {
+        return !s.isEmpty() && QuestItem.markOf(s).isEmpty();
     }
 
     /** Take up to {@code amount} matching items: the main inventory (and crafting grid) first, then the pockets. */
@@ -249,8 +259,8 @@ public final class Trackers {
 
     public static Predicate<ItemStack> matcher(ObjectiveTypes.Deliver spec) {
         if (spec.questItem().isPresent()) return st -> QuestItem.is(st, spec.questItem().get());
-        if (spec.tag().isPresent()) { var key = TagKey.create(Registries.ITEM, spec.tag().get()); return st -> !st.isEmpty() && st.is(key); }
-        return st -> !st.isEmpty() && spec.item().equals(BuiltInRegistries.ITEM.getKey(st.getItem()));
+        if (spec.tag().isPresent()) { var key = TagKey.create(Registries.ITEM, spec.tag().get()); return st -> plain(st) && st.is(key); }
+        return st -> plain(st) && spec.item().equals(BuiltInRegistries.ITEM.getKey(st.getItem()));
     }
 
     /** Ticks a follow lasts without renewal: three polls' worth, so one slow tick does not drop the charge. */
