@@ -168,6 +168,8 @@ override `scope`. Every word a player sees lives in
   in `custom_data`, so renaming one in an anvil changes nothing. `{ type: item,
   quest_item: zarp:insulin }` rewards one; loot tables use `{ "function":
   "chronicler:quest_item", "id": "zarp:ember_heart" }`; `/chronicler item give|list`.
+  A quest item belongs to its quest: a plain `item` or `tag` objective never counts or
+  takes one (Hale's Pager is a compass underneath, and stays Hale's), only `quest_item` does.
 - **Position givers** can stand `near_spawn: [dx, dz]` too, and place their own
   `block` (a campfire) with `decor` around it, once, remembered -- a camp on any
   seed, offering the first quest on approach. A fixed seed or a schematic can
@@ -257,7 +259,8 @@ rewards:
 Slot types: `pick` (one of a `pool`), `number` (`min`..`max`), `here` (where it
 starts), `around` (a dry spot `min`..`max` blocks off), `structure` (the nearest, an
 id or `#tag`, within `radius`), `lot` (the nearest CityWorld lot whose words contain
-`lot`, or a CityWorld schematic by name with `schematic: chayats-bank`), `block` (the nearest, id or `#tag`), `giver` (where another quest's giver
+`lot`, or a CityWorld schematic by name with `schematic: chayats-bank`), `block` (the nearest, id or `#tag`; it skips claimed land --
+Standards' claims, so never somebody's own door -- unless `unclaimed: false`), `giver` (where another quest's giver
 stands), `given` (a position whoever starts it hands over), `npc` (a person Cast
 places: `name`, `skin` or `entity`, `equipment`, `min`/`max` distance, `keep`). A place
 gives `{s}` (its `label`), `{s.x}`, `{s.y}`, `{s.z}`, `{s.pos}` and `{s.dim}`; a person

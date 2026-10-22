@@ -624,7 +624,8 @@ public final class QuestEngine {
                     }
                 }
                 if (r.item().isPresent()) {
-                    boolean holding = !held.isEmpty() && r.item().get().equals(BuiltInRegistries.ITEM.getKey(held.getItem()));
+                    // A plain item, or the quest item of that id -- never a quest item standing in for a plain one.
+                    boolean holding = Trackers.plain(held) && r.item().get().equals(BuiltInRegistries.ITEM.getKey(held.getItem()));
                     if (!holding) holding = QuestItem.is(held, r.item().get());
                     if (!holding) {
                         Feedback.actionBar(player, Lang.fmt("msg.ritual.need_item", "item", QuestItem.displayName(r.item().get())));
