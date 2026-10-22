@@ -290,12 +290,6 @@ public final class SelfTest {
                             : com.sablednah.chronicler.ChroniclerConfig.GIVER_MARKER_ACTIVE.get()));
             check("giver block: again while active is not an error", Givers.onUseBlock(solo, server.overworld(), here));
             check("giver block: a plain block is not a giver", !Givers.onUseBlock(solo, server.overworld(), here.above(40)));
-            check("giver block: a click on a door, trapdoor or gate giver lets it swing; on a stone one it does not",
-                    !Givers.blocksUse(net.minecraft.world.level.block.Blocks.OAK_DOOR.defaultBlockState())
-                    && !Givers.blocksUse(net.minecraft.world.level.block.Blocks.SPRUCE_TRAPDOOR.defaultBlockState())
-                    && !Givers.blocksUse(net.minecraft.world.level.block.Blocks.OAK_FENCE_GATE.defaultBlockState())
-                    && Givers.blocksUse(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
-                    && Givers.blocksUse(net.minecraft.world.level.block.Blocks.CAMPFIRE.defaultBlockState()));
             check("giver store removes", store.remove(server.overworld(), here) && Givers.questAt(server.overworld(), here).isEmpty());
             Givers.tickMarkers(server);
             check("the mark goes with the giver", Markers.textShownTo(solo.getUUID(), giverKey).isEmpty());

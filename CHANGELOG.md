@@ -3,7 +3,6 @@
 ## Unreleased
 
 - Fix: a quest item no longer counts as the plain item it is built on. Hale's Pager is a compass underneath, and Two Cities' plain `item: minecraft:compass` collect counted it -- with the deliver about to hand it to Wrench. `item` and `tag` objectives (collect, deliver, ritual) now skip any marked stack; only a `quest_item` objective matches one.
-- Fix: a giver on a door, trapdoor or fence gate no longer stops it opening. The offer still shows (Accept is the chat button or a second click); the block swings as it would without a quest on it. Sable was shut in his own hut behind the Rusted Door's offer.
 - A mini quest's `block` slot skips claimed land by default -- Standards' claims (Factions ReForged and anything else registered there), so the wild never picks the door of somebody's camp or hut. `unclaimed: false` on the slot's `find` lets it. `/chronicler status` says which claims provider answers.
 
 ## 1.3.5 — 2026-10-21
