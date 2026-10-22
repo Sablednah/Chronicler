@@ -497,9 +497,11 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
   compass, satisfied Two Cities' "a compass" and was a click from being handed to Wrench). `Trackers.plain`
   is the one test every item/tag matcher goes through: not empty AND no quest-item mark. A new objective
   that matches stacks by item must use it.
-- **A giver click cancels the block's own use -- never on a door, trapdoor or gate** (`Givers.blocksUse`):
-  a mini's wild block slot picked the door of Sable's own hut and the offer shut him in. The same slot
-  now skips claimed land by default (`find.unclaimed`, through the Claims bridge).
+- **A giver click cancels the block's own use, a door's included, and that is by design** (Sable, 2026-10-22:
+  a door that will not open fits a rusted-door quest; a "let doors swing" exception was built and
+  withdrawn the same day). The trap to avoid is the wild putting that quest on somebody's OWN door:
+  a mini's block slot picked the door of Sable's hut at camp and shut him in, so the slot now skips
+  claimed land by default (`find.unclaimed`, through the Claims bridge).
 - **A decision beat has no objectives, so `Entry.done()` is vacuously true.**
   `set()` guards on a non-empty target list; forget that and a choice screen
   completes itself.

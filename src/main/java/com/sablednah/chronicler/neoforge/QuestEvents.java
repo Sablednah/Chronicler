@@ -104,13 +104,11 @@ public final class QuestEvents {
             return;
         }
         if (Givers.onUseBlock(player, player.level(), event.getPos())) {
-            // A door, trapdoor or gate still swings: a giver on one that did not would shut in whoever lives
-            // behind it (Sable, in his own hut, with the Rusted Door offered on its door). The offer is shown
-            // either way; Accept is the chat button or the second click.
-            if (Givers.blocksUse(player.level().getBlockState(event.getPos()))) {
-                event.setCancellationResult(InteractionResult.SUCCESS);
-                event.setCanceled(true);
-            }
+            // The block's own use is swallowed, a door's included -- by design (Sable: a door that will not open
+            // fits a rusted-door quest). The wild must simply never put that quest on somebody's own door, which
+            // is the block slot's job (it skips claimed land).
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            event.setCanceled(true);
         }
     }
 
