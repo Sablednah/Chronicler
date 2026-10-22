@@ -104,8 +104,13 @@ public final class QuestEvents {
             return;
         }
         if (Givers.onUseBlock(player, player.level(), event.getPos())) {
-            event.setCancellationResult(InteractionResult.SUCCESS);
-            event.setCanceled(true);
+            // A door, trapdoor or gate still swings: a giver on one that did not would shut in whoever lives
+            // behind it (Sable, in his own hut, with the Rusted Door offered on its door). The offer is shown
+            // either way; Accept is the chat button or the second click.
+            if (Givers.blocksUse(player.level().getBlockState(event.getPos()))) {
+                event.setCancellationResult(InteractionResult.SUCCESS);
+                event.setCanceled(true);
+            }
         }
     }
 

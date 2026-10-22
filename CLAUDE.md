@@ -226,10 +226,12 @@ client/compat/       ONE guarded pair for JourneyMap: JourneyMapPlugin (its own 
                      The client-side twin of neoforge/compat/ -- same "only this may import it" rule.
                      Also StandardsHudButton: Standards' quest-tracker button toggles the HUD, lit while shown
 core/QuestMap        prerequisite-depth layout for the map; loader-light so the self-test checks it
-neoforge/Party|Money|Rep|Sheet|Lots   neutral bridges, "nothing here" without a sibling
+neoforge/Party|Money|Rep|Sheet|Lots|Claims   neutral bridges, "nothing here" without a sibling (Claims: "is this somebody's land",
+                     asked by a mini's block slot so the wild never offers a quest on a player's own door)
 neoforge/compat/     ONE guarded class per sibling: StandardsGroups, StandardsEconomy, StandardsButtons (the bar's
                      quest tracker + journal buttons; they run /quest and /quest journal, so vanilla loses nothing),
-                     StandardsReputation, LegendQuestCharacter, CityWorldLots, ZombieModConditions,
+                     StandardsReputation, StandardsClaims (Standards' Claims seam -> the Claims bridge), LegendQuestCharacter,
+                     CityWorldLots, ZombieModConditions,
                      ZombieModSpawns (Genera bridge: spawn a genus and get the Mob back -- never via the
                      command, which hands nothing back and whose mob no lookup can find this tick),
                      CuriosItems (Curios slots as Pockets, by METHOD HANDLES: Curios is not ours and only the ZARP
@@ -491,6 +493,13 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
 - **Do not name a class `Character`** (or `Process`, `Thread`, ...): it shadows
   `java.lang` inside its own package and the error lands in an unrelated file.
   The sheet bridge is `Sheet` for that reason.
+- **A quest item is its base item underneath, and a plain `item` objective once counted it** (Hale's Pager, a
+  compass, satisfied Two Cities' "a compass" and was a click from being handed to Wrench). `Trackers.plain`
+  is the one test every item/tag matcher goes through: not empty AND no quest-item mark. A new objective
+  that matches stacks by item must use it.
+- **A giver click cancels the block's own use -- never on a door, trapdoor or gate** (`Givers.blocksUse`):
+  a mini's wild block slot picked the door of Sable's own hut and the offer shut him in. The same slot
+  now skips claimed land by default (`find.unclaimed`, through the Claims bridge).
 - **A decision beat has no objectives, so `Entry.done()` is vacuously true.**
   `set()` guards on a non-empty target list; forget that and a choice screen
   completes itself.

@@ -679,6 +679,12 @@ public final class Givers {
         CLICKED.remove(player);
     }
 
+    /** Whether a giver click on this block swallows the block's own use. Never for something that opens and shuts. */
+    public static boolean blocksUse(net.minecraft.world.level.block.state.BlockState state) {
+        return !(state.is(net.minecraft.tags.BlockTags.DOORS) || state.is(net.minecraft.tags.BlockTags.TRAPDOORS)
+                || state.is(net.minecraft.tags.BlockTags.FENCE_GATES));
+    }
+
     /** The server stopped: offer cooldowns and click windows are game-time stamps from a world that is gone. */
     public static void clearSession() {
         OFFERED.clear();
