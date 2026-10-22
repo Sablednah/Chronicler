@@ -75,6 +75,7 @@ public class Chronicler {
         if (ModList.get().isLoaded("standards")) {
             optionalIntegration("economy", com.sablednah.chronicler.neoforge.compat.StandardsEconomy::register);
             optionalIntegration("groups", com.sablednah.chronicler.neoforge.compat.StandardsGroups::register);
+            optionalIntegration("claims", com.sablednah.chronicler.neoforge.compat.StandardsClaims::register);
             // api/reputation ships in Standards 1.5.0; on an older Standards this
             // is the seam LinkageError takes away, and nothing else.
             optionalIntegration("reputation", com.sablednah.chronicler.neoforge.compat.StandardsReputation::register);

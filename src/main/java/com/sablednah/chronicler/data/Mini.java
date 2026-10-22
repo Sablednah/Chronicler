@@ -54,13 +54,24 @@ public record Mini(Map<String, Slot> slots, Optional<Wild> spawn) {
     }
 
     /** Where to look for a place: at most one of these, by slot type. */
-    public record Find(Optional<String> structure, Optional<String> lot, Optional<String> schematic, Optional<String> block, Optional<Identifier> quest) {
+    public record Find(Optional<String> structure, Optional<String> lot, Optional<String> schematic, Optional<String> block, Optional<Identifier> quest,
+            boolean unclaimed) {
+        public Find(Optional<String> structure, Optional<String> lot, Optional<String> schematic, Optional<String> block, Optional<Identifier> quest) {
+            this(structure, lot, schematic, block, quest, true);
+        }
+
+        /**
+         * {@code unclaimed} (default true): a {@code block} slot skips blocks on claimed land (Standards'
+         * claims: a Factions camp, a player's own hut), so the wild never offers a quest on somebody's
+         * front door. {@code false} lets it.
+         */
         public static final MapCodec<Find> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.STRING.optionalFieldOf("structure").forGetter(Find::structure),
                 Codec.STRING.optionalFieldOf("lot").forGetter(Find::lot),
                 Codec.STRING.optionalFieldOf("schematic").forGetter(Find::schematic),
                 Codec.STRING.optionalFieldOf("block").forGetter(Find::block),
-                ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(Find::quest))
+                ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(Find::quest),
+                Codec.BOOL.optionalFieldOf("unclaimed", true).forGetter(Find::unclaimed))
                 .apply(i, Find::new));
     }
 
