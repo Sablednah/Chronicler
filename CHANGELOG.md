@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.6 — 2026-10-22
 
 - Fix: a quest item no longer counts as the plain item it is built on. Hale's Pager is a compass underneath, and Two Cities' plain `item: minecraft:compass` collect counted it -- with the deliver about to hand it to Wrench. `item` and `tag` objectives (collect, deliver, ritual) now skip any marked stack; only a `quest_item` objective matches one.
 - A mini quest's `block` slot skips claimed land by default -- Standards' claims (Factions ReForged and anything else registered there), so the wild never picks the door of somebody's camp or hut. `unclaimed: false` on the slot's `find` lets it. `/chronicler status` says which claims provider answers.
