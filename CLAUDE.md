@@ -349,6 +349,11 @@ tokens.
 - **An objective satisfied the instant a line is crossed has no story in it** -- an escort ending,
   or an ambush firing, while the player is still on the path outside. `settle` (visit, escort)
   holds the condition true for real seconds, continuously, before it credits.
+- **An advancement `background` is a client asset id, not a texture path** (since 1.21.2: `DisplayInfo`
+  holds a `ClientAsset`, and the client adds `textures/` and `.png`). The generated tab shipped the full
+  path on every line until 1.3.6 and drew the missing-texture check -- which no dedicated-server boot
+  can see; the client log said `textures/textures/...png.png`. The same applies to anything else that
+  names a GUI texture by id.
 - **`PlayerAdvancements#award` is a silent no-op on a `FakePlayer`**, even for a genuinely vanilla
   advancement -- it is never sent through `PlayerList#placeNewPlayer`, which is what seeds a real
   join's advancement progress from the manager. The self-test proves generation and lookup, not

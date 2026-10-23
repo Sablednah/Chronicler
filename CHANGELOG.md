@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fix: the achievements tab drew the missing-texture check. Its background was written as a texture path (`minecraft:textures/gui/advancements/backgrounds/stone.png`), but since 1.21.2 an advancement background is a client asset id and the game adds `textures/` and `.png` itself -- so it looked for `textures/textures/...stone.png.png` on every line. Now `minecraft:gui/advancements/backgrounds/stone`.
+- A pack can restyle the tab: `background: threadwork:gui/advancements/zarp` on a chapter (the first chapter to name one wins; the PNG ships in the pack's assets), or `achievements.background` in the config to override every pack.
+
 ## 1.3.6 — 2026-10-22
 
 - Fix: a quest item no longer counts as the plain item it is built on. Hale's Pager is a compass underneath, and Two Cities' plain `item: minecraft:compass` collect counted it -- with the deliver about to hand it to Wrench. `item` and `tag` objectives (collect, deliver, ritual) now skip any marked stack; only a `quest_item` objective matches one.
