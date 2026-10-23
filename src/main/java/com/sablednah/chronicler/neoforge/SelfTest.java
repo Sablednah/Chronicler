@@ -549,6 +549,18 @@ public final class SelfTest {
                         com.sablednah.chronicler.yaml.AchievementPack.chaptersIn(SelfTest.class, "/datapacks/prologue").contains(ChroniclerIds.of("prologue")));
                 check("achievements: a source path that is not there finds nothing, and does not throw",
                         com.sablednah.chronicler.yaml.AchievementPack.chaptersIn(SelfTest.class, "/datapacks/no_such_pack").isEmpty());
+                // The tab background is a client asset id, not a texture path (ZARP saw the missing-texture check:
+                // the game adds textures/ and .png itself). Config wins, then the first chapter naming one, then stone.
+                check("achievements: the default background is a client asset id (no textures/, no .png)",
+                        com.sablednah.chronicler.yaml.AchievementPack.DEFAULT_BACKGROUND.equals("minecraft:gui/advancements/backgrounds/stone")
+                        && com.sablednah.chronicler.yaml.AchievementPack.resolveBackground("", List.of("", ""))
+                                .equals(com.sablednah.chronicler.yaml.AchievementPack.DEFAULT_BACKGROUND));
+                check("achievements: the first chapter naming a background restyles the tab",
+                        com.sablednah.chronicler.yaml.AchievementPack.resolveBackground("", List.of("", "threadwork:gui/advancements/zarp", "other:x"))
+                                .equals("threadwork:gui/advancements/zarp"));
+                check("achievements: the config background overrides every pack",
+                        com.sablednah.chronicler.yaml.AchievementPack.resolveBackground(" mine:gui/tab ", List.of("threadwork:gui/advancements/zarp"))
+                                .equals("mine:gui/tab"));
                 int sources = com.sablednah.chronicler.yaml.AchievementPack.sourceCount();
                 com.sablednah.chronicler.api.Quests.registerAchievementSource(SelfTest.class, "datapacks/prologue/");
                 com.sablednah.chronicler.api.Quests.registerAchievementSource(SelfTest.class, "/datapacks/prologue");

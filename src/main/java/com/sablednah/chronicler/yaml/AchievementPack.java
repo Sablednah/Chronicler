@@ -89,7 +89,35 @@ public final class AchievementPack implements PackResources {
         if (!SOURCES.contains(source)) SOURCES.add(source);
     }
 
-    private record ChapterInfo(Identifier id, String name, String description, String icon, List<Identifier> requires, int order) {}
+    private record ChapterInfo(Identifier id, String name, String description, String icon, List<Identifier> requires, int order, String background) {}
+
+    /**
+     * The tab's default background, as a CLIENT ASSET ID: the game adds {@code textures/} and {@code .png}
+     * itself (since 1.21.2, {@code DisplayInfo} holds a {@code ClientAsset}). The full path form shipped here
+     * until 1.3.6 and drew the missing-texture check on every line -- the log said
+     * {@code textures/textures/...stone.png.png}.
+     */
+    public static final String DEFAULT_BACKGROUND = "minecraft:gui/advancements/backgrounds/stone";
+
+    /**
+     * Which background the one tab gets: {@code achievements.background} in the config if set; else the
+     * first chapter (packs in scan order, chapters by {@code order}) that names one; else vanilla stone.
+     * A pack restyles the tab from its own chapter file ({@code "background": "threadwork:gui/advancements/zarp"},
+     * shipped at {@code assets/threadwork/textures/gui/advancements/zarp.png}).
+     */
+    public static String resolveBackground(String configured, List<String> chapterBackgrounds) {
+        if (configured != null && !configured.isBlank()) return configured.trim();
+        for (String b : chapterBackgrounds) if (b != null && !b.isBlank()) return b.trim();
+        return DEFAULT_BACKGROUND;
+    }
+
+    private static String configuredBackground() {
+        try {
+            return com.sablednah.chronicler.ChroniclerConfig.ACHIEVEMENT_BACKGROUND.get();
+        } catch (IllegalStateException e) {
+            return ""; // config not loaded yet: the default, never a failed pack
+        }
+    }
 
     private AchievementPack(boolean zarp, boolean prologue) {
         Map<Identifier, ChapterInfo> chapters = new LinkedHashMap<>();
@@ -100,14 +128,18 @@ public final class AchievementPack implements PackResources {
         if (zarp) scanBuiltIn(AchievementPack.class, "/datapacks/zarp", chapters, endings);
         for (Source source : SOURCES) scanBuiltIn(source.anchor(), source.jarRootPath(), chapters, endings);
 
-        emitRoot();
         // Chained by order WITHIN each pack's own namespace only -- ZARP and the prologue are two
         // unrelated questlines (mutually exclusive in real play; the self-test forces both on),
         // and a chapter never gets chained to some other pack's chapter as a cosmetic accident.
         Map<String, List<ChapterInfo>> byNamespace = new LinkedHashMap<>();
         for (ChapterInfo c : chapters.values()) byNamespace.computeIfAbsent(c.id().getNamespace(), k -> new ArrayList<>()).add(c);
+        List<String> backgrounds = new ArrayList<>();
         for (List<ChapterInfo> group : byNamespace.values()) {
             group.sort(java.util.Comparator.comparingInt(ChapterInfo::order).thenComparing(c -> c.id().toString()));
+            for (ChapterInfo c : group) backgrounds.add(c.background());
+        }
+        emitRoot(resolveBackground(configuredBackground(), backgrounds));
+        for (List<ChapterInfo> group : byNamespace.values()) {
             for (int i = 0; i < group.size(); i++) emitChapter(group.get(i), chapters, i > 0 ? group.get(i - 1).id() : null);
         }
         endings.forEach((chapter, names) -> {
@@ -242,7 +274,7 @@ public final class AchievementPack implements PackResources {
         }
         int order = o.has("order") && o.get("order").isJsonPrimitive() ? o.get("order").getAsInt() : 0;
         chapters.put(id, new ChapterInfo(id,
-                str(o, "name", id.getPath()), str(o, "description", ""), str(o, "icon", ""), requires, order));
+                str(o, "name", id.getPath()), str(o, "description", ""), str(o, "icon", ""), requires, order, str(o, "background", "")));
     }
 
     /** Every distinct {@code "ending": "..."} anywhere in a quest file, filed under the chapter it declares. */
@@ -281,10 +313,10 @@ public final class AchievementPack implements PackResources {
     // --- emitting advancement JSON ---
 
     /** {@code chronicler:root} -- the tab. Granted the moment a player's journal begins. */
-    private void emitRoot() {
+    private void emitRoot(String background) {
         JsonObject display = display("&f" + Chronicler.MODID.substring(0, 1).toUpperCase(Locale.ROOT) + Chronicler.MODID.substring(1),
                 "Somewhere, a story is starting.", "minecraft:written_book", "task", false);
-        display.addProperty("background", "minecraft:textures/gui/advancements/backgrounds/stone.png");
+        display.addProperty("background", background);
         put(Achievements.ROOT, advancement(null, display));
     }
 
