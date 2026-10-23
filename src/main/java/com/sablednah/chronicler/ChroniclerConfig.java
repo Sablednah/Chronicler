@@ -35,6 +35,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.ConfigValue<String> GIVER_MARKER_LOCKED;
     public static final ModConfigSpec.BooleanValue MINI_WILD;
     public static final ModConfigSpec.BooleanValue ACHIEVEMENTS;
+    public static final ModConfigSpec.ConfigValue<String> ACHIEVEMENT_BACKGROUND;
     public static final ModConfigSpec.IntValue MINI_OFFER_SECONDS;
     public static final ModConfigSpec.DoubleValue ESCORT_PICKUP;
 
@@ -148,6 +149,11 @@ public final class ChroniclerConfig {
                         "only in a third-party datapack is not seen here). Real toasts, real F-key screen.",
                         "Off grants nothing and generates nothing.")
                 .define("enabled", true);
+        ACHIEVEMENT_BACKGROUND = BUILDER
+                .comment("The tab's background, as a client asset id (no textures/ prefix, no .png):",
+                        "\"minecraft:gui/advancements/backgrounds/stone\" is vanilla's. Empty takes the first",
+                        "chapter that names a \"background\", else stone. Set here to override every pack.")
+                .define("background", "");
         BUILDER.pop();
 
         BUILDER.comment("Shipped content").push("content");
