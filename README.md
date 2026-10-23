@@ -277,7 +277,10 @@ chapter or ending that lives only in a third-party datapack (never in config YAM
 built-in packs) is not seen by the generator and gets no advancement of its own; that pack's
 author can ship a real advancement JSON alongside their content, or any quest can grant one by
 id regardless of where it came from. `content.achievements.enabled` (default on) turns the
-whole thing off.
+whole thing off. The tab's background is a client asset id (no `textures/`, no `.png`): a
+chapter file's `background: threadwork:gui/advancements/zarp` restyles it (the first chapter
+to name one wins; ship the PNG at `assets/<ns>/textures/gui/advancements/zarp.png`), and
+`achievements.background` in the config overrides every pack. Default: vanilla's stone.
 
 ### Mini quests
 

@@ -26,12 +26,19 @@ public record Chapter(
         QuestScope scope,
         boolean replayable,
         Optional<String> recap,
-        List<Identifier> recapCovers) {
+        List<Identifier> recapCovers,
+        Optional<String> background) {
 
     /** Before {@code recap}: kept, since a record's canonical constructor is public API. */
     public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
             boolean main, QuestScope scope, boolean replayable) {
-        this(name, description, order, requires, icon, main, scope, replayable, Optional.empty(), List.of());
+        this(name, description, order, requires, icon, main, scope, replayable, Optional.empty(), List.of(), Optional.empty());
+    }
+
+    /** Before {@code background}. */
+    public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
+            boolean main, QuestScope scope, boolean replayable, Optional<String> recap, List<Identifier> recapCovers) {
+        this(name, description, order, requires, icon, main, scope, replayable, recap, recapCovers, Optional.empty());
     }
 
     /**
@@ -50,6 +57,9 @@ public record Chapter(
             QuestScope.CODEC.optionalFieldOf("scope", QuestScope.SOLO).forGetter(Chapter::scope),
             Codec.BOOL.optionalFieldOf("replayable", false).forGetter(Chapter::replayable),
             Codec.STRING.optionalFieldOf("recap").forGetter(Chapter::recap),
-            ChroniclerIds.CODEC.listOf().optionalFieldOf("recap_covers", List.of()).forGetter(Chapter::recapCovers))
+            ChroniclerIds.CODEC.listOf().optionalFieldOf("recap_covers", List.of()).forGetter(Chapter::recapCovers),
+            // The achievements tab's background, a client asset id ("threadwork:gui/advancements/zarp"); the first
+            // chapter to name one wins, since the mod has one tab. Read again from the raw JSON by AchievementPack.
+            Codec.STRING.optionalFieldOf("background").forGetter(Chapter::background))
             .apply(i, Chapter::new));
 }
