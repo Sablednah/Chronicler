@@ -230,10 +230,14 @@ public final class Trackers {
         return !s.isEmpty() && QuestItem.markOf(s).isEmpty();
     }
 
-    /** Take up to {@code amount} matching items: the main inventory (and crafting grid) first, then the pockets. */
+    /**
+     * Take up to {@code amount} matching items: the main inventory (and crafting grid) first, then the
+     * pockets, then inside the containers carried or worn (a backpack, a shulker box).
+     */
     public static int take(ServerPlayer player, Predicate<ItemStack> match, int amount) {
         int taken = player.getInventory().clearOrCountMatchingItems(match, false, amount, player.inventoryMenu.getCraftSlots());
         if (taken < amount) taken += Pockets.take(player, match, amount - taken);
+        if (taken < amount) taken += Containers.take(player, match, amount - taken);
         return taken;
     }
 
@@ -283,7 +287,10 @@ public final class Trackers {
     /** Entity tags a {@code spawn} effect writes and a {@code kill} objective's {@code tag} reads. */
     public static final String TAG_PREFIX = "chronicler:";
 
-    /** What the player has: the main inventory, plus whatever pockets an accessory mod gives them. */
+    /**
+     * What the player has: the main inventory, whatever pockets an accessory mod gives them, and what is
+     * inside the containers they carry or wear.
+     */
     public static int count(ServerPlayer player, Predicate<ItemStack> match) {
         int total = 0;
         var inv = player.getInventory();
@@ -291,7 +298,7 @@ public final class Trackers {
             ItemStack s = inv.getItem(i);
             if (match.test(s)) total += s.getCount();
         }
-        return total + Pockets.count(player, match);
+        return total + Pockets.count(player, match) + Containers.count(player, match);
     }
 
     /** Touch the class so the built-ins are registered before anything asks. */
