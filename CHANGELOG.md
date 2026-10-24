@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.7 — 2026-10-24
 
 - Fix: a chapter's achievement was granted only at the instant its last quest completed, so a world that gained the achievements pack later (the log says "Found new data pack chronicler_achievements") never got the chapters already finished. Every login, and every `/reload`, now grants whatever the journal already says was earned: the root, each chapter whose quests are all done, each ending reached. Idempotent and quiet. (ZARP's save: Settling In and The Fire done, no achievement.)
 - Every shipped chapter now has an `icon`, so the achievements tab and the journal are no longer a column of books (ZARP: vault door, sword, brewing stand, blaze powder, eye of ender, nether star; the camp's three side chapters steak, paper, boots; the prologue a torch and bread). The key was always there -- any item id on a chapter, the written book when unset -- and is now in the README.
