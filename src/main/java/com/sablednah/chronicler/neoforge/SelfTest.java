@@ -799,6 +799,38 @@ public final class SelfTest {
             } finally {
                 Pockets.install(real);
             }
+            // Containers: what is INSIDE a shulker box (or a backpack -- any item sharing its contents through
+            // NeoForge's item capability) counts and is taken, after what is loose. A vanilla shulker box stands
+            // in for Sophisticated Backpacks, which registers the same capability.
+            {
+                solo.getInventory().clearContent();
+                ItemStack box = new ItemStack(Items.SHULKER_BOX);
+                box.set(net.minecraft.core.component.DataComponents.CONTAINER,
+                        net.minecraft.world.item.component.ItemContainerContents.fromItems(List.of(new ItemStack(Items.BLAZE_POWDER, 3),
+                                com.sablednah.chronicler.data.QuestItem.build(registries, ember, 2))));
+                solo.getInventory().add(box);
+                Identifier blaze = Identifier.withDefaultNamespace("blaze_powder");
+                check("containers: plain items inside a shulker box count (" + Trackers.count(solo, blaze) + ")", Trackers.count(solo, blaze) == 3);
+                check("containers: a quest item inside counts for its quest_item, not as its base", Trackers.count(solo, isEmber) == 2);
+                solo.getInventory().add(new ItemStack(Items.BLAZE_POWDER, 1));
+                check("containers: loose and boxed together (" + Trackers.count(solo, blaze) + ")", Trackers.count(solo, blaze) == 4);
+                int took = Trackers.take(solo, s -> Trackers.plain(s) && s.is(Items.BLAZE_POWDER), 2);
+                ItemStack boxNow = solo.getInventory().getItem(0).is(Items.SHULKER_BOX) ? solo.getInventory().getItem(0) : solo.getInventory().getItem(1);
+                int inBox = 0;
+                var contents = boxNow.getOrDefault(net.minecraft.core.component.DataComponents.CONTAINER, net.minecraft.world.item.component.ItemContainerContents.EMPTY);
+                // copyInto is the one reader of a container component every line shares (26.x iterates templates, not stacks).
+                net.minecraft.core.NonNullList<ItemStack> boxed = net.minecraft.core.NonNullList.withSize(contents.getSlots(), ItemStack.EMPTY);
+                contents.copyInto(boxed);
+                for (ItemStack s : boxed) if (Trackers.plain(s) && s.is(Items.BLAZE_POWDER)) inBox += s.getCount(); // the embers in it are blaze powder underneath
+                StringBuilder inv = new StringBuilder();
+                for (int i = 0; i < 9; i++) if (!solo.getInventory().getItem(i).isEmpty()) inv.append(i).append('=').append(solo.getInventory().getItem(i)).append(' ');
+                check("containers: taking two takes the loose one first, then one from the box (took " + took + ", box now holds " + inBox
+                        + ", count now " + Trackers.count(solo, blaze) + ", inv: " + inv + ")",
+                        took == 2 && inBox == 2 && Trackers.count(solo, blaze) == 2);
+                check("containers: the box itself is still there, the quest items in it untouched",
+                        boxNow.is(Items.SHULKER_BOX) && Trackers.count(solo, isEmber) == 2);
+                solo.getInventory().clearContent();
+            }
             check("pockets: the stand-in is gone again", Pockets.current() == real && Trackers.count(solo, isEmber) == 0);
             solo.getInventory().clearContent();
         }
