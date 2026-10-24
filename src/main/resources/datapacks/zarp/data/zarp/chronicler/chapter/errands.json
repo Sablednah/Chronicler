@@ -1,6 +1,7 @@
 {
   "name": "Errands",
   "description": "Survivors out there, and none of them can manage alone.",
+  "icon": "minecraft:leather_boots",
   "order": 90,
   "main": false
 }

@@ -1,6 +1,7 @@
 {
   "name": "Survivors",
   "description": "The camp is people. People need things.",
+  "icon": "minecraft:cooked_beef",
   "order": 70,
   "main": false
 }

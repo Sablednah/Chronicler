@@ -1,6 +1,7 @@
 {
   "name": "Prologue",
   "description": "Where every story starts: on your feet, with nothing.",
+  "icon": "minecraft:torch",
   "recap": "In the first days {player} found a roof, thinned the things that come out after dark, and learned that the fire is the only thing that matters once the sun goes.",
   "recap_covers": ["first_steps", "things_in_the_dark"],
   "order": 0,
