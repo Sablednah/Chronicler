@@ -207,6 +207,9 @@ override `scope`. Every word a player sees lives in
   player wears or keeps in its slots counts for `collect` and `deliver` and is taken when they
   consume, after the main inventory -- a scarf worn in a head slot meets "carry Kit's Scarf".
   Reached by name, so no build-time dependency; `/chronicler status` says whether it is wired.
+- **Containers.** What is inside a Sophisticated Backpack, a shulker box or any item that shares its
+  contents through NeoForge's item capability counts for `collect` and `deliver`, carried or worn,
+  and is taken from after what is loose and what is in pockets. One level deep.
 - **Quest items** live in `chronicler:item` (`data/<pack>/chronicler/item/<name>.json`
   or `config/chronicler/items/`): `{ item: minecraft:nether_star, name: "&5The Origin
   Sample", lore: [...], glint: true, max_stack: 1 }`. They are marked invisibly

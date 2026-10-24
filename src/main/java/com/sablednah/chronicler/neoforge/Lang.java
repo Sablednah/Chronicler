@@ -140,8 +140,8 @@ public final class Lang {
         def("cmd.status.party", "&7Party membership: &f{provider}");
         def("cmd.status.character", "&7Character sheets: &f{provider}");
         def("cmd.status.claims", "&7Claimed land: &f{provider} &8(a mini quest's block slot skips it)");
-        def("cmd.status.pockets", "&7Pockets: &fCurios slots count for collect and deliver");
-        def("cmd.status.pockets.none", "&7Pockets: &fnone (the main inventory alone)");
+        def("cmd.status.pockets", "&7Pockets: &fCurios slots count for collect and deliver; so does what is inside backpacks and shulker boxes");
+        def("cmd.status.pockets.none", "&7Pockets: &fnone -- the main inventory, and what is inside backpacks and shulker boxes");
     }
 
     // --- journal.* : the written book. Parchment, so dark colours; every page an unstyled root ---

@@ -202,6 +202,9 @@ neoforge/Recap       "the story so far": chapters in order; a chapter's recap pa
 neoforge/Pockets     where else a player keeps things (Curios slots): count/take for collect and deliver, main
                      inventory first. Its OWN three-method Slots interface, never NeoForge's item handler (gone on
                      26.3); installed only by compat/CuriosItems; nothing without it
+neoforge/Containers  what is INSIDE carried or worn items (backpacks, shulker boxes) through NeoForge's own item capability
+                     (Capabilities.Item.ITEM -> ResourceHandler<ItemResource>, present on every line incl. 1.21.11); counted and
+                     taken after the inventory and the pockets; one level deep; names no backpack mod
 neoforge/Journal     the written book; FlagStore = world flags (SavedData, cached for off-thread)
 neoforge/JournalPanel the same journal as one payload for a modded client (journal.panel): text resolved
                      here, buttons are /quest commands the client sends back (RUN runs only "quest ...");
