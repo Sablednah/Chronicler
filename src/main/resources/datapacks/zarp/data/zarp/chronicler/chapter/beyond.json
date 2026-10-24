@@ -1,6 +1,7 @@
 {
   "name": "Act IV: Beyond",
   "description": "Something that never lived.",
+  "icon": "minecraft:ender_eye",
   "order": 50,
   "main": true
 }

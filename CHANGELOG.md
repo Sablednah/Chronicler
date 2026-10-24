@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Every shipped chapter now has an `icon`, so the achievements tab and the journal are no longer a column of books (ZARP: vault door, sword, brewing stand, blaze powder, eye of ender, nether star; the camp's three side chapters steak, paper, boots; the prologue a torch and bread). The key was always there -- any item id on a chapter, the written book when unset -- and is now in the README.
 - **Quests see inside backpacks.** `collect` counts and `deliver`/consume take from anything a player carries that shares its contents -- a Sophisticated Backpack, a shulker box, any item with NeoForge's item capability -- carried in the inventory or worn in a Curios slot. Loose items go first, then pockets, then containers; a bag inside a bag is left alone. Nothing names a backpack mod; whoever registers the capability is counted. (Sable, via ZARP.)
 - Fix: the achievements tab drew the missing-texture check. Its background was written as a texture path (`minecraft:textures/gui/advancements/backgrounds/stone.png`), but since 1.21.2 an advancement background is a client asset id and the game adds `textures/` and `.png` itself -- so it looked for `textures/textures/...stone.png.png` on every line. Now `minecraft:gui/advancements/backgrounds/stone`.
 - A pack can restyle the tab: `background: threadwork:gui/advancements/zarp` on a chapter (the first chapter to name one wins; the PNG ships in the pack's assets), or `achievements.background` in the config to override every pack.

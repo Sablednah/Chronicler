@@ -1,6 +1,7 @@
 {
   "name": "Finale: Patient Zero",
   "description": "The first one. Everything since has been a copy of a copy.",
+  "icon": "minecraft:nether_star",
   "order": 60,
   "main": true,
   "replayable": true
