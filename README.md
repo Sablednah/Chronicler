@@ -229,7 +229,8 @@ written book when unset, and the journal panel draws the same icon; chapters cha
 off `requires`, or off the previous chapter by `order` when a chapter sets none; endings hang
 off their own chapter, framed as a challenge and hidden until reached). Granted automatically:
 `chronicler:root` the first time a player's journal begins, a chapter's the moment every
-counting quest in it is done, an ending's the moment it is reached. Any quest can also grant
+counting quest in it is done, an ending's the moment it is reached -- and again on every login
+and `/reload`, so a world that gained the pack later catches up. Any quest can also grant
 one explicitly: `{"type": "advancement", "id": "chronicler:chapter/zarp/finale"}` -- any
 advancement, including vanilla's own or one a third-party datapack ships. **The gap**: a
 chapter or ending that lives only in a third-party datapack (never in config YAML or the

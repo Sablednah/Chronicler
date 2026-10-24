@@ -363,6 +363,11 @@ tokens.
   path on every line until 1.3.6 and drew the missing-texture check -- which no dedicated-server boot
   can see; the client log said `textures/textures/...png.png`. The same applies to anything else that
   names a GUI texture by id.
+- **A grant made at one instant is lost if the advancement did not exist at that instant.** Chapter and
+  ending achievements were granted only when the last quest completed; a world that gained the
+  achievements pack later never got the chapters already done (ZARP's save, two chapters). Anything
+  granted from journal state must also be re-derived from it: `Achievements.sweep` on login and
+  `/reload`, idempotent, quiet about ids that do not exist.
 - **`PlayerAdvancements#award` is a silent no-op on a `FakePlayer`**, even for a genuinely vanilla
   advancement -- it is never sent through `PlayerList#placeNewPlayer`, which is what seeds a real
   join's advancement progress from the manager. The self-test proves generation and lookup, not
