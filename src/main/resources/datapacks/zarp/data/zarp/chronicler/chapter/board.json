@@ -1,6 +1,7 @@
 {
   "name": "The Board",
   "description": "Mags pays on delivery. Nothing else is guaranteed.",
+  "icon": "minecraft:paper",
   "order": 80,
   "main": false
 }

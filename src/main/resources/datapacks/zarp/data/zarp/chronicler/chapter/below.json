@@ -1,6 +1,7 @@
 {
   "name": "Act III: Below",
   "description": "Fire that does not die.",
+  "icon": "minecraft:blaze_powder",
   "order": 40,
   "main": true
 }

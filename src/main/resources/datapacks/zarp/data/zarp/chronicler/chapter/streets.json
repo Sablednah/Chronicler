@@ -1,6 +1,7 @@
 {
   "name": "Act I: The Streets",
   "description": "The city is still there. So is everyone who died in it.",
+  "icon": "minecraft:iron_sword",
   "order": 20,
   "main": true
 }
