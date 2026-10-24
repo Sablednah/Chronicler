@@ -83,6 +83,7 @@ public final class QuestEvents {
     static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             Journal.giveToNewPlayer(player);
+            Achievements.sweep(player); // what the journal says they earned while no advancement was there to take it
             QuestEngine.journal(player).tracked().ifPresent(id -> QuestEngine.showTracker(player, id));
         }
     }

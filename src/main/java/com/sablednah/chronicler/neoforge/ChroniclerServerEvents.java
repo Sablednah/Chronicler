@@ -56,6 +56,7 @@ public final class ChroniclerServerEvents {
         if (event.getPlayer() != null) return; // a join, not a /reload
         Lang.load(); // messages.yml IS reloadable -- text is not a frozen registry
         for (ServerPlayer player : event.getPlayerList().getPlayers()) {
+            Achievements.sweep(player); // a reload can be what brings the achievements pack in
             if (ChroniclerPermissions.isAdmin(player.createCommandSourceStack())) {
                 Feedback.chat(player, Lang.get("cmd.reload_notice"));
             }
