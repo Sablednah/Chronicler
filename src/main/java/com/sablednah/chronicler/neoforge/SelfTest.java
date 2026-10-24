@@ -542,6 +542,13 @@ public final class SelfTest {
                 check("achievements: granting a known id finds it and does not throw",
                         Achievements.grant(server, solo, Achievements.ROOT) && Achievements.grant(server, solo, Achievements.ROOT));
                 check("achievements: an unknown id is refused, not thrown", !Achievements.grant(server, solo, ChroniclerIds.of("no_such_advancement")));
+                // The login sweep: what the journal already says was earned is granted again, quietly, every time
+                // (ZARP's save finished two chapters while the achievements pack was not yet in the world).
+                int swept = Achievements.sweep(solo);
+                // (A FakePlayer never logs in, so it was never given the journal; the root comes from its completions.)
+                check("achievements: the login sweep finds the root and anything else already earned (" + swept + ")",
+                        swept >= 1 && QuestEngine.journal(solo).completedCount() > 0);
+                check("achievements: sweeping again finds the same and throws nothing", Achievements.sweep(solo) == swept);
 
                 // Another mod's built-in pack opts in (Threadwork's copy of ZARP): the same scanner, resolved through
                 // the caller's own class so two jars carrying /datapacks/zarp each find their own.
