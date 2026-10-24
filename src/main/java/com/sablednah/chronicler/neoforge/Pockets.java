@@ -47,9 +47,14 @@ public final class Pockets {
         return provider != null;
     }
 
-    private static Optional<Slots> of(ServerPlayer player) {
+    /** This player's extra slots, for anyone who needs to look at what is worn (containers on a back). */
+    public static Optional<Slots> slots(ServerPlayer player) {
         Provider p = provider;
         return p == null ? Optional.empty() : p.slots(player);
+    }
+
+    private static Optional<Slots> of(ServerPlayer player) {
+        return slots(player);
     }
 
     /** How many matching items the pockets hold. */
