@@ -1,6 +1,7 @@
 {
   "name": "Errands",
   "description": "Small jobs for strangers. They find you.",
+  "icon": "minecraft:bread",
   "order": 90,
   "main": false
 }

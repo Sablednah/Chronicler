@@ -1,6 +1,7 @@
 {
   "name": "Prologue: Wake Up",
   "description": "You were in the vault. Now you are not.",
+  "icon": "minecraft:iron_door",
   "recap": "{player} woke to a fire somebody else had kept going. Dr Amara Okafor runs the camp because nobody else would, and she wanted to know if {player} could be trusted. The dead at the fence said yes.",
   "recap_covers": ["zarp:wake_up", "zarp:the_camp"],
   "order": 10,

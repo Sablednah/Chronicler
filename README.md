@@ -24,6 +24,15 @@ Drop a chapter and a quest into `config/chronicler/chapters/` and
 content is a frozen registry, `/reload` will not apply it.
 
 ```yaml
+# config/chronicler/chapters/prologue.yml
+name: Prologue
+description: Where every story starts.
+icon: minecraft:torch      # the chapter's icon in the journal and on its achievement (book if unset)
+order: 0
+main: true
+```
+
+```yaml
 # config/chronicler/quests/things_in_the_dark.yml
 name: Things in the Dark
 description: They come out at night. Make it fewer of them.
@@ -214,7 +223,9 @@ override `scope`. Every word a player sees lives in
 
 One vanilla advancement per chapter and one per ending, generated at pack-listing time from
 chapters and quests in `config/chronicler/*.yml` and the two built-in packs -- real toasts,
-real progress in the vanilla Advancements screen (`chronicler:root` is the tab; chapters chain
+real progress in the vanilla Advancements screen (`chronicler:root` is the tab; a chapter's
+`icon: minecraft:iron_sword` -- any item id -- is its advancement's icon and its endings', the
+written book when unset, and the journal panel draws the same icon; chapters chain
 off `requires`, or off the previous chapter by `order` when a chapter sets none; endings hang
 off their own chapter, framed as a challenge and hidden until reached). Granted automatically:
 `chronicler:root` the first time a player's journal begins, a chapter's the moment every
