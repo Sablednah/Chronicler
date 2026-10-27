@@ -142,7 +142,7 @@ override `scope`. Every word a player sees lives in
   counts any of them, so a file names the genus first and the vanilla stand-in
   second. `tag: warden` also counts anything a `spawn` effect tagged. `drop:
   { quest_item: zarp:ember_heart, chance: 1.0 }` makes counted kills drop a
-  quest item, no loot table needed. A mob a quest spawned that dies to
+  quest item, no loot table needed. The drop goes straight into the killer's pack (at their feet, glowing and unlosable, if it is full), never onto the ground where the kill happened. A mob a quest spawned that dies to
   anything else (a fall, the sun, itself) still counts for the player it was
   spawned for; `own_kill: true` refuses that and spawns another instead, so a
   boss that blows itself up can be tried again.

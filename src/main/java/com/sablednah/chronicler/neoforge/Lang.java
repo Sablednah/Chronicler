@@ -248,6 +248,8 @@ public final class Lang {
         def("obj.wait", "Wait {time}");
         def("obj.deliver", "Bring {count} x {item} to {who}");
         def("msg.kill.escaped", "{prefix}&7That one was not yours to claim ({what}).");
+        def("msg.kill.drop.pocketed", "&f{item} &7is yours.");
+        def("msg.kill.drop.at_feet", "&7Your pack is full: &f{item} &7is at your feet, and will keep.");
         def("msg.kill.escaped_again", "{prefix}&7That one got away from you ({what}). Another comes.");
         def("cmd.now.none", "{prefix}&7Nothing on the go. /quests lists what there is.");
         def("cmd.now.header", "{prefix}&e&l{name}&r &7- {stage}");
