@@ -540,7 +540,7 @@ public final class QuestEngine {
                         continue;
                     }
                     if (spec instanceof ObjectiveTypes.Kill k && k.drop().isPresent() && e.progress.get(n) < e.targets.get(n)) {
-                        dropQuestItem(victim, k.drop().get());
+                        dropQuestItem(killer, victim, k.drop().get());
                     }
                     set(killer, id, quest, n, e.progress.get(n) + 1, false);
                     if (journal(killer).entry(id) == null || journal(killer).entry(id).stage != e.stage) break;
@@ -568,16 +568,62 @@ public final class QuestEngine {
         return Optional.empty();
     }
 
-    private static void dropQuestItem(LivingEntity victim, ObjectiveTypes.Kill.Drop drop) {
+    /**
+     * A kill's quest-item drop goes to the killer, not onto the ground where the victim died. The
+     * Fortress Warden's heart fell into Nether lava and burned (Sable; its base is magma cream, which
+     * does not care), and the quest sat stuck until an admin gave the item by hand -- a quest kill in
+     * the Nether, over a drop or beside a cactus happens right over something that eats items.
+     */
+    private static void dropQuestItem(ServerPlayer killer, LivingEntity victim, ObjectiveTypes.Kill.Drop drop) {
         if (victim.getRandom().nextDouble() > drop.chance()) return;
         ItemStack stack = QuestItem.build(victim.level().registryAccess(), drop.questItem(), drop.count());
         if (stack.isEmpty()) {
             Chronicler.LOGGER.warn("Chronicler: kill drop names unknown quest item {}", drop.questItem());
             return;
         }
-        var item = new net.minecraft.world.entity.item.ItemEntity(victim.level(), victim.getX(), victim.getY() + 0.5, victim.getZ(), stack);
-        item.setDefaultPickUpDelay();
-        victim.level().addFreshEntity(item);
+        handOver(killer, stack);
+    }
+
+    /** Into the pack if it fits, else at the player's feet where it cannot be lost; true when pocketed. */
+    static boolean handOver(ServerPlayer player, ItemStack stack) {
+        String name = stack.getHoverName().getString();
+        player.getInventory().add(stack);
+        if (stack.isEmpty()) {
+            Feedback.actionBar(player, Lang.fmt("msg.kill.drop.pocketed", "item", name));
+            return true;
+        }
+        dropAtFeet(player, stack);
+        Feedback.actionBar(player, Lang.fmt("msg.kill.drop.at_feet", "item", name));
+        return false;
+    }
+
+    /**
+     * A world drop that keeps: at the player's own feet (they are standing somewhere survivable), no
+     * pickup delay, never despawns, glows, and is invulnerable to fire, lava, cactus and explosions.
+     */
+    static net.minecraft.world.entity.item.ItemEntity dropAtFeet(ServerPlayer player, ItemStack stack) {
+        var item = new net.minecraft.world.entity.item.ItemEntity(player.level(), player.getX(), player.getY() + 0.25, player.getZ(), stack);
+        item.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        item.setNoPickUpDelay();
+        item.setUnlimitedLifetime();
+        item.setGlowingTag(true);
+        item.setThrower(player);
+        harden(item);
+        player.level().addFreshEntity(item);
+        return item;
+    }
+
+    /** Entity#setInvulnerable, which 26.3 renamed setPermanentlyInvulnerable; by name, so one body serves every line. */
+    private static void harden(net.minecraft.world.entity.Entity entity) {
+        for (String name : new String[] { "setInvulnerable", "setPermanentlyInvulnerable" }) {
+            try {
+                net.minecraft.world.entity.Entity.class.getMethod(name, boolean.class).invoke(entity, true);
+                return;
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+                // try the other spelling
+            }
+        }
+        Chronicler.LOGGER.debug("Chronicler: could not make a dropped quest item invulnerable on this line");
     }
 
     /** The active entry whose current beat holds exactly this objective instance, or null. */
