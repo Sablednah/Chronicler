@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.8 — 2026-10-27
 
 - Fix: a kill objective's quest-item `drop` went onto the ground where the victim died, with nothing to stop lava, fire, cactus, an explosion or the five-minute despawn taking it. The Fortress Warden's heart burned in the Nether and the quest sat stuck. The drop now goes straight into the killer's pack; if that is full, it lands at the killer's own feet, glowing, invulnerable, never despawning, no pickup delay.
 
