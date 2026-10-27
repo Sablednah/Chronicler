@@ -1039,10 +1039,21 @@ public final class SelfTest {
         drawn.get(1).addTag(Rewards.FOR_PREFIX + solo.getUUID());
         QuestEngine.onUnownedDeath(solo, drawn.get(1)); drawn.get(1).discard();
         be = log.entry(beacon);
-        check("kill: a spawned mob that died to something else still counts", be != null && be.stage == 3);
+        // With both drops in the pack, the next beat (collect two embers, consume) finishes the quest on the spot.
+        check("kill: a spawned mob that died to something else still counts", (be != null && be.stage == 3) || log.isComplete(beacon));
         int itemsAfter = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(fire).inflate(24)).size();
         Chronicler.LOGGER.info("SelfTest: kill drops on the ground before {} after {}", itemsBefore, itemsAfter);
-        solo.getInventory().add(com.sablednah.chronicler.data.QuestItem.build(registries, ember, 2));
+        // The two kills' drops went straight into the killer's pack -- never onto the ground, where the Warden's
+        // heart once fell into lava (ZARP). The pack-full fallback is a drop at the player's feet that keeps.
+        int pocketed = Trackers.count(solo, st -> com.sablednah.chronicler.data.QuestItem.is(st, ember));
+        check("kill drop: both embers went straight into the killer's pack and the collect took them (left " + pocketed + ", complete "
+                + log.isComplete(beacon) + ", ground " + itemsBefore + "->" + itemsAfter + ")", itemsAfter == itemsBefore && log.isComplete(beacon) && pocketed == 0);
+        {
+            var kept = QuestEngine.dropAtFeet(solo, com.sablednah.chronicler.data.QuestItem.build(registries, ember, 1));
+            check("kill drop: the fallback drop keeps (invulnerable, glowing, no pickup delay, at the player's feet)",
+                    kept.isInvulnerable() && kept.hasGlowingTag() && !kept.hasPickUpDelay() && kept.distanceTo(solo) < 1.5D);
+            kept.discard();
+        }
         QuestEngine.poll(solo);
         check("collect: two marked embers finish the beacon", log.isComplete(beacon));
         check("collect: consumed embers are gone from the pack", Trackers.count(solo, st -> com.sablednah.chronicler.data.QuestItem.is(st, ember)) == 0);

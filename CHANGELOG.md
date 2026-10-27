@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix: a kill objective's quest-item `drop` went onto the ground where the victim died, with nothing to stop lava, fire, cactus, an explosion or the five-minute despawn taking it. The Fortress Warden's heart burned in the Nether and the quest sat stuck. The drop now goes straight into the killer's pack; if that is full, it lands at the killer's own feet, glowing, invulnerable, never despawning, no pickup delay.
+
 ## 1.3.7 — 2026-10-24
 
 - Fix: a chapter's achievement was granted only at the instant its last quest completed, so a world that gained the achievements pack later (the log says "Found new data pack chronicler_achievements") never got the chapters already finished. Every login, and every `/reload`, now grants whatever the journal already says was earned: the root, each chapter whose quests are all done, each ending reached. Idempotent and quiet. (ZARP's save: Settling In and The Fire done, no achievement.)

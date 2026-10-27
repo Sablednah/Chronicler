@@ -363,6 +363,12 @@ tokens.
   path on every line until 1.3.6 and drew the missing-texture check -- which no dedicated-server boot
   can see; the client log said `textures/textures/...png.png`. The same applies to anything else that
   names a GUI texture by id.
+- **A world drop is a world's to lose.** The kill `drop` once spawned a plain `ItemEntity` where the
+  victim died; the Warden's heart fell into Nether lava (ZARP) and the quest was stuck. Anything the
+  story owes a player goes into their pack (`QuestEngine.handOver`), and the pack-full fallback is
+  `dropAtFeet`: at the player, no pickup delay, unlimited lifetime, glowing, invulnerable. The
+  invulnerability call is by name because 26.3 renamed `setInvulnerable` to `setPermanentlyInvulnerable`
+  -- reflection on a Mojang name works at runtime on NeoForge, which runs official names.
 - **A grant made at one instant is lost if the advancement did not exist at that instant.** Chapter and
   ending achievements were granted only when the last quest completed; a world that gained the
   achievements pack later never got the chapters already done (ZARP's save, two chapters). Anything
