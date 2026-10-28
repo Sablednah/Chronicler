@@ -440,10 +440,16 @@ public final class SelfTest {
                     check("npc_remove leave: the NPC is gone, the bench stands where they were and gives the quest (known "
                             + standing.isPresent() + ", bench " + benchStands + ", gives " + benchGives + ")",
                             standing.isPresent() && benchStands && benchGives && cast.byId(server, npc).isEmpty());
-                    standing.ifPresent(b -> {
-                        GiverStore.get(server).remove(server.overworld(), b);
-                        server.overworld().setBlockAndUpdate(b, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
-                    });
+                    // npc_restore undoes the leaving: the bench and its giver entry go. (Placing the person again is
+                    // placeNpc, the path every server start takes for every NPC giver; this id names no real quest.)
+                    check("npc_restore: what was left behind is remembered", GiverStore.get(server).left(leaveQuest).map(l -> standing.map(l.pos()::equals).orElse(false)).orElse(false));
+                    Rewards.grant(solo, new com.sablednah.chronicler.data.RewardTypes.NpcRestore(java.util.Optional.of(leaveQuest)), leaveQuest, null);
+                    check("npc_restore: the bench and its giver entry are gone, the record cleared",
+                            standing.map(b -> !server.overworld().getBlockState(b).is(net.minecraft.world.level.block.Blocks.SMITHING_TABLE)
+                                    && Givers.questAt(server.overworld(), b).isEmpty()).orElse(false)
+                            && GiverStore.get(server).left(leaveQuest).isEmpty());
+                    check("npc_restore: asking again, with nothing removed and no such quest, is a quiet no-op",
+                            !Givers.restoreNpc(server, leaveQuest));
                 } finally {
                     cast.remove(server, npc);
                 }
@@ -1076,7 +1082,29 @@ public final class SelfTest {
         log.setFlag("selftest_prologue_flag", true, prologue);
         log.setFlag("selftest_other_flag", true, ChroniclerIds.of("elsewhere"));
         check("replay: a chapter that was never touched is refused", !QuestEngine.replay(fake(server, "ChroniclerTestD"), prologue));
+        Identifier[] replayed = { null };
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((com.sablednah.chronicler.api.ChapterReplayedEvent ev) -> replayed[0] = ev.chapter());
         check("replay: a replayable chapter starts over", QuestEngine.replay(solo, prologue) && !log.isComplete(beacon) && !log.isComplete(ChroniclerIds.of("first_steps")));
+        check("replay: ChapterReplayedEvent is posted for a pack mod", prologue.equals(replayed[0]));
+        // on_replay: a chapter's own effects run for the replaying player, with no quest in hand (ZARP's finale
+        // gives back the consumed quest items, brings Kit back and clears the flags its endings set).
+        {
+            var ops = com.mojang.serialization.JsonOps.INSTANCE;
+            var parsed = com.sablednah.chronicler.data.Chapter.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                    "{\"name\": \"Finale\", \"replayable\": true, \"on_replay\": [{\"type\": \"item\", \"quest_item\": \"chronicler:ember\"},"
+                    + " {\"type\": \"flag\", \"name\": \"zarp_cured\", \"value\": false}, {\"type\": \"npc_restore\", \"quest\": \"zarp:blood_ties\"}]}")).result();
+            check("on_replay: parses as a list of effects on the chapter", parsed.map(c -> c.onReplay().size() == 3
+                    && c.onReplay().get(2) instanceof com.sablednah.chronicler.data.RewardTypes.NpcRestore).orElse(false));
+            FlagStore.get(server).set("selftest_replay_world", true);
+            int embersBefore = Trackers.count(solo, st -> com.sablednah.chronicler.data.QuestItem.is(st, ember));
+            QuestEngine.runOnReplay(solo, prologue, List.of(
+                    new com.sablednah.chronicler.data.RewardTypes.Flag("selftest_replay_world", false, false),
+                    new com.sablednah.chronicler.data.RewardTypes.Flag("selftest_replay_player", true, true),
+                    new com.sablednah.chronicler.data.RewardTypes.Item(Identifier.withDefaultNamespace("air"), 1, java.util.Optional.of(ember))));
+            check("on_replay: a world flag is cleared with value: false, a quest item is handed back, a player flag lands on the chapter",
+                    !FlagStore.get(server).is("selftest_replay_world") && log.hasFlag("selftest_replay_player")
+                    && Trackers.count(solo, st -> com.sablednah.chronicler.data.QuestItem.is(st, ember)) == embersBefore + 1);
+        }
         check("replay: endings found stay found", log.endings(prologue).contains("kindness"));
         check("replay: the chapter's own player flags are cleared, others kept", !log.hasFlag("selftest_prologue_flag") && log.hasFlag("selftest_other_flag"));
         check("replay: a chapter that is not replayable is refused", !QuestEngine.replay(solo, ChroniclerIds.of("no_such_chapter")));

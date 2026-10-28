@@ -354,6 +354,11 @@ tokens.
   path on every line until 1.3.6 and drew the missing-texture check -- which no dedicated-server boot
   can see; the client log said `textures/textures/...png.png`. The same applies to anything else that
   names a GUI texture by id.
+- **A chapter's `on_replay` runs its granters with `quest == null`** (the chapter id stands as `questId`);
+  a granter that dereferences `quest` dies there -- `Flag` paid first. Replay must undo what the
+  story did (consumed items, a removed person, the endings' world flags) because nothing else can:
+  `npc_restore` undoes `npc_remove` through the `left:` record in `GiverStore` plus the same `placeNpc`
+  every start runs; `ChapterReplayedEvent` tells a pack mod.
 - **A world drop is a world's to lose.** The kill `drop` once spawned a plain `ItemEntity` where the
   victim died; the Warden's heart fell into Nether lava (ZARP) and the quest was stuck. Anything the
   story owes a player goes into their pack (`QuestEngine.handOver`), and the pack-full fallback is

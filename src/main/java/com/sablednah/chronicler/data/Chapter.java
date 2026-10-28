@@ -6,6 +6,7 @@ import java.util.Optional;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.sablednah.chronicler.core.QuestScope;
+import com.sablednah.chronicler.data.RewardTypes;
 
 import net.minecraft.resources.Identifier;
 
@@ -27,18 +28,25 @@ public record Chapter(
         boolean replayable,
         Optional<String> recap,
         List<Identifier> recapCovers,
-        Optional<String> background) {
+        Optional<String> background,
+        List<RewardSpec> onReplay) {
+
+    /** Before {@code on_replay}. */
+    public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
+            boolean main, QuestScope scope, boolean replayable, Optional<String> recap, List<Identifier> recapCovers, Optional<String> background) {
+        this(name, description, order, requires, icon, main, scope, replayable, recap, recapCovers, background, List.of());
+    }
 
     /** Before {@code recap}: kept, since a record's canonical constructor is public API. */
     public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
             boolean main, QuestScope scope, boolean replayable) {
-        this(name, description, order, requires, icon, main, scope, replayable, Optional.empty(), List.of(), Optional.empty());
+        this(name, description, order, requires, icon, main, scope, replayable, Optional.empty(), List.of(), Optional.empty(), List.of());
     }
 
     /** Before {@code background}. */
     public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
             boolean main, QuestScope scope, boolean replayable, Optional<String> recap, List<Identifier> recapCovers) {
-        this(name, description, order, requires, icon, main, scope, replayable, recap, recapCovers, Optional.empty());
+        this(name, description, order, requires, icon, main, scope, replayable, recap, recapCovers, Optional.empty(), List.of());
     }
 
     /**
@@ -60,6 +68,10 @@ public record Chapter(
             ChroniclerIds.CODEC.listOf().optionalFieldOf("recap_covers", List.of()).forGetter(Chapter::recapCovers),
             // The achievements tab's background, a client asset id ("threadwork:gui/advancements/zarp"); the first
             // chapter to name one wins, since the mod has one tab. Read again from the raw JSON by AchievementPack.
-            Codec.STRING.optionalFieldOf("background").forGetter(Chapter::background))
+            Codec.STRING.optionalFieldOf("background").forGetter(Chapter::background),
+            // Run for the replaying player once /quest replay has cleared the chapter: the same effects a
+            // quest's rewards and on_enter take (give back the quest items its stages consumed, npc_restore
+            // the person a choice removed, clear the world flags its endings set). ZARP's finale asked.
+            RewardTypes.CODEC.listOf().optionalFieldOf("on_replay", List.of()).forGetter(Chapter::onReplay))
             .apply(i, Chapter::new));
 }
