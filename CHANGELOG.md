@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.9 — 2026-10-28
 
 - Progress counts only quests this player can reach: a counting quest shut to them by `race`, `class` or a flag as it stands is left out of the total (a finished one keeps its credit); `level_min`, karma and reputation are grown into and still count. Chapter completion, its achievement and the login sweep use the same arithmetic. Sable's ZARP run sat at 90% behind four Survivors quests locked to other classes.
 - **A replay can put the world back.** A chapter's `on_replay` list runs for the replaying player once `/quest replay` has cleared it, with the same effects quests use -- ZARP's finale hands back the three quest items its stages consumed, brings Kit back and clears the flags its endings set. New `npc_restore` effect: undoes `npc_remove` for a quest's person (what they left behind goes, they are placed again as a server start places them; a no-op if still there). `flag` with `value: false` clears a world flag, as it always did. `ChapterReplayedEvent` is posted on the game bus for a pack mod. (Sable replayed the finale and found the items gone, Kit gone and the endings' flags still set.)
