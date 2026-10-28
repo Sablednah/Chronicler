@@ -315,6 +315,7 @@ public final class Lang {
         def("giver.someone", "the one who asked");
         def("rew.npc_say", "Someone has something to say.");
         def("rew.npc_remove", "Someone will not be there any more.");
+        def("rew.npc_restore", "Someone comes back.");
         def("rew.ending", "An ending.");
         def("cond.race", "be {race}");
         def("cond.class", "be a {class}");

@@ -125,6 +125,28 @@ public final class GiverStore extends SavedData {
         setDirty();
     }
 
+    /** Where {@code npc_remove} left something behind for this quest's person, in {@code dim|x,y,z}. */
+    public record Left(Identifier dimension, BlockPos pos) {}
+
+    public void setLeft(Identifier quest, Identifier dimension, BlockPos pos) {
+        placed.put("left:" + quest, dimension + "|" + pos.getX() + "," + pos.getY() + "," + pos.getZ());
+        setDirty();
+    }
+
+    public Optional<Left> left(Identifier quest) {
+        String v = placed.get("left:" + quest);
+        if (v == null) return Optional.empty();
+        try {
+            String[] halves = v.split("\\|");
+            String[] p = halves[1].split(",");
+            return Optional.of(new Left(Identifier.parse(halves[0]), new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]))));
+        } catch (RuntimeException e) { return Optional.empty(); }
+    }
+
+    public void clearLeft(Identifier quest) {
+        if (placed.remove("left:" + quest) != null) setDirty();
+    }
+
     public void setPlacedFor(Identifier quest, java.util.UUID npcId) {
         placed.put(quest.toString(), npcId.toString());
         setDirty();
