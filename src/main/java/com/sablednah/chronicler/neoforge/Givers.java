@@ -212,6 +212,28 @@ public final class Givers {
         level.setBlockAndUpdate(pos, state);
     }
 
+    /**
+     * Undo {@code npc_remove} for a quest's person: whatever it left behind (the bench, the notes) goes,
+     * then the giver is placed again exactly as a server start places it -- a no-op if they are still
+     * there. False when there is nothing to place (no such quest, or its giver is not a person); what was
+     * left behind is cleared either way. Kit, removed by the Cure, comes back for a replay of the finale.
+     */
+    public static boolean restoreNpc(MinecraftServer server, Identifier questId) {
+        GiverStore store = GiverStore.get(server);
+        store.left(questId).ifPresent(left -> {
+            ServerLevel level = server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, left.dimension()));
+            if (level != null) {
+                store.remove(level, left.pos());
+                level.setBlockAndUpdate(left.pos(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+            store.clearLeft(questId);
+        });
+        var quest = QuestEngine.quest(server, questId);
+        if (quest.isEmpty() || !(quest.get().value().giver().orElse(null) instanceof GiverTypes.NpcGiver n) || n.of().isPresent()) return false;
+        placeNpc(server, questId, n);
+        return true;
+    }
+
     /** This quest is given by the NPC of another quest. */
     private static void shareNpc(MinecraftServer server, Identifier questId, Identifier of) {
         if (!Npcs.available()) return;

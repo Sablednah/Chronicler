@@ -149,6 +149,7 @@ public final class Rewards {
                     var at = net.minecraft.core.BlockPos.containing(p.pos());
                     Givers.placeBlock(level, at, r.leave().get(), questId);
                     r.giverFor().ifPresent(q -> GiverStore.get(server).set(level, at, q));
+                    GiverStore.get(server).setLeft(r.quest().orElse(questId), p.dimension(), at); // so npc_restore can take it away
                     Chronicler.LOGGER.info("Chronicler: {} left {} at {}{}", r.quest().orElse(questId), r.leave().get(), at,
                             r.giverFor().map(q -> ", giving " + q).orElse(""));
                 });
@@ -157,6 +158,11 @@ public final class Rewards {
             GiverStore.get(server).removeNpc(npc.get());
             GiverStore.get(server).clearMini(npc.get());
             Chronicler.LOGGER.info("Chronicler: quest {} removed the NPC of {} ({})", questId, r.quest().orElse(questId), npc.get());
+        });
+        register(RewardTypes.NpcRestore.class, (player, r, questId, quest) -> {
+            Identifier of = r.quest().orElse(questId);
+            boolean back = Givers.restoreNpc(player.level().getServer(), of);
+            Chronicler.LOGGER.info("Chronicler: {} asked for the NPC of {} back{}", questId, of, back ? "" : " -- nothing to place (no such quest, or not a person)");
         });
         register(RewardTypes.SetBlock.class, (player, r, questId, quest) -> {
             var server = player.level().getServer();
@@ -205,7 +211,8 @@ public final class Rewards {
         });
         register(RewardTypes.Flag.class, (player, r, questId, quest) -> {
             if (r.player()) {
-                QuestEngine.journal(player).setFlag(r.name(), r.value(), quest.chapter());
+                // quest is null when a chapter's on_replay runs: questId is then the chapter itself.
+                QuestEngine.journal(player).setFlag(r.name(), r.value(), quest != null ? quest.chapter() : questId);
             } else {
                 FlagStore.get(player.level().getServer()).set(r.name(), r.value());
                 Chronicler.LOGGER.info("Chronicler: world flag {} = {} (quest {} by {})",
