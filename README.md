@@ -223,7 +223,12 @@ override `scope`. Every word a player sees lives in
   conditions ("finish The Camp; be Immune"). Without `locked`, a plain sentence.
 - **Progress.** `/quests` and the journal show a percentage. Only quests that
   count move it: `counts: true|false`, unsaid means "main chapter and not
-  repeatable", so bounties and side lines never hold anyone short of 100%.
+  repeatable", so bounties and side lines never hold anyone short of 100%. And
+  only quests this player can reach: one shut to them by `race`, `class` or a flag
+  as it stands is left out of the total (a finished one keeps its credit), while
+  `level_min`, karma and reputation are grown into and still count. Chapter
+  completion and its achievement use the same arithmetic, so a class-locked side
+  quest never holds a chapter at 90%.
 
 ### Achievements
 
