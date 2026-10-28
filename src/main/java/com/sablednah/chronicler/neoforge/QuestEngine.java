@@ -786,10 +786,20 @@ public final class QuestEngine {
             }
         }
         log.replay(chapter, mine);
+        runOnReplay(player, chapter, holder.get().value().onReplay());
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new com.sablednah.chronicler.api.ChapterReplayedEvent(player, chapter));
         Feedback.fanfare(player, Lang.fmt("cmd.replay.done", "name", holder.get().value().name(), "found", log.endings(chapter).size(), "total", endingsOf(server, chapter).size()),
                 Lang.fmt("cmd.replay.title", "name", holder.get().value().name()), Lang.get("cmd.replay.subtitle"));
         Chronicler.LOGGER.info("Chronicler: {} replays chapter {}", player.getName().getString(), chapter);
         return true;
+    }
+
+    /**
+     * A chapter's {@code on_replay} effects, once the journal has forgotten the chapter: the same granters
+     * as a quest's rewards, run with the chapter as the id and no quest (a granter must not assume one).
+     */
+    static void runOnReplay(ServerPlayer player, Identifier chapter, List<RewardSpec> effects) {
+        for (RewardSpec r : effects) Rewards.grant(player, r, chapter, null);
     }
 
     /** Counting quests done over counting quests, per chapter and overall. */

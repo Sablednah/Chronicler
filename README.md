@@ -210,7 +210,13 @@ override `scope`. Every word a player sees lives in
 - **Endings.** A stage or a choice with `ending: cure` records an ending for
   the chapter; `end: true` on a stage finishes the quest there. A chapter with
   `replayable: true` can be started over with `/quest replay <chapter>` --
-  completions, cooldowns and the chapter's own player flags go, endings stay.
+  completions, cooldowns and the chapter's own player flags go, endings stay. A chapter's
+  `on_replay: [ ... ]` then runs for the replaying player, with the same effects quests use: hand
+  back the quest items its stages consumed (`{ type: item, quest_item: zarp:living_flame }`),
+  bring back a person a choice removed (`{ type: npc_restore, quest: zarp:blood_ties }` -- the
+  bench or notes it left go too; a no-op if they are still there), clear the world flags its
+  endings set (`{ type: flag, name: zarp_cured, value: false }`). A pack mod can listen for
+  `api.ChapterReplayedEvent` on the game bus as well.
 - **`locked`** on a quest is the in-character line for a refusal ("Kit shakes
   her head. 'They'd look at you.'"), spoken by the NPC if there is one; what it
   really means follows in grey brackets, generated from the requirements and

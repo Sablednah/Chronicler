@@ -185,6 +185,19 @@ public final class RewardTypes {
      * bench can go on handing out his work. Placed at the NPC's last position, not their data
      * offset, so it lands right even after a Storyteller walked them somewhere else.
      */
+    /**
+     * Undoes {@code npc_remove} for a quest's NPC giver: whatever it left behind goes, and the person is
+     * placed again where Givers puts them (their file's spot). A giver who was never removed is a no-op.
+     * {@code quest} defaults to the quest the effect runs from; a chapter's {@code on_replay} names it.
+     */
+    public record NpcRestore(Optional<Identifier> quest) implements RewardSpec {
+        public static final MapCodec<NpcRestore> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(NpcRestore::quest))
+                .apply(i, NpcRestore::new));
+        @Override public MapCodec<NpcRestore> codec() { return MAP_CODEC; }
+        @Override public String describe() { return Lang.get("rew.npc_restore"); }
+    }
+
     public record NpcRemove(Optional<Identifier> quest, Optional<String> text,
             Optional<String> leave, Optional<Identifier> giverFor, Optional<String> npc) implements RewardSpec {
         public NpcRemove(Optional<Identifier> quest, Optional<String> text, Optional<String> leave, Optional<Identifier> giverFor) {
@@ -321,6 +334,7 @@ public final class RewardTypes {
         TYPES.register("money", Money.MAP_CODEC);
         TYPES.register("npc_say", NpcSay.MAP_CODEC);
         TYPES.register("npc_remove", NpcRemove.MAP_CODEC);
+        TYPES.register("npc_restore", NpcRestore.MAP_CODEC);
         TYPES.register("ending", Ending.MAP_CODEC);
         TYPES.register("advancement", Advancement.MAP_CODEC);
         TYPES.register("block", SetBlock.MAP_CODEC);
