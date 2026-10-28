@@ -10,6 +10,32 @@ import net.minecraft.server.level.ServerPlayer;
 /** Evaluate an {@link Availability} for a player: the lines that are NOT met, in prose. */
 public final class Conditions {
 
+    /**
+     * The gates a player cannot grow through: race, class, world flags and player flags, as they stand
+     * now. Karma, level and reputation are left out -- "you'll grow into it" is a path, not a wall --
+     * and so are {@code requires}, which are the story's own order. What {@code progress} asks before a
+     * quest is counted toward a chapter or the story: Sable's ZARP run sat at 90% with four Survivors
+     * quests shut to his race and class for good, and prestige is New Game+, not a plan.
+     */
+    public static boolean gatesClosed(ServerPlayer player, Availability a) {
+        if (!a.race().isEmpty() || !a.clazz().isEmpty()) {
+            if (!Sheet.available()) return true; // nobody can be the race or class a quest wants with no sheet to be it on
+            if (!a.race().isEmpty()) {
+                var race = Sheet.race(player);
+                if (race.isEmpty() || a.race().stream().noneMatch(want -> idMatches(race.get(), want))) return true;
+            }
+            if (!a.clazz().isEmpty()) {
+                var classes = Sheet.classes(player);
+                if (classes.stream().noneMatch(c -> a.clazz().stream().anyMatch(want -> idMatches(c, want)))) return true;
+            }
+        }
+        FlagStore world = FlagStore.get(player.level().getServer());
+        for (var e : a.flags().entrySet()) if (world.is(e.getKey()) != e.getValue()) return true;
+        var log = QuestEngine.journal(player);
+        for (var e : a.playerFlags().entrySet()) if (log.hasFlag(e.getKey()) != e.getValue()) return true;
+        return false;
+    }
+
     public static List<String> unmet(ServerPlayer player, Availability a) {
         List<String> out = new ArrayList<>();
         if (a.needsCharacter() && !Sheet.available()) {
