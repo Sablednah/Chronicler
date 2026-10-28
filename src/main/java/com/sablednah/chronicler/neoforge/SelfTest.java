@@ -1071,6 +1071,27 @@ public final class SelfTest {
         check("progress: main-chapter quests count, repeatables do not (prologue " + chapterP.done() + "/" + chapterP.total() + ")",
                 chapterP.total() == 5 && chapterP.done() == 4);
         check("progress: overall is at least the prologue", overall.total() >= chapterP.total() && overall.percent() >= 0 && overall.percent() <= 100);
+        // Only quests this player can reach count (ZARP sat at 90% behind four class-locked Survivors quests):
+        // a shut gate (race, class, a flag as it stands) keeps a quest out of the total; a level is grown into.
+        {
+            var ops = com.mojang.serialization.JsonOps.INSTANCE;
+            java.util.function.Function<String, Quest> q = avail -> Quest.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                    "{\"name\": \"Gated\", \"chapter\": \"prologue\", \"objectives\": [{\"type\": \"collect\", \"item\": \"minecraft:stick\"}], \"availability\": "
+                    + avail + "}")).result().orElseThrow();
+            Identifier gated = ChroniclerIds.of("selftest_gated");
+            check("progress: a quest behind a player flag that is not set is not reachable",
+                    !QuestEngine.reachable(solo, gated, q.apply("{\"player_flags\": {\"selftest_gate\": true}}")));
+            log.setFlag("selftest_gate", true, prologue);
+            check("progress: ...and is, once the flag flips", QuestEngine.reachable(solo, gated, q.apply("{\"player_flags\": {\"selftest_gate\": true}}")));
+            FlagStore.get(server).set("selftest_world_gate", true);
+            check("progress: a world flag wanted false while true shuts it", !QuestEngine.reachable(solo, gated, q.apply("{\"flags\": {\"selftest_world_gate\": false}}")));
+            check("progress: a level the player has not reached is grown into, not a wall", QuestEngine.reachable(solo, gated, q.apply("{\"level_min\": 99}")));
+            check("progress: a race or class the player is not is a wall (" + (Sheet.available() ? "sheet: " + Sheet.providerName() : "no sheet") + ")",
+                    !QuestEngine.reachable(solo, gated, q.apply("{\"race\": [\"legendquest:no_such_race\"]}")));
+            log.complete(gated);
+            check("progress: a finished quest keeps its credit whatever closed after", QuestEngine.reachable(solo, gated, q.apply("{\"race\": [\"legendquest:no_such_race\"]}")));
+            log.setFlag("selftest_gate", false, prologue);
+        }
 
         // --- endings and replay ---
         var nightWatch = QuestEngine.quest(server, ChroniclerIds.of("night_watch")).map(h -> h.value()).orElseThrow();

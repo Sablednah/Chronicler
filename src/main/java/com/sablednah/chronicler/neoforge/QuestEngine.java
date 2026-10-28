@@ -807,6 +807,18 @@ public final class QuestEngine {
         public int percent() { return total == 0 ? 0 : (int) Math.floor(done * 100.0 / total); }
     }
 
+    /**
+     * Whether this player could ever do the quest: done already (credit keeps, whatever closed after),
+     * or none of its gates -- race, class, flags -- is shut right now. Level, karma and reputation are
+     * grown into and do not count against it; a flag that flips later in normal play (keeping the
+     * sample) keeps that quest out until it does, which is right for the player who never will.
+     */
+    public static boolean reachable(ServerPlayer player, Identifier id, Quest quest) {
+        if (journal(player).isComplete(id)) return true;
+        return quest.availability().map(a -> !Conditions.gatesClosed(player, a)).orElse(true);
+    }
+
+    /** Counting quests this player can reach, done over total; the live chapter grant and the login sweep both read it. */
     public static Progress progress(ServerPlayer player, Optional<Identifier> chapter) {
         MinecraftServer server = player.level().getServer();
         QuestLog log = journal(player);
@@ -816,6 +828,7 @@ public final class QuestEngine {
             if (chapter.isPresent() && !q.chapter().equals(chapter.get())) return;
             var ch = chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, q.chapter()));
             if (ch.isEmpty() || !q.countsToward(ch.get().value())) return;
+            if (!reachable(player, h.key().identifier(), q)) return; // shut to this player for good: not theirs to finish
             total[0]++;
             if (log.isComplete(h.key().identifier())) done[0]++;
         });
