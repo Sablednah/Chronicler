@@ -121,7 +121,10 @@ kill <the JVM whose cmdline has Chronicler/build/classes>; rm run/mods/*.jar
   `build.gradle` for the same reason.
 - **Boot with every sibling AND with only the required two** (Standards and Cast; without
   them NeoForge refuses to start). The compat classes only link when the mod is present, and
-  both counts matter (192 and 166 at 1.0.0; 280 and 252 with mini quests; 373 and 328 at 1.3.4).
+  both counts matter (192 and 166 at 1.0.0; 280 and 252 with mini quests; 411 and 366 at 1.3.9). **The required-only
+  boot loads the prologue alone (2 chapters); only the all-siblings boot loads ZARP's 11**, so a change to
+  ZARP data is proven by the second boot, not the first. A boot command cut off by the harness (exit 144)
+  may have finished anyway: read `server.log` before re-running.
 - **`libs/` (gitignored) holds a sibling jar that has no `build/libs` for this
   line** -- ZombieMod's 26.1.2 jar is copied there from the CurseForge `26.1.2`
   instance (its 1.21.11 jar does build in `../ZombieMod/ZombieMod/build/libs`
@@ -205,6 +208,11 @@ neoforge/Pockets     where else a player keeps things (Curios slots): count/take
 neoforge/Containers  what is INSIDE carried or worn items (backpacks, shulker boxes) through NeoForge's own item capability
                      (Capabilities.Item.ITEM -> ResourceHandler<ItemResource>, present on every line incl. 1.21.11); counted and
                      taken after the inventory and the pockets; one level deep; names no backpack mod
+neoforge/Conditions  unmet(player, availability) = every reason a quest is not open, worded; gatesClosed(player, availability) =
+                     only the walls (race, class, flags as they stand). QuestEngine.reachable = complete OR gates open, and
+                     progress() counts only reachable quests -- the chapter grant, the sweep, the journal and /quests agree
+neoforge/Achievements chapter/<ns>/<chapter> and ending/<ns>/<chapter>/<slug> ids; sweep(player) on login and /reload re-grants
+                     whatever the journal already says was earned (the pack may have arrived after the deed)
 neoforge/Journal     the written book; FlagStore = world flags (SavedData, cached for off-thread)
 neoforge/JournalPanel the same journal as one payload for a modded client (journal.panel): text resolved
                      here, buttons are /quest commands the client sends back (RUN runs only "quest ...");
@@ -573,7 +581,7 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
   may already cover it. If it recurs, get the quest pair before touching `pick`.
 - `git cherry-pick` has no `-q`; it errors, and a `| tail -1` behind it hides the error while the
   loop moves on and reports the OLD head. Show cherry-pick output, and check the head moved.
-- **Release day, as run (1.0.0, 2026-09-13; four lines since 1.2.1, last 1.3.4 on 2026-10-12):** edit
+- **Release day, as run (1.0.0, 2026-09-13; four lines since 1.2.1; 1.3.5-1.3.9 ran it five times in a fortnight):** edit
   template mods.toml + `mod_version` + dated CHANGELOG heading + rot sweep (`grep -rn "0\.1\.0\|not
   yet\|to come"` over docs), build, the two self-test boots, commit main, cherry-pick to
   `mc26.1`/`mc26.2`/`mc26.3` (docs conflicts: `--ours` on CLAUDE.md/README.md/docs/DESIGN.md, `rm`
@@ -581,11 +589,16 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
   26.x) and read `Build-Commit`/`Build-Branch` from each manifest (equal to that branch's head, no
   `-dirty`), `git tag -a`, push every branch and the tag, `gh release create` with the four jars and the
   CHANGELOG section as notes, watch `gh run list --workflow=curseforge.yml` (one ">> Uploading" per
-  jar), then `./deploy.sh` on each branch. `deploy.sh` REBUILDS: a sibling whose `build/libs` lacks
-  this line's jar breaks it after the release build passed (`libs/` is the fallback; copy the released
-  jar by hand after `cmp` against the GitHub asset). It skips the **LegendQuest ZARP** instance
-  (`.sablecraft-no-deploy`, which stays): Sable allows hand-copied jars there until that pack rolls
-  out, when every jar must come from CurseForge -- copy after a running check, never a dev build
-  once a release covers 26.2. A 26.3-only fix is a 26.3-only point release: version bumped on every
-  branch, one jar attached, the other lines stay where they were on CurseForge.
+  jar; the log shows the file ids a few seconds after the run says success), then `./deploy.sh` on each
+  branch -- four rebuilds exceed one foreground window, so run that loop in the background and read its
+  output file. `deploy.sh` REBUILDS: a sibling whose `build/libs` lacks this line's jar breaks it after the
+  release build passed (`libs/` is the fallback; copy the released jar by hand after `cmp` against the
+  GitHub asset). It skips the **LegendQuest ZARP** instance (`.sablecraft-no-deploy`, which stays): since
+  2026-10-22 that instance takes Chronicler through the **CurseForge app** (Sable updates it himself; the
+  ZARP session logs the file id), so nothing is copied there unless Sable asks for a dev jar outright --
+  then after a running check, and tell the ZARP session so its jar log is right. A 26.3-only fix is a
+  26.3-only point release: version bumped on every branch, one jar attached, the other lines stay where
+  they were on CurseForge. **Another session may release Cast between your checks** (1.2.3, 1.2.4 were):
+  before answering "anything unreleased?", `git fetch` and compare each branch against origin in BOTH
+  directions.
 - Never edit a sibling's `CLAUDE.md`; raise it with Sable instead.
