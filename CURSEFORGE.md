@@ -28,11 +28,13 @@ is sugar; nothing is required.
   deadlines with a fall-back, and decision beats whose choices set flags, pay karma, spawn things,
   send an NPC away, or open another quest.
 - **Measured honestly.** Kill this, carry that, reach there, *hand it over* (a bare "collect" is
-  satisfied in your pack; a delivery means putting it in someone's hands), build a multiblock and
-  light it, wait for something, wait for the world to change.
+  satisfied in your pack; a delivery means putting it in someone's hands), go back to someone and
+  tell them, build a multiblock and light it, wait for something, wait for the world to change.
 - **Remembered.** World flags any quest can set and any quest can read; the player's own flags;
   reputation with a standing; endings reached per chapter, and chapters you can play again to find
-  the others, with a progress figure that only counts the quests that should count.
+  the others, with a progress figure that only counts the quests that should count. And the
+  words keep up: once a flag says someone is gone, their quests speak of them in the past tense,
+  and a line that would mention them is not said.
 - **Shared.** A party quest pools progress across a party, scales targets to its size, and pays
   everyone.
 
