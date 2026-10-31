@@ -36,6 +36,26 @@ public final class Conditions {
         return false;
     }
 
+    /**
+     * Does every gate hold? A variant's and a {@code when} effect's test, asked on every read of a quest
+     * that has variants, so the flag-only case touches no Lang at all.
+     */
+    public static boolean met(ServerPlayer player, Availability a) {
+        if (gatesClosed(player, a)) return false;
+        if (a.karmaMin().isEmpty() && a.karmaMax().isEmpty() && a.levelMin().isEmpty() && a.levelMax().isEmpty() && a.reputation().isEmpty()) return true;
+        return unmet(player, a).isEmpty();
+    }
+
+    /** The effects and rewards this player would be given: a {@code when} that does not hold for them is left out. */
+    public static List<com.sablednah.chronicler.data.RewardSpec> shownTo(ServerPlayer player, List<com.sablednah.chronicler.data.RewardSpec> rewards) {
+        List<com.sablednah.chronicler.data.RewardSpec> out = new ArrayList<>(rewards.size());
+        for (var r : rewards) {
+            if (player != null && r instanceof com.sablednah.chronicler.data.RewardTypes.When w && !met(player, w.when())) continue;
+            out.add(r);
+        }
+        return out;
+    }
+
     public static List<String> unmet(ServerPlayer player, Availability a) {
         List<String> out = new ArrayList<>();
         if (a.needsCharacter() && !Sheet.available()) {

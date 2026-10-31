@@ -275,9 +275,10 @@ public final class ChroniclerCommands {
         int shown = 0;
         for (var entry : byChapter.entrySet()) {
             var chapter = chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, entry.getKey()));
-            out.append("\n").append(Feedback.colored(chapter.map(h -> Lang.fmt("cmd.list.chapter",
-                            "name", h.value().name(),
-                            "description", h.value().description().orElse("")))
+            var worded = player == null ? chapter.map(Holder.Reference::value) : QuestEngine.chapterFor(player, entry.getKey());
+            out.append("\n").append(Feedback.colored(worded.map(c -> Lang.fmt("cmd.list.chapter",
+                            "name", c.name(),
+                            "description", c.description().orElse("")))
                     .orElseGet(() -> Lang.fmt("cmd.list.orphan_chapter", "id", entry.getKey()))));
             if (player != null && chapter.isPresent()) {
                 var p = QuestEngine.progress(player, java.util.Optional.of(entry.getKey()));
@@ -288,8 +289,8 @@ public final class ChroniclerCommands {
             entry.getValue().sort(Comparator.comparingInt((Holder.Reference<Quest> h) -> h.value().order())
                     .thenComparing(h -> h.key().identifier().toString()));
             for (var h : entry.getValue()) {
-                Quest q = h.value();
                 Identifier id = h.key().identifier();
+                Quest q = player == null ? h.value() : QuestEngine.questFor(player, id).orElse(h.value());
                 // The console has no journal, so it sees what a newcomer would.
                 boolean visible = player != null ? QuestEngine.visible(player, id, q)
                         : q.visibility() == com.sablednah.chronicler.core.QuestVisibility.ALWAYS;
@@ -354,8 +355,8 @@ public final class ChroniclerCommands {
 
         List<String> lines = new ArrayList<>();
         lines.add(Lang.fmt("cmd.info.header", "name", q.name(), "id", id));
-        String chapterName = chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, q.chapter()))
-                .map(h -> h.value().name()).orElse(q.chapter().toString());
+        String chapterName = player != null ? QuestEngine.chapterNameFor(player, q.chapter())
+                : chapters.get(ResourceKey.create(ChroniclerRegistries.CHAPTER, q.chapter())).map(h -> h.value().name()).orElse(q.chapter().toString());
         lines.add(Lang.fmt("cmd.info.chapter", "chapter", chapterName));
         q.description().ifPresent(d -> lines.add(Lang.fmt("cmd.info.description", "description", d)));
         if (QuestEngine.scopeOf(source.getServer(), q) == QuestScope.PARTY) lines.add(Lang.get("cmd.info.scope_party"));
@@ -365,7 +366,7 @@ public final class ChroniclerCommands {
         }
         if (!q.requires().isEmpty()) {
             lines.add(Lang.fmt("cmd.info.requires", "list", q.requires().stream()
-                    .map(r -> quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, r))
+                    .map(r -> player != null ? QuestEngine.nameFor(player, r) : quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, r))
                             .map(h -> h.value().name()).orElse(r.toString()))
                     .collect(Collectors.joining(", "))));
         }
@@ -385,8 +386,9 @@ public final class ChroniclerCommands {
                     : Lang.fmt("cmd.info.progress", "line", desc, "done", entry.progress.get(n), "target", entry.targets.get(n)));
         }
         lines.add(Lang.get("cmd.info.rewards"));
-        if (q.rewards().isEmpty()) lines.add(Lang.get("cmd.info.none"));
-        q.rewards().forEach(r -> lines.add(Lang.fmt("cmd.info.reward", "line", r.describe())));
+        var rewards = Conditions.shownTo(player, q.rewards());
+        if (rewards.isEmpty()) lines.add(Lang.get("cmd.info.none"));
+        rewards.forEach(r -> lines.add(Lang.fmt("cmd.info.reward", "line", r.describe())));
 
         MutableComponent out = Feedback.colored(String.join("\n", lines)).copy();
         if (player != null) {

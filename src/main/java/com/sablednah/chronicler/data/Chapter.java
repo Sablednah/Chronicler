@@ -29,24 +29,38 @@ public record Chapter(
         Optional<String> recap,
         List<Identifier> recapCovers,
         Optional<String> background,
-        List<RewardSpec> onReplay) {
+        List<RewardSpec> onReplay,
+        List<Variant> variants) {
+
+    /** Before {@code variants}. */
+    public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
+            boolean main, QuestScope scope, boolean replayable, Optional<String> recap, List<Identifier> recapCovers, Optional<String> background,
+            List<RewardSpec> onReplay) {
+        this(name, description, order, requires, icon, main, scope, replayable, recap, recapCovers, background, onReplay, List.of());
+    }
+
+    /** The chapter in a variant's words (name, description, recap); the copy has no variants of its own. */
+    public Chapter worded(Variant v) {
+        return new Chapter(v.name().orElse(name), v.description().or(() -> description), order, requires, icon, main, scope, replayable,
+                v.recap().or(() -> recap), recapCovers, background, onReplay, List.of());
+    }
 
     /** Before {@code on_replay}. */
     public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
             boolean main, QuestScope scope, boolean replayable, Optional<String> recap, List<Identifier> recapCovers, Optional<String> background) {
-        this(name, description, order, requires, icon, main, scope, replayable, recap, recapCovers, background, List.of());
+        this(name, description, order, requires, icon, main, scope, replayable, recap, recapCovers, background, List.of(), List.of());
     }
 
     /** Before {@code recap}: kept, since a record's canonical constructor is public API. */
     public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
             boolean main, QuestScope scope, boolean replayable) {
-        this(name, description, order, requires, icon, main, scope, replayable, Optional.empty(), List.of(), Optional.empty(), List.of());
+        this(name, description, order, requires, icon, main, scope, replayable, Optional.empty(), List.of(), Optional.empty(), List.of(), List.of());
     }
 
     /** Before {@code background}. */
     public Chapter(String name, Optional<String> description, int order, List<Identifier> requires, Optional<Identifier> icon,
             boolean main, QuestScope scope, boolean replayable, Optional<String> recap, List<Identifier> recapCovers) {
-        this(name, description, order, requires, icon, main, scope, replayable, recap, recapCovers, Optional.empty(), List.of());
+        this(name, description, order, requires, icon, main, scope, replayable, recap, recapCovers, Optional.empty(), List.of(), List.of());
     }
 
     /**
@@ -55,7 +69,7 @@ public record Chapter(
      * names them; unsaid, every quest that counts toward the chapter's progress. The covered quests'
      * {@code recap_endings} and {@code recap_flags} lines still follow, since they carry the choices.
      */
-    public static final Codec<Chapter> CODEC = RecordCodecBuilder.create(i -> i.group(
+    public static final Codec<Chapter> CODEC = RecordCodecBuilder.<Chapter>create(i -> i.group(
             Codec.STRING.fieldOf("name").forGetter(Chapter::name),
             Codec.STRING.optionalFieldOf("description").forGetter(Chapter::description),
             Codec.INT.optionalFieldOf("order", 0).forGetter(Chapter::order),
@@ -72,6 +86,18 @@ public record Chapter(
             // Run for the replaying player once /quest replay has cleared the chapter: the same effects a
             // quest's rewards and on_enter take (give back the quest items its stages consumed, npc_restore
             // the person a choice removed, clear the world flags its endings set). ZARP's finale asked.
-            RewardTypes.CODEC.listOf().optionalFieldOf("on_replay", List.of()).forGetter(Chapter::onReplay))
-            .apply(i, Chapter::new));
+            RewardTypes.CODEC.listOf().optionalFieldOf("on_replay", List.of()).forGetter(Chapter::onReplay),
+            // Other words once the world has moved on: name, description and recap only (see Variant).
+            Variant.CODEC.listOf().optionalFieldOf("variants", List.of()).forGetter(Chapter::variants))
+            .apply(i, Chapter::new)).validate(c -> {
+                for (int n = 0; n < c.variants().size(); n++) {
+                    var bad = c.variants().get(n).notForAChapter();
+                    if (bad.isPresent()) {
+                        String why = "variants[" + (n + 1) + "]." + bad.get() + ": a chapter variant rewords name, description and recap; "
+                                + bad.get() + " belongs in a quest's variants";
+                        return com.mojang.serialization.DataResult.error(() -> why);
+                    }
+                }
+                return com.mojang.serialization.DataResult.success(c);
+            });
 }
