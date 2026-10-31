@@ -164,6 +164,14 @@ override `scope`. Every word a player sees lives in
   around: spawn, min_radius: 17, radius: 24 }` is outside a fence at 15. Quest items are not
   eatable or drinkable unless the entry says `usable: true`.
 - **`wait`** (`seconds`) lets time pass from entering the beat -- "come back later".
+- **Going back to someone.** `{ type: visit, giver: zarp:the_camp, radius: 8 }` is a `visit` to
+  a quest's giver wherever it is -- the person, the block, or the block `giver_for` left behind
+  them -- in place of coordinates ("Go back to Sarge"). `{ type: talk, to: zarp:the_camp,
+  label: "Tell Sarge" }` is reporting back: done by right-clicking that giver, before any offer.
+  Both show as map waypoints.
+- **Kill drops** (`drop: { quest_item: zarp:dog_tag, chance: 0.5 }`) stop when the kill count
+  fills, unless a `collect` or `deliver` in the same beat still wants that item -- then they go on
+  until it is satisfied, so a low chance can never strand the quest. Collect in the kill's own beat.
 - **`collect`** takes `tag: minecraft:logs` or `quest_item: zarp:insulin`.
 - **`place`** takes `any: [ { lot: Hospital }, { structure: "#minecraft:village" } ]`
   -- alternatives, so a CityWorld lot has a vanilla fallback.
@@ -194,7 +202,10 @@ override `scope`. Every word a player sees lives in
 - **NPC givers** can stand `near_spawn: [dx, dz]` instead of `at`, dropped onto
   the surface on any seed, and `of: zarp:the_camp` makes one person give
   several quests (their mark shows whichever matters now). `npc_say` and
-  `npc_remove` effects make them speak or leave (`quest:` picks whose NPC); `leave: <block>` puts
+  `npc_remove` effects make them speak or leave (`quest:` picks whose NPC). A line said while the
+  player whose quest said it is out of earshot (another dimension, past `radius`) reaches them in
+  chat anyway, as `msg.say.far`; `far: none` keeps it where it was said, and `far: "&8[radio]
+  &f{name}&8: &7{text}"` is that line's own style. `leave: <block>` puts
   what is left of them where they last stood, and `giver_for: <quest>` makes that block its giver.
   `equipment: { mainhand: "minecraft:potion[potion_contents={potion:'minecraft:healing'}]", head: minecraft:iron_helmet }`
   dresses them (slots mainhand, offhand, head, chest, legs, feet; items as
@@ -217,6 +228,26 @@ override `scope`. Every word a player sees lives in
   bench or notes it left go too; a no-op if they are still there), clear the world flags its
   endings set (`{ type: flag, name: zarp_cured, value: false }`). A pack mod can listen for
   `api.ChapterReplayedEvent` on the game bus as well.
+- **Variants: other words once the world has moved on.** A quest's `variants` are tried in order
+  wherever its text is shown, and the first whose `when` holds for the reader rewords it; anything
+  it leaves out keeps the quest's own. `when` takes the `availability` gates (`flags`,
+  `player_flags`, race, class, karma, level, reputation; an unset flag is false). Words only --
+  objectives, rewards and beats never change.
+  ```json
+  "variants": [ { "when": { "flags": { "zarp_garage_fell": true } },
+                  "description": "Wrench had a theory. His notes still do.",
+                  "recap": "{player} finished what Wrench started.",
+                  "stages": { "1": { "text": "...", "objectives": { "1": { "label": "Bring the bench a Pump Valve" } },
+                                     "choices": { "2": { "label": "...", "text": "..." } } } } } ]
+  ```
+  Also `name`, `locked`, `recap_endings` and `recap_flags` (merged line by line). Stages, objectives
+  and choices are numbered from 1, as `next` and `fail` are; a number the quest does not have, or a
+  label on an objective type that has none (kill, collect, reputation), refuses the file at load. A
+  chapter's `variants` reword its `name`, `description` and `recap`.
+- **`when` on any effect.** `{ type: npc_say, text: "Ask Wrench.", when: { flags: { zarp_garage_fell: false } } }`
+  runs only if the gates hold for that player at that moment -- two lines side by side, one per
+  outcome. Works in rewards, `on_enter`, `on_complete`, `on_fail`, choice `effects` and
+  `on_replay`; a gated reward that does not hold is left out of the list a player is shown.
 - **`locked`** on a quest is the in-character line for a refusal ("Kit shakes
   her head. 'They'd look at you.'"), spoken by the NPC if there is one; what it
   really means follows in grey brackets, generated from the requirements and
