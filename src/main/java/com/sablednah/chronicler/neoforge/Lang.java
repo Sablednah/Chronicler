@@ -227,6 +227,8 @@ public final class Lang {
         def("obj.hold", "Carry {count} x {item}");
         def("obj.visit", "Reach {x}, {z}");
         def("obj.visit_label", "Reach {label}");
+        def("obj.visit_giver", "Go back to {who}");
+        def("obj.talk", "Talk to {who}");
         def("rew.item", "{count} x {item}");
         def("rew.command", "Something happens.");
         def("rew.xp", "{amount} experience");
@@ -314,6 +316,8 @@ public final class Lang {
         def("rew.mini", "Another errand.");
         def("giver.someone", "the one who asked");
         def("rew.npc_say", "Someone has something to say.");
+        // npc_say out of earshot, to the player whose quest said it ({name}, {text}); a file's far: overrides it.
+        def("msg.say.far", "&8(word reaches you) &f{name}&8: &7{text}");
         def("rew.npc_remove", "Someone will not be there any more.");
         def("rew.npc_restore", "Someone comes back.");
         def("rew.ending", "An ending.");

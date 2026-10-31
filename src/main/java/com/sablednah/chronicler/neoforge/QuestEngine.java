@@ -586,7 +586,8 @@ public final class QuestEngine {
                         was.ifPresent(w -> Rewards.respawnOne(w, killer));
                         continue;
                     }
-                    if (spec instanceof ObjectiveTypes.Kill k && k.drop().isPresent() && e.progress.get(n) < e.targets.get(n)) {
+                    if (spec instanceof ObjectiveTypes.Kill k && k.drop().isPresent()
+                            && (e.progress.get(n) < e.targets.get(n) || stillWanted(objectives, e, k.drop().get().questItem()))) {
                         dropQuestItem(killer, victim, k.drop().get());
                     }
                     set(killer, id, quest, n, e.progress.get(n) + 1, false);
@@ -594,6 +595,20 @@ public final class QuestEngine {
                 }
             }
         }
+    }
+
+    /**
+     * Does a collect or deliver in this beat still want more of that quest item? A drop with a chance under
+     * 1 can fill the kill count before it has dropped enough (ZARP's armoury: 5 kills at 0.5 for 2 dog tags
+     * left about one player in five stuck for good), so the drops go on while the beat is short of them.
+     */
+    static boolean stillWanted(List<ObjectiveSpec> objectives, QuestLog.Entry e, Identifier questItem) {
+        for (int m = 0; m < objectives.size() && m < e.progress.size(); m++) {
+            Optional<Identifier> wants = objectives.get(m) instanceof ObjectiveTypes.Collect c ? c.questItem()
+                    : objectives.get(m) instanceof ObjectiveTypes.Deliver d ? d.questItem() : Optional.empty();
+            if (wants.filter(questItem::equals).isPresent() && e.progress.get(m) < e.targets.get(m)) return true;
+        }
+        return false;
     }
 
     /**
@@ -742,6 +757,31 @@ public final class QuestEngine {
      */
     public static boolean onDeliver(ServerPlayer player, Identifier giverQuest) {
         return onDeliver(player, d -> d.to().map(giverQuest::equals).orElse(false));
+    }
+
+    /**
+     * A click on a quest's giver, offered to every active {@code talk} addressed to it: true when one was
+     * credited, so the giver does not also make its offer. A talk in a later beat than the current one
+     * waits its turn, as every objective does.
+     */
+    public static boolean onTalk(ServerPlayer player, Identifier giverQuest) {
+        QuestLog log = journal(player);
+        if (log.activeCount() == 0) return false;
+        boolean any = false;
+        for (Identifier id : List.copyOf(log.activeView().keySet())) {
+            var holder = questFor(player, id);
+            QuestLog.Entry e = log.entry(id);
+            if (holder.isEmpty() || e == null) continue;
+            Quest quest = holder.get();
+            List<ObjectiveSpec> objectives = currentObjectives(quest, e);
+            for (int n = 0; n < objectives.size() && n < e.progress.size(); n++) {
+                if (!(objectives.get(n) instanceof ObjectiveTypes.Talk t) || !t.to().equals(giverQuest) || e.objectiveDone(n)) continue;
+                any = true;
+                set(player, id, quest, n, 1, true);
+                if (journal(player).entry(id) == null || journal(player).entry(id).stage != e.stage) break;
+            }
+        }
+        return any;
     }
 
     /** As above, for every active delivery {@code addressed} picks out: to a quest's giver, a person by id, a block. */

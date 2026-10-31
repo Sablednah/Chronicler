@@ -224,7 +224,7 @@ public final class ObjectiveTypes {
                 Codec.intRange(0, 60).optionalFieldOf("settle", 0).forGetter(Visit::settle))
                 .apply(i, Visit::new));
 
-        @Override public MapCodec<Visit> codec() { return MAP_CODEC; }
+        @Override public MapCodec<? extends ObjectiveSpec> codec() { return VISIT; }
         @Override public int required() { return 1; }
         @Override public int settleSeconds() { return settle; }
         @Override public String describe() {
@@ -276,13 +276,55 @@ public final class ObjectiveTypes {
         @Override public String describe() { return label.orElseGet(() -> Lang.fmt("obj.flag", "flag", Lang.pretty(name))); }
     }
 
+    /**
+     * Go back to someone: stand within {@code radius} of a quest's giver, wherever it was placed -- a person,
+     * a block, the bench left where they stood. Written as a {@code visit} with {@code giver} in place of
+     * coordinates (ZARP's never_lived went from the End straight to "the horde is at the fence").
+     */
+    public record VisitGiver(Identifier giver, double radius, Optional<String> label, int settle) implements ObjectiveSpec {
+        public static final MapCodec<VisitGiver> FIELDS = RecordCodecBuilder.mapCodec(i -> i.group(
+                ChroniclerIds.CODEC.fieldOf("giver").forGetter(VisitGiver::giver),
+                Codec.DOUBLE.optionalFieldOf("radius", 8.0D).forGetter(VisitGiver::radius),
+                Codec.STRING.optionalFieldOf("label").forGetter(VisitGiver::label),
+                Codec.intRange(0, 60).optionalFieldOf("settle", 0).forGetter(VisitGiver::settle))
+                .apply(i, VisitGiver::new));
+        @Override public MapCodec<? extends ObjectiveSpec> codec() { return VISIT; }
+        @Override public int required() { return 1; }
+        @Override public int settleSeconds() { return settle; }
+        @Override public String describe() {
+            return label.orElseGet(() -> Lang.fmt("obj.visit_giver", "who", com.sablednah.chronicler.neoforge.Givers.nameOf(giver)));
+        }
+    }
+
+    /**
+     * Report back: right-click a quest's giver (the person, the block, whatever was left giving for them).
+     * Counted by the engine on the click, before any offer; nothing to poll.
+     */
+    public record Talk(Identifier to, Optional<String> label) implements ObjectiveSpec {
+        public static final MapCodec<Talk> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                ChroniclerIds.CODEC.fieldOf("to").forGetter(Talk::to),
+                Codec.STRING.optionalFieldOf("label").forGetter(Talk::label))
+                .apply(i, Talk::new));
+        @Override public MapCodec<Talk> codec() { return MAP_CODEC; }
+        @Override public int required() { return 1; }
+        @Override public String describe() {
+            return label.orElseGet(() -> Lang.fmt("obj.talk", "who", com.sablednah.chronicler.neoforge.Givers.nameOf(to)));
+        }
+    }
+
+    /** {@code visit}: a {@code giver}, or coordinates. Both records hand back this codec, so either encodes as "visit". */
+    static final MapCodec<ObjectiveSpec> VISIT = Codec.mapEither(VisitGiver.FIELDS, Visit.MAP_CODEC).xmap(
+            e -> e.map(g -> (ObjectiveSpec) g, v -> (ObjectiveSpec) v),
+            s -> s instanceof VisitGiver g ? com.mojang.datafixers.util.Either.left(g) : com.mojang.datafixers.util.Either.right((Visit) s));
+
     static {
         TYPES.register("kill", Kill.MAP_CODEC);
         TYPES.register("flag", FlagSet.MAP_CODEC);
         TYPES.register("place", At.MAP_CODEC);
         TYPES.register("reputation", Reputation.MAP_CODEC);
         TYPES.register("collect", Collect.MAP_CODEC);
-        TYPES.register("visit", Visit.MAP_CODEC);
+        TYPES.register("visit", VISIT);
+        TYPES.register("talk", Talk.MAP_CODEC);
         TYPES.register("ritual", Ritual.MAP_CODEC);
         TYPES.register("wait", Wait.MAP_CODEC);
         TYPES.register("deliver", Deliver.MAP_CODEC);

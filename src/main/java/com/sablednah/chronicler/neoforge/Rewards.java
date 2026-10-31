@@ -2,6 +2,7 @@ package com.sablednah.chronicler.neoforge;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import com.sablednah.chronicler.Chronicler;
 import com.sablednah.chronicler.data.Quest;
@@ -42,6 +43,22 @@ public final class Rewards {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * The line again, for the player whose quest said it, when they could not have heard it: another
+     * dimension, or further than its radius. Empty when they were in earshot or the file says {@code far: none}.
+     */
+    static Optional<String> farLine(ServerPlayer player, Optional<Npcs.Placed> npc, RewardTypes.NpcSay r) {
+        if (npc.isEmpty()) return Optional.empty();
+        Npcs.Placed p = npc.get();
+        boolean heard = p.dimension().equals(player.level().dimension().identifier())
+                && player.position().distanceToSqr(p.pos()) <= r.radius() * r.radius();
+        if (heard) return Optional.empty();
+        String how = r.far().orElse("");
+        if (how.equalsIgnoreCase("none")) return Optional.empty();
+        String format = how.isBlank() ? Lang.get("msg.say.far") : how;
+        return Optional.of(format.replace("{name}", p.name()).replace("{text}", r.text()));
+    }
+
     public static <R extends RewardSpec> void grant(ServerPlayer player, R reward, Identifier questId, Quest quest) {
         Granter<R> g;
         synchronized (Rewards.class) { g = (Granter<R>) BY_CLASS.get(reward.getClass()); }
@@ -134,7 +151,10 @@ public final class Rewards {
         register(RewardTypes.NpcSay.class, (player, r, questId, quest) -> {
             var npc = r.npc().isPresent() ? npcById(player, r.npc().get()) : npcFor(player, r.quest().orElse(questId));
             if (npc.isEmpty()) { Feedback.chat(player, r.text()); return; }
-            Npcs.provider().get().say(player.level().getServer(), npc.get(), r.text(), r.radius());
+            var server = player.level().getServer();
+            var placed = Npcs.provider().get().byId(server, npc.get());
+            Npcs.provider().get().say(server, npc.get(), r.text(), r.radius());
+            farLine(player, placed, r).ifPresent(line -> Feedback.chat(player, line));
         });
         register(RewardTypes.NpcRemove.class, (player, r, questId, quest) -> {
             var npc = r.npc().isPresent() ? npcById(player, r.npc().get()) : npcFor(player, r.quest().orElse(questId));
