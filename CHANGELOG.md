@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Variants: other words once the world has moved on.** A quest's `variants` reword its name, description, `locked`, `recap`, `recap_endings`/`recap_flags`, and per stage its text, objective labels and choices, for a reader whose `when` gates hold (the `availability` shape) -- first match wins, anything left out keeps the quest's own. Everywhere the text is read: journal, panel, HUD, action bar, `/quests`, offers, waypoints, recap. A chapter's `variants` reword its name, description and recap. Bad numbers are refused at load. (ZARP: Wrench in the past tense after the garage fell.)
+- **`when` on any effect or reward**: it runs, and is listed, only while those gates hold for the player.
+- **Going back to someone**: `visit` takes `giver: <quest>` in place of coordinates, and a new `talk` objective is done by right-clicking a quest's giver. A click on a giver now asks every delivery and talk addressed to it, not only the first quest's.
+- **`npc_say` out of earshot** reaches the player whose quest said it anyway (`msg.say.far`; `far: none`, or `far: "<format>"` for the line's own style). Okafor's lines after the Cinder in the Nether were lost.
+- Fix: a kill `drop` with a chance under 1 could fill the kill count before dropping enough to collect, and the quest was stuck for good (ZARP's armoury, about one player in five). Drops go on while a collect or deliver in the same beat still wants the item.
+
 ## 1.3.9 — 2026-10-28
 
 - Progress counts only quests this player can reach: a counting quest shut to them by `race`, `class` or a flag as it stands is left out of the total (a finished one keeps its credit); `level_min`, karma and reputation are grown into and still count. Chapter completion, its achievement and the login sweep use the same arithmetic. Sable's ZARP run sat at 90% behind four Survivors quests locked to other classes.
