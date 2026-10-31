@@ -467,7 +467,14 @@ upload `chronicler-*.jar` only; attach anything else to the GitHub release alone
 - **A mini quest's holes are filled per player, so read a quest through `QuestEngine.questFor(player, id)`,**
   never `quest(server, id)`, wherever a player is in hand: the registry copy holds stand-in values
   ("Bread for Aldous" in every list). The filled copy is cached per slot set because `wait` and
-  `escort` find their journal entry by the objective object's identity.
+  `escort` find their journal entry by the objective object's identity. `questFor` also applies the
+  quest's `variants` (first `when` that holds), through `QuestEngine.worded`, whose copies are cached
+  by identity for the same reason (a relabelled objective is a new object) and cleared on
+  `ServerStoppedEvent`; a chapter's go through `chapterFor`, other quests' names through `nameFor`.
+  A new display site that reads `h.value().name()` from the registry shows the wrong words.
+- **`when` on an effect is a wrapper, not a type** (`RewardTypes.When`, applied by `RewardTypes.CODEC`
+  around the dispatch). Code that looks for a reward type with `instanceof` must `When.unwrap` it first --
+  `own_kill`'s spawn fallback does.
 - An escort template's `radius` is the size of "there": a test that hands over a village 40 blocks
   away finishes a 64-block escort on its first poll.
 - **`Class#getResource` on a bare directory path does not reliably resolve through FML's
