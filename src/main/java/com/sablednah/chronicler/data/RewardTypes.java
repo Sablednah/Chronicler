@@ -13,7 +13,49 @@ import net.minecraft.resources.Identifier;
 public final class RewardTypes {
 
     public static final SpecTypes<RewardSpec> TYPES = new SpecTypes<>("reward", RewardSpec::codec);
-    public static final Codec<RewardSpec> CODEC = TYPES.codec();
+    /** Every effect and reward as written: a type, its fields, and optionally {@code when} (see {@link When}). */
+    public static final Codec<RewardSpec> CODEC = When.wrap(TYPES.codec());
+
+    /**
+     * Any effect with a {@code when}: it runs for a player only if those gates hold for them at that
+     * moment -- the same shape as {@code availability} and a variant's {@code when}. Two {@code npc_say}
+     * lines side by side, one per outcome, is the use it was made for (Wrench's name in someone else's
+     * mouth after the garage fell). Not a type of its own: {@code when} sits beside {@code type} in the
+     * effect's own object, and the wrapper is taken off before the effect is decoded.
+     */
+    public record When(Availability when, RewardSpec effect) implements RewardSpec {
+        @Override public MapCodec<When> codec() { return MapCodec.unit(this); } // never dispatched; wrap() writes it
+        @Override public String describe() { return effect.describe(); }
+
+        /** The effect underneath, for anything that looks for a type ({@code own_kill}'s spawn, by tag). */
+        public static RewardSpec unwrap(RewardSpec r) {
+            return r instanceof When w ? unwrap(w.effect()) : r;
+        }
+
+        static Codec<RewardSpec> wrap(Codec<RewardSpec> inner) {
+            return new Codec<>() {
+                @Override
+                public <T> com.mojang.serialization.DataResult<com.mojang.datafixers.util.Pair<RewardSpec, T>> decode(
+                        com.mojang.serialization.DynamicOps<T> ops, T input) {
+                    var json = ops.convertTo(com.mojang.serialization.JsonOps.INSTANCE, input);
+                    if (!(json instanceof com.google.gson.JsonObject o) || !o.has("when")) return inner.decode(ops, input);
+                    var rest = o.deepCopy();
+                    var gate = rest.remove("when");
+                    var parsedGate = Availability.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, gate);
+                    if (parsedGate.error().isPresent()) return com.mojang.serialization.DataResult.error(() -> "when: " + parsedGate.error().get().message());
+                    return inner.decode(ops, com.mojang.serialization.JsonOps.INSTANCE.convertTo(ops, rest))
+                            .map(p -> com.mojang.datafixers.util.Pair.of((RewardSpec) new When(parsedGate.getOrThrow(), p.getFirst()), input));
+                }
+
+                @Override
+                public <T> com.mojang.serialization.DataResult<T> encode(RewardSpec spec, com.mojang.serialization.DynamicOps<T> ops, T prefix) {
+                    if (!(spec instanceof When w)) return inner.encode(spec, ops, prefix);
+                    return inner.encodeStart(ops, w.effect()).flatMap(body -> Availability.CODEC.encodeStart(ops, w.when())
+                            .flatMap(gate -> ops.mergeToMap(body, ops.createString("when"), gate)));
+                }
+            };
+        }
+    }
 
     /** {@code count} of {@code item}, into the inventory or dropped at the feet. */
     public record Item(Identifier item, int count, Optional<Identifier> questItem) implements RewardSpec {

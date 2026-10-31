@@ -203,7 +203,7 @@ public final class Journal {
         int onPage = 0;
         for (var h : available) {
             Identifier id = h.key().identifier();
-            page.append(Feedback.colored(Lang.fmt("journal.available.quest", "name", h.value().name()))).append("\n");
+            page.append(Feedback.colored(Lang.fmt("journal.available.quest", "name", QuestEngine.nameFor(player, id)))).append("\n");
             if (h.value().giver().isPresent()) {
                 page.append(Feedback.colored(Lang.fmt("journal.available.where",
                         "where", Givers.describe(server, h.value())))).append("\n");
@@ -232,7 +232,7 @@ public final class Journal {
         for (var h : done) {
             int times = log.completions(h.key().identifier());
             page.append(Feedback.colored(Lang.fmt(times > 1 ? "journal.done.quest_times" : "journal.done.quest",
-                    "name", h.value().name(), "times", times))).append("\n");
+                    "name", QuestEngine.nameFor(player, h.key().identifier()), "times", times))).append("\n");
             if (++onPage == LINES_PER_PAGE - 3) {
                 page.append(pageLink(Lang.get("journal.link.back"), 1, Lang.get("journal.tip.contents")));
                 pages.add(Filterable.passThrough(page));
@@ -262,9 +262,7 @@ public final class Journal {
         Quest q = holder.get();
         MutableComponent head = Component.empty();
         head.append(Feedback.colored(Lang.fmt("journal.quest.name", "name", q.name()))).append("\n");
-        String chapter = QuestEngine.chapters(server)
-                .get(net.minecraft.resources.ResourceKey.create(com.sablednah.chronicler.ChroniclerRegistries.CHAPTER, q.chapter()))
-                .map(h -> h.value().name()).orElse(q.chapter().toString());
+        String chapter = QuestEngine.chapterNameFor(player, q.chapter());
         head.append(Feedback.colored(Lang.fmt("journal.quest.chapter", "chapter", chapter))).append("\n");
         if (QuestEngine.scopeOf(server, q) == QuestScope.PARTY) {
             head.append(Feedback.colored(Lang.get("journal.quest.party"))).append("\n");
