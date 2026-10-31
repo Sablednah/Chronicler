@@ -1092,6 +1092,81 @@ public final class SelfTest {
             check("progress: a finished quest keeps its credit whatever closed after", QuestEngine.reachable(solo, gated, q.apply("{\"race\": [\"legendquest:no_such_race\"]}")));
             log.setFlag("selftest_gate", false, prologue);
         }
+        // Variants: other words once the world has moved on (ZARP: Wrench in the past tense after the garage fell),
+        // and a when on any effect (a line spoken only if he is still alive).
+        {
+            var ops = com.mojang.serialization.JsonOps.INSTANCE;
+            java.util.function.Function<String, com.mojang.serialization.DataResult<Quest>> parse = json ->
+                    Quest.CODEC.parse(ops, com.google.gson.JsonParser.parseString(json));
+            String stages = "\"stages\": [{\"text\": \"Wrench has a theory.\", \"objectives\": [{\"type\": \"wait\", \"seconds\": 5, \"label\": \"Ask Wrench\"},"
+                    + " {\"type\": \"collect\", \"item\": \"minecraft:stick\"}]}, {\"text\": \"Decide.\", \"choices\": [{\"label\": \"Tell Wrench\"}, {\"label\": \"Keep it\"}]}]";
+            Quest worded = parse.apply("{\"name\": \"Pump Action\", \"chapter\": \"prologue\", \"description\": \"Wrench has a theory.\","
+                    + " \"recap\": \"{player} found Wrench a valve.\", \"recap_flags\": {\"a\": \"A.\"}, " + stages + ", \"variants\": ["
+                    + "{\"when\": {\"flags\": {\"selftest_wrench_gone\": true}}, \"name\": \"Pump Action (his notes)\", \"description\": \"Wrench had a theory.\","
+                    + " \"recap\": \"{player} finished what Wrench started.\", \"recap_flags\": {\"b\": \"B.\"},"
+                    + " \"stages\": {\"1\": {\"text\": \"Wrench had a theory.\", \"objectives\": {\"1\": {\"label\": \"Read Wrench's notes\"}}},"
+                    + " \"2\": {\"choices\": {\"1\": {\"label\": \"Tell his bench\"}}}}}]}").result().orElse(null);
+            check("variants: a quest with variants parses", worded != null && worded.variants().size() == 1);
+            if (worded != null) {
+                FlagStore.get(server).set("selftest_wrench_gone", false);
+                check("variants: no match reads as written, the very same object", QuestEngine.worded(solo, worded) == worded);
+                FlagStore.get(server).set("selftest_wrench_gone", true);
+                Quest past = QuestEngine.worded(solo, worded);
+                check("variants: a world flag picks the variant's name, description and recap",
+                        past.name().equals("Pump Action (his notes)") && past.description().orElse("").equals("Wrench had a theory.")
+                                && past.recap().orElse("").startsWith("{player} finished"));
+                check("variants: recap_flags merge over the quest's own", past.recapFlags().keySet().equals(java.util.Set.of("a", "b")));
+                check("variants: stage text and an objective's label are reworded",
+                        past.beats().get(0).text().orElse("").equals("Wrench had a theory.")
+                                && past.objectivesAt(0).get(0).describe().equals("Read Wrench's notes"));
+                check("variants: a choice's label is reworded, its neighbour left be",
+                        past.beats().get(1).choices().get(0).label().equals("Tell his bench") && past.beats().get(1).choices().get(1).label().equals("Keep it"));
+                check("variants: an objective left alone is the same object (wait and escort find theirs by identity)",
+                        past.objectivesAt(0).get(1) == worded.objectivesAt(0).get(1));
+                check("variants: the reworded copy is held, so a relabelled objective keeps its identity across reads",
+                        QuestEngine.worded(solo, worded) == past);
+                FlagStore.get(server).set("selftest_wrench_gone", false);
+            }
+            String bad = "{\"name\": \"x\", \"chapter\": \"prologue\", " + stages + ", \"variants\": [{\"when\": {\"flags\": {\"f\": true}}, ";
+            check("variants: a stage the quest does not have is refused, by number",
+                    parse.apply(bad + "\"stages\": {\"3\": {\"text\": \"t\"}}}]}").error().map(e -> e.message().contains("stage 3, but the quest has 2")).orElse(false));
+            check("variants: relabelling an objective type with no label is refused, naming the type",
+                    parse.apply(bad + "\"stages\": {\"1\": {\"objectives\": {\"2\": {\"label\": \"l\"}}}}}]}").error().map(e -> e.message().contains("collect objective takes no label")).orElse(false));
+            check("variants: a choice the stage does not have is refused",
+                    parse.apply(bad + "\"stages\": {\"2\": {\"choices\": {\"3\": {\"label\": \"l\"}}}}}]}").error().isPresent());
+            check("variants: a stage numbered 0 is refused (numbers start at 1, as next and fail do)",
+                    parse.apply(bad + "\"stages\": {\"0\": {\"text\": \"t\"}}}]}").error().isPresent());
+            check("variants: a variant with no when is refused", parse.apply("{\"name\": \"x\", \"chapter\": \"prologue\", \"variants\": [{\"name\": \"y\"}]}").error().isPresent());
+            var chapterOk = com.sablednah.chronicler.data.Chapter.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                    "{\"name\": \"Settling In\", \"recap\": \"Wrench fixed things.\", \"variants\": [{\"when\": {\"flags\": {\"f\": true}}, \"recap\": \"Wrench had fixed things.\"}]}")).result();
+            check("variants: a chapter rewords its recap", chapterOk.map(c -> c.worded(c.variants().get(0)).recap().orElse("").equals("Wrench had fixed things.")).orElse(false));
+            check("variants: a chapter variant with stages is refused, saying where they belong",
+                    com.sablednah.chronicler.data.Chapter.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                            "{\"name\": \"c\", \"variants\": [{\"when\": {}, \"stages\": {\"1\": {\"text\": \"t\"}}}]}")).error()
+                            .map(e -> e.message().contains("belongs in a quest's variants")).orElse(false));
+
+            // when, on any effect: runs only if it holds for this player at that moment.
+            var gated = com.sablednah.chronicler.data.RewardTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                    "{\"type\": \"flag\", \"name\": \"selftest_when_ran\", \"player\": true, \"when\": {\"flags\": {\"selftest_wrench_gone\": false}}}")).result();
+            check("when: an effect with a when parses as the effect, gated",
+                    gated.map(r -> r instanceof com.sablednah.chronicler.data.RewardTypes.When w && w.effect() instanceof com.sablednah.chronicler.data.RewardTypes.Flag).orElse(false));
+            check("when: it encodes back with its when beside its type", gated.flatMap(r -> com.sablednah.chronicler.data.RewardTypes.CODEC.encodeStart(ops, r).result())
+                    .map(j -> j.getAsJsonObject().has("when") && j.getAsJsonObject().get("type").getAsString().endsWith("flag")).orElse(false));
+            check("when: a malformed when refuses the effect", com.sablednah.chronicler.data.RewardTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                    "{\"type\": \"xp\", \"amount\": 1, \"when\": {\"flags\": 3}}")).error().map(e -> e.message().startsWith("when:")).orElse(false));
+            if (gated.isPresent() && worded != null) {
+                Identifier wid = ChroniclerIds.of("selftest_variants");
+                FlagStore.get(server).set("selftest_wrench_gone", true);
+                Rewards.grant(solo, gated.get(), wid, worded);
+                check("when: a when that does not hold does nothing", !log.hasFlag("selftest_when_ran"));
+                check("when: ...and is left out of the rewards a player is shown", Conditions.shownTo(solo, List.of(gated.get())).isEmpty());
+                FlagStore.get(server).set("selftest_wrench_gone", false);
+                Rewards.grant(solo, gated.get(), wid, worded);
+                check("when: ...and runs once it holds", log.hasFlag("selftest_when_ran"));
+                check("when: ...and is shown then", Conditions.shownTo(solo, List.of(gated.get())).size() == 1);
+                log.setFlag("selftest_when_ran", false);
+            }
+        }
 
         // --- endings and replay ---
         var nightWatch = QuestEngine.quest(server, ChroniclerIds.of("night_watch")).map(h -> h.value()).orElseThrow();

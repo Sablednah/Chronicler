@@ -688,7 +688,7 @@ public final class Givers {
         Feedback.chat(player, Lang.fmt("msg.giver.offer.header", "name", quest.name()));
         quest.description().ifPresent(d -> Feedback.chat(player, Lang.fmt("msg.giver.offer.description", "description", d)));
         for (var o : quest.objectivesAt(0)) Feedback.chat(player, Lang.fmt("msg.giver.offer.objective", "line", o.describe()));
-        for (var r : quest.rewards()) Feedback.chat(player, Lang.fmt("msg.giver.offer.reward", "line", r.describe()));
+        for (var r : Conditions.shownTo(player, quest.rewards())) Feedback.chat(player, Lang.fmt("msg.giver.offer.reward", "line", r.describe()));
         Feedback.chatWithButtons(player, Lang.get("msg.giver.offer.prompt"),
                 Feedback.button(Lang.get("button.accept"), "/quest accept " + id, Lang.get("button.accept.tip")),
                 Feedback.button(Lang.get("button.info"), "/quest info " + id, Lang.get("button.info.tip")));

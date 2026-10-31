@@ -75,16 +75,63 @@ public final class QuestEngine {
      * The quest as this player sees it. For a mini quest that is the template filled with their
      * slots -- from the journal once started, from a standing offer before -- so every name, line and
      * objective they read or the engine measures is the real one. Anything else is the registry's.
+     * Then, in the words of the first {@code variants} entry whose {@code when} holds for them.
      */
     public static Optional<Quest> questFor(ServerPlayer player, Identifier id) {
         MinecraftServer server = player.level().getServer();
         var holder = quest(server, id);
         if (holder.isEmpty()) return Optional.empty();
         Quest base = holder.get().value();
-        if (base.mini().isEmpty()) return Optional.of(base);
+        if (base.mini().isEmpty()) return Optional.of(worded(player, base));
         QuestLog.Entry e = journal(player).entry(id);
-        if (e != null && !e.slots.isEmpty()) return Optional.of(Minis.instance(server, id, base, e.slots));
-        return Optional.of(Minis.pendingValues(player, id).map(v -> Minis.instance(server, id, base, v)).orElse(base));
+        if (e != null && !e.slots.isEmpty()) return Optional.of(worded(player, Minis.instance(server, id, base, e.slots)));
+        return Optional.of(worded(player, Minis.pendingValues(player, id).map(v -> Minis.instance(server, id, base, v)).orElse(base)));
+    }
+
+    /**
+     * Reworded copies, by the quest object they were made from and the variant's place in its list. Held,
+     * not rebuilt per read: a relabelled objective is a new object, and wait and escort find their entry
+     * by identity. Keyed by identity because the registry and Minis' instances hand out one object each.
+     */
+    private static final java.util.Map<Quest, Quest[]> WORDED = java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+
+    /** The quest in the first matching variant's words, or as it is. Cheap when it has none. */
+    public static Quest worded(ServerPlayer player, Quest quest) {
+        var variants = quest.variants();
+        if (variants.isEmpty()) return quest;
+        for (int n = 0; n < variants.size(); n++) {
+            if (!Conditions.met(player, variants.get(n).when())) continue;
+            int at = n;
+            MinecraftServer server = player.level().getServer();
+            synchronized (WORDED) {
+                if (WORDED.size() > 4096) WORDED.clear(); // Minis' own cache turns over at the same size
+                Quest[] made = WORDED.computeIfAbsent(quest, q -> new Quest[variants.size()]);
+                if (made[at] == null) {
+                    made[at] = quest.worded(variants.get(at), net.minecraft.resources.RegistryOps.create(com.mojang.serialization.JsonOps.INSTANCE, server.registryAccess()));
+                }
+                return made[at];
+            }
+        }
+        return quest;
+    }
+
+    /** A chapter as this player reads it: the first matching variant's name, description and recap. */
+    public static Optional<Chapter> chapterFor(ServerPlayer player, Identifier id) {
+        return chapters(player.level().getServer()).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, id)).map(h -> {
+            Chapter c = h.value();
+            for (var v : c.variants()) if (Conditions.met(player, v.when())) return c.worded(v);
+            return c;
+        });
+    }
+
+    /** A quest's name as this player reads it -- the requires lists, which name quests other than the one in hand. */
+    public static String nameFor(ServerPlayer player, Identifier id) {
+        return questFor(player, id).map(Quest::name).orElse(id.toString());
+    }
+
+    /** A chapter's name as this player reads it. */
+    public static String chapterNameFor(ServerPlayer player, Identifier id) {
+        return chapterFor(player, id).map(Chapter::name).orElse(id.toString());
     }
 
     public static QuestScope scopeOf(MinecraftServer server, Quest quest) {
@@ -148,7 +195,7 @@ public final class QuestEngine {
         List<String> why = new ArrayList<>();
         List<String> missing = new ArrayList<>();
         for (Identifier r : quest.requires()) {
-            if (!log.isComplete(r)) missing.add(quest(server, r).map(h -> h.value().name()).orElse(r.toString()));
+            if (!log.isComplete(r)) missing.add(nameFor(player, r));
         }
         if (!missing.isEmpty()) why.add(Lang.fmt("cond.requires", "quests", String.join(Lang.get("cond.list_join"), missing)));
         why.addAll(unmet(player, quest));
@@ -561,7 +608,7 @@ public final class QuestEngine {
     private static Optional<Rewards.Spawned> onEnterSpawnFor(ServerPlayer killer, Identifier questId, Quest quest, int stage, ObjectiveTypes.Kill k) {
         if (k.tag().isEmpty()) return Optional.empty();
         for (RewardSpec r : quest.onEnterAt(stage)) {
-            if (r instanceof RewardTypes.Spawn sp && sp.tag().equals(k.tag())) {
+            if (RewardTypes.When.unwrap(r) instanceof RewardTypes.Spawn sp && sp.tag().equals(k.tag())) {
                 return Optional.of(new Rewards.Spawned(sp, killer.getUUID(), questId, quest));
             }
         }
@@ -755,7 +802,7 @@ public final class QuestEngine {
         if (fresh) Achievements.grantOrWarn(player, Achievements.endingId(chapter, ending), "ending " + ending + " of " + chapter);
         int total = endingsOf(server, chapter).size();
         int found = log.endings(chapter).size();
-        String name = chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, chapter)).map(h -> h.value().name()).orElse(chapter.toString());
+        String name = chapterNameFor(player, chapter);
         Feedback.fanfare(player, Lang.fmt(fresh ? "msg.ending.reached" : "msg.ending.again", "ending", Lang.pretty(ending), "chapter", name, "found", found, "total", total),
                 Lang.fmt("msg.ending.title", "ending", Lang.pretty(ending)), Lang.fmt("msg.ending.subtitle", "found", found, "total", total));
         boolean replayable = chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, chapter)).map(h -> h.value().replayable()).orElse(false);
@@ -894,9 +941,11 @@ public final class QuestEngine {
     }
 
     /** The server stopped: every settle clock belonged to that world. */
-    static void clearSession() { SETTLING.clear(); }
+    static void clearSession() { SETTLING.clear(); WORDED.clear(); }
 
     static int settlingCount() { return SETTLING.size(); }
+
+    static int wordedCount() { return WORDED.size(); }
 
     /** A quest ended for this player one way or another: forget any settle timers it was running. */
     private static void clearSettling(ServerPlayer player, Identifier id) {

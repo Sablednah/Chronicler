@@ -37,8 +37,7 @@ public final class Recap {
                     .thenComparing(h -> h.key().identifier().toString()));
             // The act as one paragraph, once everything it covers is done: it replaces those quests' own lines.
             java.util.Set<Identifier> covered = new java.util.HashSet<>();
-            var chapter = QuestEngine.chapters(server).get(net.minecraft.resources.ResourceKey.create(
-                    com.sablednah.chronicler.ChroniclerRegistries.CHAPTER, entry.getKey())).map(c -> c.value());
+            var chapter = QuestEngine.chapterFor(player, entry.getKey()); // in the reader's words: a variant may retell it
             if (chapter.isPresent() && chapter.get().recap().filter(r -> !r.isBlank()).isPresent()) {
                 List<Identifier> covers = chapter.get().recapCovers();
                 if (covers.isEmpty()) {
