@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 — 2026-10-31
 
 - **Variants: other words once the world has moved on.** A quest's `variants` reword its name, description, `locked`, `recap`, `recap_endings`/`recap_flags`, and per stage its text, objective labels and choices, for a reader whose `when` gates hold (the `availability` shape) -- first match wins, anything left out keeps the quest's own. Everywhere the text is read: journal, panel, HUD, action bar, `/quests`, offers, waypoints, recap. A chapter's `variants` reword its name, description and recap. Bad numbers are refused at load. (ZARP: Wrench in the past tense after the garage fell.)
 - **`when` on any effect or reward**: it runs, and is listed, only while those gates hold for the player.
