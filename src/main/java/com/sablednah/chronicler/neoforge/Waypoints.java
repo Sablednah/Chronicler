@@ -42,6 +42,11 @@ public final class Waypoints {
                     Identifier dim = v.dimension().orElse(here);
                     marks.add(new Mark(id + ":target", Lang.fmt("waypoint.target", "quest", questName, "what", v.describe()),
                             v.x(), v.y().orElse(player.getBlockY()), v.z(), dim, WaypointsPayload.TARGET));
+                } else if (spec instanceof ObjectiveTypes.VisitGiver || spec instanceof ObjectiveTypes.Talk) {
+                    Identifier giver = spec instanceof ObjectiveTypes.VisitGiver vg ? vg.giver() : ((ObjectiveTypes.Talk) spec).to();
+                    Givers.whereGiven(server, giver).ifPresent(where -> marks.add(new Mark(id + ":target",
+                            Lang.fmt("waypoint.target", "quest", questName, "what", spec.describe()),
+                            (int) where.pos().x, (int) where.pos().y, (int) where.pos().z, where.level(), WaypointsPayload.TARGET)));
                 } else if (spec instanceof ObjectiveTypes.Escort esc) {
                     Identifier dim = esc.dimension().orElse(here);
                     marks.add(new Mark(id + ":target", Lang.fmt("waypoint.target", "quest", questName, "what", esc.describe()),
