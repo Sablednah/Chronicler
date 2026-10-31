@@ -68,7 +68,14 @@ public record Quest(
      */
     public record Extras(Optional<Boolean> counts, Optional<String> locked,
             Optional<QuestVisibility> visibility, Optional<Identifier> icon, Optional<Mini> mini, Optional<JsonElement> template,
-            Optional<String> recap, java.util.Map<String, String> recapEndings, java.util.Map<String, String> recapFlags) {
+            Optional<String> recap, java.util.Map<String, String> recapEndings, java.util.Map<String, String> recapFlags,
+            List<Variant> variants) {
+        /** Before {@code variants}. */
+        public Extras(Optional<Boolean> counts, Optional<String> locked, Optional<QuestVisibility> visibility, Optional<Identifier> icon,
+                Optional<Mini> mini, Optional<JsonElement> template, Optional<String> recap, java.util.Map<String, String> recapEndings,
+                java.util.Map<String, String> recapFlags) {
+            this(counts, locked, visibility, icon, mini, template, recap, recapEndings, recapFlags, List.of());
+        }
         /** Before {@code recap}: kept, since a record's canonical constructor is public API. */
         public Extras(Optional<Boolean> counts, Optional<String> locked, Optional<QuestVisibility> visibility, Optional<Identifier> icon,
                 Optional<Mini> mini, Optional<JsonElement> template) {
@@ -95,8 +102,9 @@ public record Quest(
                 Mini.CODEC.optionalFieldOf("mini").forGetter(Extras::mini),
                 Codec.STRING.optionalFieldOf("recap").forGetter(Extras::recap),
                 Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("recap_endings", java.util.Map.of()).forGetter(Extras::recapEndings),
-                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("recap_flags", java.util.Map.of()).forGetter(Extras::recapFlags))
-                .apply(i, (c, l, v, ic, m, r, re, rf) -> new Extras(c, l, v, ic, m, Optional.empty(), r, re, rf)));
+                Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("recap_flags", java.util.Map.of()).forGetter(Extras::recapFlags),
+                Variant.CODEC.listOf().optionalFieldOf("variants", List.of()).forGetter(Extras::variants))
+                .apply(i, (c, l, v, ic, m, r, re, rf, vs) -> new Extras(c, l, v, ic, m, Optional.empty(), r, re, rf, vs)));
         public static final Extras NONE = new Extras(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
@@ -123,11 +131,29 @@ public record Quest(
      * chapter ending. A key starting {@code world:} reads a world flag instead.
      */
     public java.util.Map<String, String> recapFlags() { return extras.recapFlags(); }
+    /** Other words for when the world has moved on, first match wins; see {@link Variant}. Read through {@code QuestEngine.questFor}. */
+    public List<Variant> variants() { return extras.variants(); }
+
+    /**
+     * This quest in a variant's words: every field it gives replaces ours, the rest stand. Rewards and
+     * effects are the very same objects; a relabelled objective is not, so hold the copy (QuestEngine
+     * caches it) -- wait and escort find their entry by identity. The copy carries no variants of its own.
+     */
+    public Quest worded(Variant v, com.mojang.serialization.DynamicOps<JsonElement> ops) {
+        java.util.Map<String, String> endings = new java.util.LinkedHashMap<>(extras.recapEndings());
+        endings.putAll(v.recapEndings());
+        java.util.Map<String, String> flags = new java.util.LinkedHashMap<>(extras.recapFlags());
+        flags.putAll(v.recapFlags());
+        return new Quest(v.name().orElse(name), v.description().or(() -> description), chapter, requires, objectives, rewards,
+                repeatable, hidden, order, scope, scale, giver, v.reword(stages, ops), availability, cooldown,
+                new Extras(extras.counts(), v.locked().or(extras::locked), extras.visibility(), extras.icon(), extras.mini(),
+                        extras.template(), v.recap().or(extras::recap), endings, flags, List.of()));
+    }
 
     private Quest withTemplate(JsonElement raw) {
         return new Quest(name, description, chapter, requires, objectives, rewards, repeatable, hidden, order, scope, scale, giver,
                 stages, availability, cooldown, new Extras(extras.counts(), extras.locked(), extras.visibility(), extras.icon(), extras.mini(), Optional.of(raw),
-                        extras.recap(), extras.recapEndings(), extras.recapFlags()));
+                        extras.recap(), extras.recapEndings(), extras.recapFlags(), extras.variants()));
     }
 
     /** Does finishing this move the progress figure? Unsaid: main-chapter quests that are not repeatable. */
@@ -164,7 +190,7 @@ public record Quest(
     }
 
     /** The record as written, holes already filled. */
-    public static final Codec<Quest> BASE_CODEC = RecordCodecBuilder.create(i -> i.group(
+    public static final Codec<Quest> BASE_CODEC = RecordCodecBuilder.<Quest>create(i -> i.group(
             Codec.STRING.fieldOf("name").forGetter(Quest::name),
             Codec.STRING.optionalFieldOf("description").forGetter(Quest::description),
             ChroniclerIds.CODEC.fieldOf("chapter").forGetter(Quest::chapter),
@@ -181,7 +207,18 @@ public record Quest(
             Availability.CODEC.optionalFieldOf("availability").forGetter(Quest::availability),
             Codec.INT.optionalFieldOf("cooldown", 0).forGetter(Quest::cooldown),
             Extras.MAP_CODEC.forGetter(Quest::extras))
-            .apply(i, Quest::new));
+            .apply(i, Quest::new)).validate(Quest::checkVariants);
+
+    private static DataResult<Quest> checkVariants(Quest q) {
+        for (int n = 0; n < q.variants().size(); n++) {
+            var bad = q.variants().get(n).mismatch(q.beats(), !q.stages().isEmpty());
+            if (bad.isPresent()) {
+                String where = "variants[" + (n + 1) + "]." + bad.get();
+                return DataResult.error(() -> where);
+            }
+        }
+        return DataResult.success(q);
+    }
 
     /**
      * A quest file. One with a {@code mini} block is a template: it is checked by filling every

@@ -159,6 +159,10 @@ public final class Rewards {
             GiverStore.get(server).clearMini(npc.get());
             Chronicler.LOGGER.info("Chronicler: quest {} removed the NPC of {} ({})", questId, r.quest().orElse(questId), npc.get());
         });
+        // A gated effect: the gates are asked of this player now (each party member for themselves).
+        register(RewardTypes.When.class, (player, r, questId, quest) -> {
+            if (Conditions.met(player, r.when())) grant(player, r.effect(), questId, quest);
+        });
         register(RewardTypes.NpcRestore.class, (player, r, questId, quest) -> {
             Identifier of = r.quest().orElse(questId);
             boolean back = Givers.restoreNpc(player.level().getServer(), of);

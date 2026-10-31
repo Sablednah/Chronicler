@@ -16,6 +16,7 @@ import com.sablednah.chronicler.ChroniclerConfig;
 import com.sablednah.chronicler.ChroniclerRegistries;
 import com.sablednah.chronicler.core.QuestLog;
 import com.sablednah.chronicler.core.QuestScope;
+import com.sablednah.chronicler.data.Chapter;
 import com.sablednah.chronicler.data.ObjectiveSpec;
 import com.sablednah.chronicler.data.Quest;
 import com.sablednah.chronicler.data.Stage;
@@ -135,8 +136,8 @@ public final class JournalPanel {
                     if (req == null) continue; // a prerequisite the player cannot see yet is not drawn
                     requires.add(r.toString());
                     if (!req.value().chapter().equals(chapterId) && external.add(r)) {
-                        externals.add(new JournalPayload.External(r.toString(), Feedback.colored(req.value().name()),
-                                Feedback.colored(Lang.fmt("panel.external", "chapter", chapterName(server, req.value().chapter()))),
+                        externals.add(new JournalPayload.External(r.toString(), Feedback.colored(QuestEngine.nameFor(player, r)),
+                                Feedback.colored(Lang.fmt("panel.external", "chapter", QuestEngine.chapterNameFor(player, req.value().chapter()))),
                                 status(player, log, r, req.value()), iconOf(server, req.value())));
                     }
                 }
@@ -147,7 +148,7 @@ public final class JournalPanel {
             }
 
             List<String> text = new ArrayList<>();
-            chapter.flatMap(c -> c.value().description()).ifPresent(d -> text.add(Lang.fmt("cmd.info.description", "description", d)));
+            QuestEngine.chapterFor(player, chapterId).flatMap(Chapter::description).ifPresent(d -> text.add(Lang.fmt("cmd.info.description", "description", d)));
             var progress = QuestEngine.progress(player, Optional.of(chapterId));
             if (progress.total() > 0) {
                 text.add(Lang.fmt("panel.chapter.progress", "done", progress.done(), "total", progress.total(), "percent", progress.percent()));
@@ -159,7 +160,7 @@ public final class JournalPanel {
             if (chapter.map(c -> c.value().replayable()).orElse(false) && touched) {
                 chapterButtons.add(button(Lang.get("button.replay"), "/quest replay " + chapterId, Lang.get("button.replay.tip")));
             }
-            chapters.add(new JournalPayload.ChapterView(chapterId.toString(), Feedback.colored(chapterName(server, chapterId)),
+            chapters.add(new JournalPayload.ChapterView(chapterId.toString(), Feedback.colored(QuestEngine.chapterNameFor(player, chapterId)),
                     chapter.flatMap(c -> c.value().icon()).map(Identifier::toString).orElse(""),
                     text.stream().map(Feedback::colored).toList(), chapterButtons, quests, externals));
         }
@@ -212,10 +213,6 @@ public final class JournalPanel {
         return QuestEngine.available(player, id, q) ? JournalPayload.AVAILABLE : JournalPayload.LOCKED;
     }
 
-    private static String chapterName(MinecraftServer server, Identifier chapter) {
-        return QuestEngine.chapters(server).get(ResourceKey.create(ChroniclerRegistries.CHAPTER, chapter))
-                .map(h -> h.value().name()).orElse(chapter.toString());
-    }
 
     /** The quest's own icon, else its chapter's, else nothing (the client draws a book). */
     private static String iconOf(MinecraftServer server, Quest q) {
@@ -249,7 +246,7 @@ public final class JournalPanel {
             q.locked().ifPresent(t -> out.add(Lang.fmt("panel.quest.locked", "text", t)));
             List<String> missing = new ArrayList<>();
             for (Identifier r : q.requires()) {
-                if (!log.isComplete(r)) missing.add(QuestEngine.quest(server, r).map(h -> h.value().name()).orElse(r.toString()));
+                if (!log.isComplete(r)) missing.add(QuestEngine.nameFor(player, r));
             }
             if (!missing.isEmpty()) {
                 out.add(Lang.fmt("cmd.info.needs", "line", Lang.fmt("cond.requires", "quests", String.join(Lang.get("cond.list_join"), missing))));
@@ -287,8 +284,9 @@ public final class JournalPanel {
             }
         }
         out.add(Lang.get("cmd.info.rewards"));
-        if (q.rewards().isEmpty()) out.add(Lang.get("cmd.info.none"));
-        q.rewards().forEach(r -> out.add(Lang.fmt("cmd.info.reward", "line", r.describe())));
+        var rewards = Conditions.shownTo(player, q.rewards());
+        if (rewards.isEmpty()) out.add(Lang.get("cmd.info.none"));
+        rewards.forEach(r -> out.add(Lang.fmt("cmd.info.reward", "line", r.describe())));
         int times = log.completions(id);
         if (times > 1) out.add(Lang.fmt("panel.quest.times", "times", times));
         return out.stream().map(Feedback::colored).toList();
