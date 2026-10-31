@@ -25,6 +25,7 @@ import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
+import com.sablednah.chronicler.data.ObjectiveTypes;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
 /**
@@ -290,6 +291,35 @@ public final class SelfTest {
                             : com.sablednah.chronicler.ChroniclerConfig.GIVER_MARKER_ACTIVE.get()));
             check("giver block: again while active is not an error", Givers.onUseBlock(solo, server.overworld(), here));
             check("giver block: a plain block is not a giver", !Givers.onUseBlock(solo, server.overworld(), here.above(40)));
+            {
+                // Going back to someone: a visit to a quest's giver, wherever it is -- here, an op-placed block.
+                var ops = com.mojang.serialization.JsonOps.INSTANCE;
+                var goBack = ObjectiveTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"type\": \"visit\", \"giver\": \"first_steps\", \"radius\": 6}")).result();
+                check("visit giver: parses as a visit with a giver", goBack.map(o -> o instanceof ObjectiveTypes.VisitGiver).orElse(false));
+                check("visit giver: coordinates still parse as before", ObjectiveTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"type\": \"visit\", \"x\": 1, \"z\": 2}")).result().map(o -> o instanceof ObjectiveTypes.Visit).orElse(false));
+                check("visit giver: encodes back as a visit", goBack.flatMap(o -> ObjectiveTypes.CODEC.encodeStart(ops, o).result())
+                        .map(j -> j.getAsJsonObject().get("type").getAsString().endsWith("visit") && j.getAsJsonObject().has("giver")).orElse(false));
+                check("visit giver: neither giver nor coordinates is refused", ObjectiveTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"type\": \"visit\", \"label\": \"home\"}")).error().isPresent());
+                if (goBack.isPresent()) {
+                    var vg = (ObjectiveTypes.VisitGiver) goBack.get();
+                    Vec3 stood = solo.position();
+                    solo.setPos(here.getX() + 2.5D, here.getY(), here.getZ() + 0.5D);
+                    boolean near = Trackers.of(vg).poll(solo, vg).orElse(0) == 1;
+                    solo.setPos(here.getX() + 40.5D, here.getY(), here.getZ() + 0.5D);
+                    boolean far = Trackers.of(vg).poll(solo, vg).orElse(1) == 0;
+                    solo.setPos(stood.x, stood.y, stood.z);
+                    check("visit giver: beside the op-placed giver block counts", near);
+                    check("visit giver: forty blocks off does not", far);
+                    check("visit giver: says whom to go back to", !vg.describe().isBlank() && vg.describe().startsWith("Go back to"));
+                }
+                var talk = ObjectiveTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString("{\"type\": \"talk\", \"to\": \"first_steps\"}")).result();
+                check("talk: parses, and a talk with nobody to talk to is refused", talk.map(o -> o instanceof ObjectiveTypes.Talk).orElse(false)
+                        && ObjectiveTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString("{\"type\": \"talk\"}")).error().isPresent());
+                check("talk: no talk in play, so the click is not swallowed by one", !QuestEngine.onTalk(solo, ChroniclerIds.of("first_steps")));
+            }
             check("giver store removes", store.remove(server.overworld(), here) && Givers.questAt(server.overworld(), here).isEmpty());
             Givers.tickMarkers(server);
             check("the mark goes with the giver", Markers.textShownTo(solo.getUUID(), giverKey).isEmpty());
@@ -1060,6 +1090,26 @@ public final class SelfTest {
                     kept.isInvulnerable() && kept.hasGlowingTag() && !kept.hasPickUpDelay() && kept.distanceTo(solo) < 1.5D);
             kept.discard();
         }
+        {
+            // A drop under chance 1 can fill the kill count first; the drops go on while the same beat's collect is short.
+            var ops = com.mojang.serialization.JsonOps.INSTANCE;
+            var beat = Quest.CODEC.parse(ops, com.google.gson.JsonParser.parseString("{\"name\": \"Armoury\", \"chapter\": \"prologue\", \"objectives\": ["
+                    + "{\"type\": \"kill\", \"target\": \"minecraft:zombie\", \"count\": 5, \"drop\": {\"quest_item\": \"ember\", \"chance\": 0.5}},"
+                    + " {\"type\": \"collect\", \"quest_item\": \"ember\", \"count\": 2}]}")).result();
+            check("kill drop: the armoury shape parses", beat.isPresent());
+            if (beat.isPresent()) {
+                Identifier tmp = ChroniclerIds.of("selftest_armoury");
+                log.start(tmp, List.of(5, 2));
+                var te = log.entry(tmp);
+                te.progress.set(0, 5); te.progress.set(1, 1);
+                check("kill drop: the kill count full but one ember short, drops go on", QuestEngine.stillWanted(beat.get().objectivesAt(0), te, ember));
+                te.progress.set(1, 2);
+                check("kill drop: ...and stop once the collect is satisfied", !QuestEngine.stillWanted(beat.get().objectivesAt(0), te, ember));
+                check("kill drop: ...and never for an item the beat does not want",
+                        !QuestEngine.stillWanted(beat.get().objectivesAt(0), te, ChroniclerIds.of("no_such_item")));
+                log.abandon(tmp);
+            }
+        }
         QuestEngine.poll(solo);
         check("collect: two marked embers finish the beacon", log.isComplete(beacon));
         check("collect: consumed embers are gone from the pack", Trackers.count(solo, st -> com.sablednah.chronicler.data.QuestItem.is(st, ember)) == 0);
@@ -1166,6 +1216,27 @@ public final class SelfTest {
                 check("when: ...and is shown then", Conditions.shownTo(solo, List.of(gated.get())).size() == 1);
                 log.setFlag("selftest_when_ran", false);
             }
+        }
+
+        // npc_say out of earshot: the player whose quest said it hears it anyway (living_fire ends in the Nether, Okafor is at camp).
+        {
+            var say = new com.sablednah.chronicler.data.RewardTypes.NpcSay(java.util.Optional.empty(), "Well done.", 16D);
+            var nearby = new Npcs.Placed(java.util.UUID.randomUUID(), "Okafor", solo.level().dimension().identifier(), solo.position().add(3, 0, 0));
+            var inNether = new Npcs.Placed(nearby.id(), "Okafor", net.minecraft.world.level.Level.NETHER.identifier(), solo.position());
+            var farOff = new Npcs.Placed(nearby.id(), "Okafor", nearby.dimension(), solo.position().add(200, 0, 0));
+            check("npc_say: in earshot, nothing extra", Rewards.farLine(solo, java.util.Optional.of(nearby), say).isEmpty());
+            check("npc_say: another dimension relays the line, named", Rewards.farLine(solo, java.util.Optional.of(inNether), say)
+                    .map(l -> l.contains("Okafor") && l.contains("Well done.")).orElse(false));
+            check("npc_say: past the radius relays it too", Rewards.farLine(solo, java.util.Optional.of(farOff), say).isPresent());
+            var radio = new com.sablednah.chronicler.data.RewardTypes.NpcSay(java.util.Optional.empty(), "Country music.", 16D, java.util.Optional.empty(),
+                    java.util.Optional.of("&8[radio] &f{name}&8: &7{text}"));
+            check("npc_say: far as a format is the line's own style", Rewards.farLine(solo, java.util.Optional.of(inNether), radio)
+                    .map(l -> l.equals("&8[radio] &fOkafor&8: &7Country music.")).orElse(false));
+            var quiet = new com.sablednah.chronicler.data.RewardTypes.NpcSay(java.util.Optional.empty(), "x", 16D, java.util.Optional.empty(), java.util.Optional.of("none"));
+            check("npc_say: far none keeps it where it was said", Rewards.farLine(solo, java.util.Optional.of(inNether), quiet).isEmpty());
+            check("npc_say: far parses from a file", com.sablednah.chronicler.data.RewardTypes.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,
+                    com.google.gson.JsonParser.parseString("{\"type\": \"npc_say\", \"text\": \"t\", \"far\": \"none\"}")).result()
+                    .map(r -> r instanceof com.sablednah.chronicler.data.RewardTypes.NpcSay ns && ns.far().orElse("").equals("none")).orElse(false));
         }
 
         // --- endings and replay ---

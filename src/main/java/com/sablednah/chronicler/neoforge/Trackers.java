@@ -187,6 +187,17 @@ public final class Trackers {
     }
 
     static {
+        register(ObjectiveTypes.VisitGiver.class, new Tracker<ObjectiveTypes.VisitGiver>() {
+            @Override
+            public OptionalInt poll(ServerPlayer player, ObjectiveTypes.VisitGiver spec) {
+                var where = Givers.whereGiven(player.level().getServer(), spec.giver());
+                if (where.isEmpty() || !where.get().level().equals(player.level().dimension().identifier())) return OptionalInt.of(0);
+                return OptionalInt.of(player.position().distanceToSqr(where.get().pos()) <= spec.radius() * spec.radius() ? 1 : 0);
+            }
+            @Override public boolean latching(ObjectiveTypes.VisitGiver spec) { return true; }
+        });
+        // A talk is an event (the click on the giver), counted by the engine; nothing to poll.
+        register(ObjectiveTypes.Talk.class, new Tracker<ObjectiveTypes.Talk>() {});
         register(ObjectiveTypes.At.class, new Tracker<ObjectiveTypes.At>() {
             @Override
             public OptionalInt poll(ServerPlayer player, ObjectiveTypes.At spec) {

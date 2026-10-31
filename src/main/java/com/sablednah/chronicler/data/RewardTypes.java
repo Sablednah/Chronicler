@@ -207,14 +207,23 @@ public final class RewardTypes {
      * A placed NPC speaks -- the one that gives {@code quest} (its own quest, unless
      * another is named). Chat to everyone within {@code radius}. Nothing without Cast.
      */
-    public record NpcSay(Optional<Identifier> quest, String text, double radius, Optional<String> npc) implements RewardSpec {
+    public record NpcSay(Optional<Identifier> quest, String text, double radius, Optional<String> npc, Optional<String> far) implements RewardSpec {
         /** {@code npc}: a person by id -- a mini quest's {@code "{elder.id}"} -- instead of a quest's giver. */
-        public NpcSay(Optional<Identifier> quest, String text, double radius) { this(quest, text, radius, Optional.empty()); }
+        public NpcSay(Optional<Identifier> quest, String text, double radius) { this(quest, text, radius, Optional.empty(), Optional.empty()); }
+        /** Before {@code far}. */
+        public NpcSay(Optional<Identifier> quest, String text, double radius, Optional<String> npc) { this(quest, text, radius, npc, Optional.empty()); }
+        /**
+         * {@code far}: what the player whose quest fired the line gets when they are out of earshot (another
+         * dimension, past {@code radius}) -- a beat that ends in the Nether must not lose the line said at camp.
+         * Unsaid, {@code msg.say.far}; {@code "none"} drops it; anything else is the format itself, with
+         * {@code {name}} and {@code {text}} ({@code "&8[radio] &f{name}&8: &7{text}"} in ZARP, where Sarge fixed the radio).
+         */
         public static final MapCodec<NpcSay> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 ChroniclerIds.CODEC.optionalFieldOf("quest").forGetter(NpcSay::quest),
                 Codec.STRING.fieldOf("text").forGetter(NpcSay::text),
                 Codec.DOUBLE.optionalFieldOf("radius", 16.0D).forGetter(NpcSay::radius),
-                Codec.STRING.optionalFieldOf("npc").forGetter(NpcSay::npc))
+                Codec.STRING.optionalFieldOf("npc").forGetter(NpcSay::npc),
+                Codec.STRING.optionalFieldOf("far").forGetter(NpcSay::far))
                 .apply(i, NpcSay::new));
         @Override public MapCodec<NpcSay> codec() { return MAP_CODEC; }
         @Override public String describe() { return Lang.get("rew.npc_say"); }

@@ -286,6 +286,16 @@ public final class Givers {
         Chronicler.LOGGER.info("Chronicler: placed NPC giver '{}' for {} at {}", n.name(), questId, at);
     }
 
+    /** Deliveries and talks addressed to any of these quests' giver, every one of them asked. True if any was in play. */
+    private static boolean handIn(ServerPlayer player, List<Identifier> quests) {
+        boolean any = false;
+        for (Identifier q : quests) {
+            any |= QuestEngine.onDeliver(player, q);
+            any |= QuestEngine.onTalk(player, q);
+        }
+        return any;
+    }
+
     /** A right-click on a Cast NPC carrying the giver role. */
     public static boolean onUseNpc(ServerPlayer player, UUID npcId) {
         MinecraftServer server = player.level().getServer();
@@ -302,7 +312,8 @@ public final class Givers {
             return true;
         }
         // A hand-over to this person, for any of the quests they give, comes before any offer.
-        for (Identifier q : quests) if (QuestEngine.onDeliver(player, q)) return true;
+        // A report back to them likewise: both are asked, so a short delivery does not swallow the talk.
+        if (handIn(player, quests)) return true;
         // More than one thing to take from this person: all of them, not the first.
         if (offerAll(player, npcName(npcId.toString()), quests)) return true;
         // Several quests on one person: the same rule as several on one block.
@@ -410,6 +421,22 @@ public final class Givers {
         if (!Npcs.available()) return Optional.empty();
         return GiverStore.get(server).placedFor(questId).flatMap(id -> Npcs.provider().get().byId(server, id))
                 .map(p -> new Where(p.dimension(), p.pos()));
+    }
+
+    /**
+     * Where a quest's giver can be found by someone going back to it: {@link #positionOf}, else a block an op
+     * or {@code npc_remove}'s {@code giver_for} set giving it (Wrench's bench, once the garage fell).
+     */
+    public static Optional<Where> whereGiven(MinecraftServer server, Identifier questId) {
+        var known = positionOf(server, questId);
+        if (known.isPresent()) return known;
+        for (var e : GiverStore.get(server).view().entrySet()) {
+            if (!e.getValue().equals(questId) || e.getKey().startsWith("npc|")) continue;
+            BlockPos pos = parse(e.getKey());
+            Identifier dim = Identifier.tryParse(e.getKey().substring(0, e.getKey().indexOf('|')));
+            if (pos != null && dim != null) return Optional.of(new Where(dim, Vec3.atCenterOf(pos)));
+        }
+        return Optional.empty();
     }
 
     /** How far {@code of} is followed before giving up: a chain that long is a loop in the data. */
@@ -634,7 +661,7 @@ public final class Givers {
         List<Identifier> here = questsAt(level, pos);
         if (here.isEmpty()) return false;
         // A hand-over for any quest given here comes before any offer, as at a person.
-        for (Identifier q : here) if (QuestEngine.onDeliver(player, q)) return true;
+        if (handIn(player, here)) return true;
         String who = QuestEngine.quest(level.getServer(), here.getFirst()).map(h -> describe(level.getServer(), h.value())).orElse(Lang.get("giver.someone"));
         if (offerAll(player, who, here)) return true;
         Optional<Identifier> id = pick(player, here);
