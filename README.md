@@ -178,7 +178,16 @@ without it), `flag`, and the effects `title`, `message` (`action_bar: true`
 for the bar) and `spawn`. Commands substitute
 `{player}`, `{uuid}`, `{quest}`, `{x}`, `{y}`, `{z}`. A `reputation` objective
 (`standing` + `at_least`) waits on a standing. A chapter carries `scope: solo | party` and `main: true`; a quest may
-override `scope`. Every word a player sees lives in
+override `scope`. A party quest is accepted, advanced and finished by the party members online
+at the time; one choice at a decision beat is the party's, its effects applied to each of them.
+Its gates (`availability`, `requires`) are asked of the one who accepts it, and a member who does
+not meet them is not brought along. **A member who was away is caught up**: on login, or on
+joining the party, a party quest the party finished is marked done for them (with its endings and
+the player flags its choices set), and they are paid its rewards that belong to a person -- xp,
+items, money, reputation, karma -- never what already happened to the world (spawns, lines said,
+commands, titles). `party.catchUpRewards: false` marks them done unpaid. A party quest an online
+member is still on is joined at their stage. Repeatables stay each member's own. The party is
+filed by its group's id, so a rename loses nothing. Every word a player sees lives in
 `config/chronicler/messages.yml`.
 
 ### The rest of the vocabulary (2026-09-08)

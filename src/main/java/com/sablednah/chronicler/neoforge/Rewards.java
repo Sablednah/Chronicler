@@ -242,6 +242,7 @@ public final class Rewards {
             if (r.player()) {
                 // quest is null when a chapter's on_replay runs: questId is then the chapter itself.
                 QuestEngine.journal(player).setFlag(r.name(), r.value(), quest != null ? quest.chapter() : questId);
+                PartyLedger.recordFlag(player, quest, quest != null ? quest.chapter() : questId, r.name(), r.value()); // a party's choice is everyone's
             } else {
                 FlagStore.get(player.level().getServer()).set(r.name(), r.value());
                 Chronicler.LOGGER.info("Chronicler: world flag {} = {} (quest {} by {})",
