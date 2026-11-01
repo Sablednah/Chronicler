@@ -1209,8 +1209,20 @@ public final class SelfTest {
             String bad = "{\"name\": \"x\", \"chapter\": \"prologue\", " + stages + ", \"variants\": [{\"when\": {\"flags\": {\"f\": true}}, ";
             check("variants: a stage the quest does not have is refused, by number",
                     parse.apply(bad + "\"stages\": {\"3\": {\"text\": \"t\"}}}]}").error().map(e -> e.message().contains("stage 3, but the quest has 2")).orElse(false));
-            check("variants: relabelling an objective type with no label is refused, naming the type",
-                    parse.apply(bad + "\"stages\": {\"1\": {\"objectives\": {\"2\": {\"label\": \"l\"}}}}}]}").error().map(e -> e.message().contains("collect objective takes no label")).orElse(false));
+            check("variants: a collect can be relabelled (every built-in objective takes a label now)",
+                    parse.apply(bad + "\"stages\": {\"1\": {\"objectives\": {\"2\": {\"label\": \"l\"}}}}}]}").result().isPresent());
+            // A file's own label on collect, kill and reputation is what the player reads (ZARP had seventeen dropped
+            // silently: Bigger Boxes said "Barrel", as if any barrel would do).
+            java.util.function.Function<String, String> said = json -> ObjectiveTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(json))
+                    .result().map(com.sablednah.chronicler.data.ObjectiveSpec::describe).orElse("<refused>");
+            check("label: a collect says its label", said.apply("{\"type\": \"collect\", \"item\": \"minecraft:barrel\", \"label\": \"Craft a Sophisticated Barrel (any wood)\"}")
+                    .equals("Craft a Sophisticated Barrel (any wood)"));
+            check("label: a kill by tag says its label, not the tag", said.apply("{\"type\": \"kill\", \"tag\": \"zarp_colossus\", \"label\": \"Kill the Colossus\"}")
+                    .equals("Kill the Colossus"));
+            check("label: a reputation says its label", said.apply("{\"type\": \"reputation\", \"standing\": \"camp\", \"at_least\": 10, \"label\": \"Earn the camp's trust\"}")
+                    .equals("Earn the camp's trust"));
+            check("label: left out, a collect still says what it wants", !said.apply("{\"type\": \"collect\", \"item\": \"minecraft:barrel\"}").equals("<refused>")
+                    && said.apply("{\"type\": \"collect\", \"item\": \"minecraft:barrel\"}").contains("Barrel"));
             check("variants: a choice the stage does not have is refused",
                     parse.apply(bad + "\"stages\": {\"2\": {\"choices\": {\"3\": {\"label\": \"l\"}}}}}]}").error().isPresent());
             check("variants: a stage numbered 0 is refused (numbers start at 1, as next and fail do)",

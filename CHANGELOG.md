@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fix: a person `npc_remove` took away came back on the next server start (Cast forgets a removed NPC, and the start placed it again). They now stay gone; a world that removed someone with `leave` before this agrees on its own.
+- Fix: the block a removed person left gave only its `giver_for` quest, so their own quests -- and every one shared with them by `of` -- had no giver, and a delivery or talk `to` their quest could not land (ZARP: Wrench's bench would not take Pump Action's valve). The block now stands in for them completely: their quests first, then the `giver_for` one, with marks, waypoints and `visit` giver pointing at it. Rebuilt on every start from what the world already recorded, so no replay is needed; `npc_restore` undoes it.
+- `collect`, `kill` and `reputation` take a `label`, as every other objective already did -- it was dropped without a word, so Bigger Boxes said "Barrel" as if any barrel would do, and a kill by tag named the tag. A `variants` entry can reword them too.
+
 ## 1.4.0 — 2026-10-31
 
 - **Variants: other words once the world has moved on.** A quest's `variants` reword its name, description, `locked`, `recap`, `recap_endings`/`recap_flags`, and per stage its text, objective labels and choices, for a reader whose `when` gates hold (the `availability` shape) -- first match wins, anything left out keeps the quest's own. Everywhere the text is read: journal, panel, HUD, action bar, `/quests`, offers, waypoints, recap. A chapter's `variants` reword its name, description and recap. Bad numbers are refused at load. (ZARP: Wrench in the past tense after the garage fell.)
