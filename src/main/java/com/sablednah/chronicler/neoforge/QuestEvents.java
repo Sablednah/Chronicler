@@ -17,6 +17,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 public final class QuestEvents {
 
     private static int tickCounter;
+    private static int catchUpCounter;
 
     @SubscribeEvent
     static void onDeath(LivingDeathEvent event) {
@@ -76,6 +77,11 @@ public final class QuestEvents {
             EscortBars.sync(player);
         }
         Minis.tick(event.getServer());
+        // Someone who joined a party since logging in catches up too, without waiting for the next login.
+        if (++catchUpCounter >= 30) {
+            catchUpCounter = 0;
+            PartyLedger.catchUpMovers(event.getServer());
+        }
     }
 
     /** Remind a returning player what they were doing; hand a new one the book. */
@@ -83,6 +89,7 @@ public final class QuestEvents {
     static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             Journal.giveToNewPlayer(player);
+            PartyLedger.catchUp(player); // what their party did while they were away, before the sweep reads the journal
             Achievements.sweep(player); // what the journal says they earned while no advancement was there to take it
             QuestEngine.journal(player).tracked().ifPresent(id -> QuestEngine.showTracker(player, id));
         }
@@ -159,6 +166,7 @@ public final class QuestEvents {
         EscortBars.clearSession();
         Rewards.clearSession();
         QuestEngine.clearSession();
+        PartyLedger.clearSession();
         Minis.clear();
         FlagStore.forget();
         com.sablednah.chronicler.data.QuestItem.CURRENT = null;
@@ -167,7 +175,7 @@ public final class QuestEvents {
     /** How much per-world in-memory state is held right now; the self-test's window onto {@link #clearSession}. */
     static int sessionStateCount() {
         return Givers.sessionStateCount() + Hud.sessionStateCount() + JournalPanel.sessionStateCount()
-                + EscortBars.activeCount() + Rewards.spawnedCount() + QuestEngine.settlingCount() + QuestEngine.wordedCount()
+                + EscortBars.activeCount() + Rewards.spawnedCount() + QuestEngine.settlingCount() + QuestEngine.wordedCount() + PartyLedger.sessionStateCount()
                 + (FlagStore.cached() == null ? 0 : 1) + (com.sablednah.chronicler.data.QuestItem.CURRENT == null ? 0 : 1);
     }
 
@@ -177,6 +185,7 @@ public final class QuestEvents {
         Markers.forget(event.getEntity().getUUID());
         JournalPanel.forget(event.getEntity().getUUID());
         Hud.forget(event.getEntity().getUUID());
+        PartyLedger.forget(event.getEntity().getUUID());
         if (event.getEntity() instanceof ServerPlayer player) EscortBars.forget(player);
     }
 

@@ -22,6 +22,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.IntValue HUD_MAX_OFFERS;
     public static final ModConfigSpec.BooleanValue SHOW_HIDDEN_TO_OPS;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> PARTY_GROUP_KINDS;
+    public static final ModConfigSpec.BooleanValue PARTY_CATCH_UP_REWARDS;
     public static final ModConfigSpec.BooleanValue JOURNAL_GIVE_NEW;
     public static final ModConfigSpec.BooleanValue JOURNAL_PANEL;
     public static final ModConfigSpec.IntValue GIVER_COOLDOWN_SECONDS;
@@ -175,6 +176,11 @@ public final class ChroniclerConfig {
                 .defineListAllowEmpty("groupKinds",
                         java.util.List.of("legendquest:party", "standards:group"),
                         () -> "", o -> o instanceof String);
+        PARTY_CATCH_UP_REWARDS = BUILDER
+                .comment("A member who was away when their party finished a party quest is caught up on login:",
+                        "the quest is marked done. With this on they are also paid its rewards that belong to a",
+                        "person (xp, items, money, reputation, karma); what happened to the world is never re-run.")
+                .define("catchUpRewards", true);
         BUILDER.pop();
     }
 
