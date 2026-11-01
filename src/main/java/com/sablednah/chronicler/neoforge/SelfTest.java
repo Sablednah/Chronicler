@@ -480,6 +480,35 @@ public final class SelfTest {
                             && GiverStore.get(server).left(leaveQuest).isEmpty());
                     check("npc_restore: asking again, with nothing removed and no such quest, is a quiet no-op",
                             !Givers.restoreNpc(server, leaveQuest));
+                    // What a removed person left stands in for them: every quest they gave, by "of" too (ZARP: Wrench's
+                    // bench took none of his eleven, so his deliveries could not land). Any person in the loaded packs with a
+                    // sharer will do -- ZARP's in the all-siblings boot; the prologue alone has none.
+                    Identifier person = null, sharer = null;
+                    for (var h : quests.listElements().toList()) {
+                        if (h.value().giver().orElse(null) instanceof com.sablednah.chronicler.data.GiverTypes.NpcGiver n && n.of().isPresent()) {
+                            Identifier root = Givers.personOf(server, h.key().identifier());
+                            if (!root.equals(h.key().identifier())) { person = root; sharer = h.key().identifier(); break; }
+                        }
+                    }
+                    if (person == null) {
+                        Chronicler.LOGGER.info("SelfTest: no NPC giver with an \"of\" sharer loaded -- stand-in checks need the all-siblings boot");
+                    } else {
+                        var bench = new net.minecraft.core.BlockPos(7, 300, 7);
+                        var left = new GiverStore.Left(server.overworld().dimension().identifier(), bench);
+                        GiverStore.get(server).setLeft(person, left.dimension(), bench);
+                        check("npc_remove: a person who left something behind stays gone on the next start (" + person + ")", GiverStore.get(server).isGone(person));
+                        Givers.standIn(server, person, left);
+                        var onBench = Givers.questsAt(server.overworld(), bench);
+                        check("stand-in: the bench gives the person's own quest first, then those shared by of (" + onBench.size() + ")",
+                                !onBench.isEmpty() && onBench.get(0).equals(person) && onBench.contains(sharer));
+                        final Identifier sharerId = sharer;
+                        check("stand-in: a shared quest's giver is the bench now (visit giver, waypoints)",
+                                Givers.positionOf(server, sharerId).map(w -> w.pos().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(bench)) < 0.01D).orElse(false));
+                        Givers.restoreNpc(server, person);
+                        check("npc_restore: the stand-in gives nothing of theirs any more, and they are not gone",
+                                Givers.questsAt(server.overworld(), bench).isEmpty() && !GiverStore.get(server).isGone(person)
+                                        && GiverStore.get(server).left(person).isEmpty());
+                    }
                 } finally {
                     cast.remove(server, npc);
                 }

@@ -81,11 +81,13 @@ public final class Givers {
                 BlockPos at = resolve(server, e.id(), p, dim);
                 if (at != null) addBlock(e.id(), dim, at);
             }
-            if (e.giver() instanceof GiverTypes.NpcGiver n && n.of().isEmpty()) placeNpc(server, e.id(), n);
+            if (e.giver() instanceof GiverTypes.NpcGiver n && n.of().isEmpty() && !store.isGone(e.id())) placeNpc(server, e.id(), n);
         }
         // Second pass: quests that share another quest's block or NPC, once every block and NPC is placed.
         for (Entry e : List.copyOf(DATA)) {
-            if (e.giver() instanceof GiverTypes.NpcGiver n && n.of().isPresent()) shareNpc(server, e.id(), n.of().get());
+            if (e.giver() instanceof GiverTypes.NpcGiver n && n.of().isPresent() && !store.isGone(personOf(server, e.id()))) {
+                shareNpc(server, e.id(), n.of().get());
+            }
             if (e.giver() instanceof GiverTypes.Position p && p.of().isPresent()) {
                 BlockPos at = RESOLVED.get(p.of().get());
                 if (at == null) {
@@ -96,7 +98,58 @@ public final class Givers {
                 addBlock(e.id(), RESOLVED_DIM.get(p.of().get()), at);
             }
         }
+        // What a removed person left behind stands in for them: every quest they gave, given from it.
+        for (Identifier q : store.leftQuests()) store.left(q).ifPresent(left -> standIn(server, personOf(server, q), left));
         OFFERED.clear();
+    }
+
+    /**
+     * The quest whose person gives this one: itself for an NPC giver of its own, else where its {@code of}
+     * chain ends. Anything that is not an NPC giver is its own.
+     */
+    static Identifier personOf(MinecraftServer server, Identifier questId) {
+        Identifier at = questId;
+        for (int hops = 0; hops < OF_HOPS; hops++) {
+            var g = QuestEngine.quest(server, at).flatMap(h -> h.value().giver()).orElse(null);
+            if (!(g instanceof GiverTypes.NpcGiver n) || n.of().isEmpty()) return at;
+            at = n.of().get();
+        }
+        return at;
+    }
+
+    /** The data person this placed NPC is, by their own quest; empty for a mini quest's person or an op's. */
+    static Optional<Identifier> personOfNpc(MinecraftServer server, UUID npc) {
+        GiverStore store = GiverStore.get(server);
+        for (Entry e : DATA) {
+            if (e.giver() instanceof GiverTypes.NpcGiver n && n.of().isEmpty() && store.placedFor(e.id()).map(npc::equals).orElse(false)) {
+                return Optional.of(e.id());
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * The block a removed person left (Wrench's bench, once the garage fell) gives every quest they gave:
+     * theirs first, then each that shared them by {@code of}; a {@code giver_for} quest follows after, from
+     * the store. A click on it is a click on their giver, so a delivery or talk {@code to} their quest lands.
+     */
+    static void standIn(MinecraftServer server, Identifier person, GiverStore.Left left) {
+        if (QuestEngine.quest(server, person).flatMap(h -> h.value().giver()).filter(g -> g instanceof GiverTypes.NpcGiver).isEmpty()) return;
+        addBlock(person, left.dimension(), left.pos());
+        for (Entry e : DATA) {
+            if (e.giver() instanceof GiverTypes.NpcGiver && !e.id().equals(person) && personOf(server, e.id()).equals(person)) {
+                addBlock(e.id(), left.dimension(), left.pos());
+            }
+        }
+    }
+
+    /** Undo {@link #standIn}: the block at this key gives nothing of the person's any more. */
+    private static void dropStandIn(Identifier dim, BlockPos pos) {
+        String key = dim + "|" + pos.getX() + "," + pos.getY() + "," + pos.getZ();
+        DATA_BLOCKS.remove(key);
+        List<Identifier> gone = new ArrayList<>();
+        RESOLVED_KEY.forEach((q, k) -> { if (k.equals(key)) gone.add(q); });
+        for (Identifier q : gone) { RESOLVED.remove(q); RESOLVED_KEY.remove(q); RESOLVED_DIM.remove(q); }
     }
 
     private static void addBlock(Identifier questId, Identifier dim, BlockPos at) {
@@ -226,11 +279,18 @@ public final class Givers {
                 store.remove(level, left.pos());
                 level.setBlockAndUpdate(left.pos(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
             }
+            dropStandIn(left.dimension(), left.pos());
             store.clearLeft(questId);
         });
-        var quest = QuestEngine.quest(server, questId);
+        Identifier person = personOf(server, questId);
+        store.clearGone(person);
+        var quest = QuestEngine.quest(server, person);
         if (quest.isEmpty() || !(quest.get().value().giver().orElse(null) instanceof GiverTypes.NpcGiver n) || n.of().isPresent()) return false;
-        placeNpc(server, questId, n);
+        placeNpc(server, person, n);
+        // Everyone who shared them by "of" shares the person again, as a start would.
+        for (Entry e : List.copyOf(DATA)) {
+            if (e.giver() instanceof GiverTypes.NpcGiver g && g.of().isPresent() && personOf(server, e.id()).equals(person)) shareNpc(server, e.id(), g.of().get());
+        }
         return true;
     }
 
