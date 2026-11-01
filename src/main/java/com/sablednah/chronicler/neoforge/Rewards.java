@@ -161,6 +161,9 @@ public final class Rewards {
             r.text().ifPresent(t -> Feedback.chat(player, t));
             if (npc.isEmpty()) return;
             var server = player.level().getServer();
+            // A data-placed person stays gone: the next start must not put them back.
+            var person = Givers.personOfNpc(server, npc.get());
+            person.ifPresent(p -> GiverStore.get(server).setGone(p));
             // What is left of them goes where they last stood -- asked before they are gone.
             if (r.leave().isPresent()) {
                 Npcs.provider().get().byId(server, npc.get()).ifPresent(p -> {
@@ -170,6 +173,8 @@ public final class Rewards {
                     Givers.placeBlock(level, at, r.leave().get(), questId);
                     r.giverFor().ifPresent(q -> GiverStore.get(server).set(level, at, q));
                     GiverStore.get(server).setLeft(r.quest().orElse(questId), p.dimension(), at); // so npc_restore can take it away
+                    // ...and stands in for them now, not only from the next start.
+                    person.ifPresent(who -> Givers.standIn(server, who, new GiverStore.Left(p.dimension(), at)));
                     Chronicler.LOGGER.info("Chronicler: {} left {} at {}{}", r.quest().orElse(questId), r.leave().get(), at,
                             r.giverFor().map(q -> ", giving " + q).orElse(""));
                 });
