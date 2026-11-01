@@ -44,7 +44,7 @@ public final class PartyLedger extends SavedData {
             .apply(i, PartyLedger::new));
 
     public static final SavedDataType<PartyLedger> TYPE =
-            new SavedDataType<>("chronicler_party", PartyLedger::new, CODEC, null);
+            new SavedDataType<>(net.minecraft.resources.Identifier.fromNamespaceAndPath("chronicler", "party"), PartyLedger::new, CODEC, null);
 
     /** party -> quest ids finished */
     private final Map<String, Set<String>> done = new LinkedHashMap<>();
