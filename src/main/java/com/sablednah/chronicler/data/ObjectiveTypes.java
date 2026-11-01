@@ -37,8 +37,10 @@ public final class ObjectiveTypes {
      * player can keep trying (the Bloater you must kill before it blows). With a {@code tag}
      * and no {@code target}, only the tagged one counts; with neither, anything does.
      */
-    public record Kill(List<String> targets, int count, Optional<String> tag, Optional<Drop> drop, boolean ownKill) implements ObjectiveSpec {
+    public record Kill(List<String> targets, int count, Optional<String> tag, Optional<Drop> drop, boolean ownKill, Optional<String> label) implements ObjectiveSpec {
         public Kill(List<String> targets, int count, Optional<String> tag, Optional<Drop> drop) { this(targets, count, tag, drop, false); }
+        /** Before {@code label}. */
+        public Kill(List<String> targets, int count, Optional<String> tag, Optional<Drop> drop, boolean ownKill) { this(targets, count, tag, drop, ownKill, Optional.empty()); }
         public record Drop(Identifier questItem, double chance, int count) {
             public static final Codec<Drop> CODEC = RecordCodecBuilder.create(i -> i.group(
                     ChroniclerIds.CODEC.fieldOf("quest_item").forGetter(Drop::questItem),
@@ -53,17 +55,18 @@ public final class ObjectiveTypes {
                 Codec.INT.optionalFieldOf("count", 1).forGetter(Kill::count),
                 Codec.STRING.optionalFieldOf("tag").forGetter(Kill::tag),
                 Drop.CODEC.optionalFieldOf("drop").forGetter(Kill::drop),
-                Codec.BOOL.optionalFieldOf("own_kill", false).forGetter(Kill::ownKill))
+                Codec.BOOL.optionalFieldOf("own_kill", false).forGetter(Kill::ownKill),
+                Codec.STRING.optionalFieldOf("label").forGetter(Kill::label))
                 .apply(i, Kill::new));
 
-        public Kill(String target, int count) { this(List.of(target), count, Optional.empty(), Optional.empty(), false); }
+        public Kill(String target, int count) { this(List.of(target), count, Optional.empty(), Optional.empty(), false, Optional.empty()); }
         /** The first named target, for text: the tag when only a tag was given (Phil), "any" when neither. */
         public String target() { return !targets.isEmpty() ? targets.getFirst() : tag.orElse("any"); }
 
         @Override public MapCodec<Kill> codec() { return MAP_CODEC; }
         @Override public int required() { return count; }
         @Override public String describe() {
-            return Lang.fmt("obj.kill", "count", count, "target", Lang.pretty(target()));
+            return label.orElseGet(() -> Lang.fmt("obj.kill", "count", count, "target", Lang.pretty(target())));
         }
     }
 
@@ -190,21 +193,24 @@ public final class ObjectiveTypes {
     }
 
     /** Hold {@code count} of {@code item}; {@code consume} takes them on completion. */
-    public record Collect(Identifier item, int count, boolean consume, Optional<Identifier> questItem, Optional<Identifier> tag) implements ObjectiveSpec {
+    public record Collect(Identifier item, int count, boolean consume, Optional<Identifier> questItem, Optional<Identifier> tag, Optional<String> label) implements ObjectiveSpec {
         public Collect(Identifier item, int count, boolean consume) { this(item, count, consume, Optional.empty(), Optional.empty()); }
+        /** Before {@code label}. */
+        public Collect(Identifier item, int count, boolean consume, Optional<Identifier> questItem, Optional<Identifier> tag) { this(item, count, consume, questItem, tag, Optional.empty()); }
         public static final MapCodec<Collect> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Identifier.CODEC.optionalFieldOf("item", Identifier.withDefaultNamespace("air")).forGetter(Collect::item),
                 Codec.INT.optionalFieldOf("count", 1).forGetter(Collect::count),
                 Codec.BOOL.optionalFieldOf("consume", true).forGetter(Collect::consume),
                 ChroniclerIds.CODEC.optionalFieldOf("quest_item").forGetter(Collect::questItem),
-                Identifier.CODEC.optionalFieldOf("tag").forGetter(Collect::tag))
+                Identifier.CODEC.optionalFieldOf("tag").forGetter(Collect::tag),
+                Codec.STRING.optionalFieldOf("label").forGetter(Collect::label))
                 .apply(i, Collect::new));
 
         @Override public MapCodec<Collect> codec() { return MAP_CODEC; }
         @Override public int required() { return count; }
         @Override public String describe() {
-            return Lang.fmt(consume ? "obj.collect" : "obj.hold", "count", count,
-                    "item", questItem.map(QuestItem::displayName).orElseGet(() -> Lang.pretty(tag.map(Identifier::getPath).orElse(item.getPath()))));
+            return label.orElseGet(() -> Lang.fmt(consume ? "obj.collect" : "obj.hold", "count", count,
+                    "item", questItem.map(QuestItem::displayName).orElseGet(() -> Lang.pretty(tag.map(Identifier::getPath).orElse(item.getPath())))));
         }
     }
 
@@ -234,16 +240,19 @@ public final class ObjectiveTypes {
     }
 
     /** Hold a standing of at least {@code at_least} with a group. Polled; not latching. */
-    public record Reputation(String standing, int atLeast) implements ObjectiveSpec {
+    public record Reputation(String standing, int atLeast, Optional<String> label) implements ObjectiveSpec {
+        /** Before {@code label}. */
+        public Reputation(String standing, int atLeast) { this(standing, atLeast, Optional.empty()); }
         public static final MapCodec<Reputation> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.STRING.fieldOf("standing").forGetter(Reputation::standing),
-                Codec.INT.fieldOf("at_least").forGetter(Reputation::atLeast))
+                Codec.INT.fieldOf("at_least").forGetter(Reputation::atLeast),
+                Codec.STRING.optionalFieldOf("label").forGetter(Reputation::label))
                 .apply(i, Reputation::new));
 
         @Override public MapCodec<Reputation> codec() { return MAP_CODEC; }
         @Override public int required() { return Math.max(1, atLeast); }
         @Override public String describe() {
-            return Lang.fmt("obj.reputation", "amount", atLeast, "standing", Lang.pretty(standing));
+            return label.orElseGet(() -> Lang.fmt("obj.reputation", "amount", atLeast, "standing", Lang.pretty(standing)));
         }
     }
 
