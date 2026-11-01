@@ -708,6 +708,7 @@ public final class SelfTest {
                 QuestEngine.journal(a).complete(firstSteps);
                 QuestEngine.journal(b).complete(firstSteps);
                 Party.install("selftest", p -> List.of(a, b));
+                Party.installId(p -> java.util.Optional.of("selftest|party"));
                 check("party accept by A", QuestEngine.accept(a, things).isEmpty());
                 check("party accept reached B", QuestEngine.journal(b).isActive(things));
                 check("party target scaled to 10", QuestEngine.journal(a).entry(things).targets.get(0) == 10
@@ -721,6 +722,33 @@ public final class SelfTest {
                         && QuestEngine.journal(b).isComplete(things));
                 check("both rewarded", Trackers.count(a, Identifier.parse("minecraft:iron_sword")) == 1
                         && Trackers.count(b, Identifier.parse("minecraft:iron_sword")) == 1);
+                // Catch-up: a member who was away when the party finished it gets it on login -- done, and paid
+                // what belongs to a person (ZARP: one world, one party; a quest done is done for the party).
+                check("party ledger: the finished party quest is filed under the party", PartyLedger.get(server).doneCount("selftest|party") >= 1);
+                FakePlayer late = fake(server, "ChroniclerTestE");
+                try {
+                    QuestEngine.journal(late).clear();
+                    QuestEngine.journal(late).complete(firstSteps);
+                    Party.install("selftest", p -> List.of(a, b, late));
+                    PartyLedger.catchUp(late);
+                    check("party catch-up: the latecomer has it done", QuestEngine.journal(late).isComplete(things));
+                    check("party catch-up: ...and its sword, since that belongs to a person", Trackers.count(late, Identifier.parse("minecraft:iron_sword")) == 1);
+                    PartyLedger.catchUp(late);
+                    check("party catch-up: twice pays once", Trackers.count(late, Identifier.parse("minecraft:iron_sword")) == 1);
+                    check("party catch-up: a reward that is the world's is never re-run",
+                            !PartyLedger.personal(new com.sablednah.chronicler.data.RewardTypes.Command("say hi", true))
+                                    && PartyLedger.personal(new com.sablednah.chronicler.data.RewardTypes.Xp(5)));
+                    Party.installId(p -> java.util.Optional.empty());
+                    FakePlayer loner = fake(server, "ChroniclerTestF");
+                    QuestEngine.journal(loner).clear();
+                    PartyLedger.catchUp(loner);
+                    check("party catch-up: someone in no party is left be", !QuestEngine.journal(loner).isComplete(things));
+                    QuestEngine.journal(loner).clear();
+                    loner.discard();
+                } finally {
+                    QuestEngine.journal(late).clear();
+                    late.discard();
+                }
             } finally {
                 Party.reset();
                 QuestEngine.journal(a).clear();
