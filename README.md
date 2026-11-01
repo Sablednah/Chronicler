@@ -173,6 +173,8 @@ override `scope`. Every word a player sees lives in
   fills, unless a `collect` or `deliver` in the same beat still wants that item -- then they go on
   until it is satisfied, so a low chance can never strand the quest. Collect in the kill's own beat.
 - **`collect`** takes `tag: minecraft:logs` or `quest_item: zarp:insulin`.
+- **`label`** on any objective is what the player reads in its place ("Craft a Sophisticated Barrel (any wood)")
+  -- an item's own name, or a kill's tag, is rarely the instruction.
 - **`place`** takes `any: [ { lot: Hospital }, { structure: "#minecraft:village" } ]`
   -- alternatives, so a CityWorld lot has a vanilla fallback.
 - **Pockets.** With [Curios](https://www.curseforge.com/minecraft/mc-mods/curios) installed, what a
