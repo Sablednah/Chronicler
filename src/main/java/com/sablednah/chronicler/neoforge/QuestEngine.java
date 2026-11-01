@@ -839,6 +839,7 @@ public final class QuestEngine {
         QuestLog log = journal(player);
         Identifier chapter = quest.chapter();
         boolean fresh = log.addEnding(chapter, ending);
+        PartyLedger.recordEnding(player, quest, ending);
         if (fresh) Achievements.grantOrWarn(player, Achievements.endingId(chapter, ending), "ending " + ending + " of " + chapter);
         int total = endingsOf(server, chapter).size();
         int found = log.endings(chapter).size();
@@ -873,6 +874,7 @@ public final class QuestEngine {
             }
         }
         log.replay(chapter, mine);
+        PartyLedger.forgetChapter(player, chapter, mine);
         runOnReplay(player, chapter, holder.get().value().onReplay());
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new com.sablednah.chronicler.api.ChapterReplayedEvent(player, chapter));
         Feedback.fanfare(player, Lang.fmt("cmd.replay.done", "name", holder.get().value().name(), "found", log.endings(chapter).size(), "total", endingsOf(server, chapter).size()),
@@ -1073,6 +1075,7 @@ public final class QuestEngine {
                     Lang.get("msg.complete.subtitle"));
             for (RewardSpec r : quest.rewards()) Rewards.grant(m, r, id, quest);
             announceUnlocked(m, id);
+            PartyLedger.recordDone(m, id, quest); // for the members who are not here
             journal(m).tracked().ifPresent(t -> showTracker(m, t));
             Progress chapterProgress = progress(m, Optional.of(quest.chapter()));
             if (chapterProgress.total() > 0 && chapterProgress.done() >= chapterProgress.total()) {

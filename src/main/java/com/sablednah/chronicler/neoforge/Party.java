@@ -17,6 +17,7 @@ public final class Party {
 
     private static volatile Function<ServerPlayer, List<ServerPlayer>> provider = List::of;
     private static volatile String providerName = "none";
+    private static volatile Function<ServerPlayer, java.util.Optional<String>> idProvider = p -> java.util.Optional.empty();
 
     /** Online members of the player's party, including the player. Never empty. */
     public static List<ServerPlayer> members(ServerPlayer player) {
@@ -27,6 +28,23 @@ public final class Party {
             out = List.of(player);
         }
         return out == null || out.isEmpty() ? List.of(player) : out;
+    }
+
+    /**
+     * The player's party as a stable id (the group's kind and id, never its name, which can change), or empty
+     * when they are in none. What {@link PartyLedger} files a party's deeds under, for the members offline.
+     */
+    public static java.util.Optional<String> id(ServerPlayer player) {
+        try {
+            var out = idProvider.apply(player);
+            return out == null ? java.util.Optional.empty() : out;
+        } catch (RuntimeException e) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    public static void installId(Function<ServerPlayer, java.util.Optional<String>> ids) {
+        idProvider = ids;
     }
 
     /** Is there anything answering, beyond "just you"? For messages, not decisions. */
@@ -43,6 +61,7 @@ public final class Party {
     public static void reset() {
         provider = List::of;
         providerName = "none";
+        idProvider = p -> java.util.Optional.empty();
     }
 
     private Party() {}

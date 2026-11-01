@@ -34,6 +34,7 @@ public final class StandardsGroups {
      */
     public static void register() {
         Party.install("standards", StandardsGroups::members);
+        Party.installId(StandardsGroups::partyId);
         Chronicler.LOGGER.info("Chronicler: party membership via Standards groups (kinds from party.groupKinds)");
     }
 
@@ -53,6 +54,16 @@ public final class StandardsGroups {
             return out;
         }
         return List.of(player);
+    }
+
+    /** The same group {@link #members} answers with, by kind and id: stable through a rename. */
+    private static java.util.Optional<String> partyId(ServerPlayer player) {
+        for (String kindId : ChroniclerConfig.PARTY_GROUP_KINDS.get()) {
+            GroupKind kind = Groups.kind(kindId).orElse(null);
+            if (kind == null) continue;
+            return Groups.primary(player, kind).map(g -> kind.id() + "|" + g.id());
+        }
+        return java.util.Optional.empty();
     }
 
     private StandardsGroups() {}
