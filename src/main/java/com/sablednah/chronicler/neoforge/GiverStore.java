@@ -143,6 +143,35 @@ public final class GiverStore extends SavedData {
         } catch (RuntimeException e) { return Optional.empty(); }
     }
 
+    /**
+     * A data-placed person {@code npc_remove} took away, by their own quest: never placed again on a later
+     * start (Cast forgets a removed NPC, so without this the next start put them straight back). A
+     * {@code left:} record says the same, so a world that removed someone before this record existed agrees.
+     */
+    public void setGone(Identifier quest) {
+        placed.put("gone:" + quest, "1");
+        setDirty();
+    }
+
+    public boolean isGone(Identifier quest) {
+        return placed.containsKey("gone:" + quest) || placed.containsKey("left:" + quest);
+    }
+
+    public void clearGone(Identifier quest) {
+        if (placed.remove("gone:" + quest) != null) setDirty();
+    }
+
+    /** Every quest whose person left something behind. */
+    public java.util.List<Identifier> leftQuests() {
+        java.util.List<Identifier> out = new java.util.ArrayList<>();
+        for (String k : placed.keySet()) {
+            if (!k.startsWith("left:")) continue;
+            Identifier id = Identifier.tryParse(k.substring("left:".length()));
+            if (id != null) out.add(id);
+        }
+        return out;
+    }
+
     public void clearLeft(Identifier quest) {
         if (placed.remove("left:" + quest) != null) setDirty();
     }
