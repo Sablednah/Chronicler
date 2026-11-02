@@ -50,7 +50,7 @@ public final class Conditions {
     public static List<com.sablednah.chronicler.data.RewardSpec> shownTo(ServerPlayer player, List<com.sablednah.chronicler.data.RewardSpec> rewards) {
         List<com.sablednah.chronicler.data.RewardSpec> out = new ArrayList<>(rewards.size());
         for (var r : rewards) {
-            if (player != null && r instanceof com.sablednah.chronicler.data.RewardTypes.When w && !met(player, w.when())) continue;
+            if (player != null && !Rewards.gatesMet(player, r)) continue;
             out.add(r);
         }
         return out;

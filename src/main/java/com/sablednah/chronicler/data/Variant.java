@@ -116,7 +116,7 @@ public record Variant(Availability when, Optional<String> name, Optional<String>
                 objectives = List.copyOf(objectives);
             }
             out.add(new Stage(t.text().or(s::text), objectives, s.onEnter(), s.onComplete(), choices,
-                    s.deadline(), s.onFail(), s.fail(), s.ending(), s.end()));
+                    s.deadline(), s.onFail(), s.fail(), s.ending(), s.end(), s.unscaled()));
         }
         return out;
     }

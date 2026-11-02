@@ -14,7 +14,42 @@ public final class RewardTypes {
 
     public static final SpecTypes<RewardSpec> TYPES = new SpecTypes<>("reward", RewardSpec::codec);
     /** Every effect and reward as written: a type, its fields, and optionally {@code when} (see {@link When}). */
-    public static final Codec<RewardSpec> CODEC = When.wrap(TYPES.codec());
+    public static final Codec<RewardSpec> CODEC = Once.wrap(When.wrap(TYPES.codec()));
+
+    /**
+     * Any effect with {@code "once": true}: in a party quest it runs one time, for the member who moved the
+     * beat on, instead of once per member online -- a story boss is one boss, its title card one card. Means
+     * nothing solo. {@code npc_say} needs no {@code once}: a person speaks once to a party anyway (everyone
+     * in earshot hears it, everyone out of it gets the relayed line). Like {@link When}, a wrapper and not a
+     * type: it sits beside {@code type} and is taken off before the effect is decoded.
+     */
+    public record Once(RewardSpec effect) implements RewardSpec {
+        @Override public MapCodec<Once> codec() { return MapCodec.unit(this); } // never dispatched; wrap() writes it
+        @Override public String describe() { return effect.describe(); }
+
+        static Codec<RewardSpec> wrap(Codec<RewardSpec> inner) {
+            return new Codec<>() {
+                @Override
+                public <T> com.mojang.serialization.DataResult<com.mojang.datafixers.util.Pair<RewardSpec, T>> decode(
+                        com.mojang.serialization.DynamicOps<T> ops, T input) {
+                    var json = ops.convertTo(com.mojang.serialization.JsonOps.INSTANCE, input);
+                    if (!(json instanceof com.google.gson.JsonObject o) || !o.has("once")) return inner.decode(ops, input);
+                    var rest = o.deepCopy();
+                    var flag = rest.remove("once");
+                    if (!flag.isJsonPrimitive() || !flag.getAsJsonPrimitive().isBoolean()) return com.mojang.serialization.DataResult.error(() -> "once is true or false");
+                    boolean once = flag.getAsBoolean();
+                    return inner.decode(ops, com.mojang.serialization.JsonOps.INSTANCE.convertTo(ops, rest))
+                            .map(p -> com.mojang.datafixers.util.Pair.of(once ? (RewardSpec) new Once(p.getFirst()) : p.getFirst(), input));
+                }
+
+                @Override
+                public <T> com.mojang.serialization.DataResult<T> encode(RewardSpec spec, com.mojang.serialization.DynamicOps<T> ops, T prefix) {
+                    if (!(spec instanceof Once w)) return inner.encode(spec, ops, prefix);
+                    return inner.encodeStart(ops, w.effect()).flatMap(body -> ops.mergeToMap(body, ops.createString("once"), ops.createBoolean(true)));
+                }
+            };
+        }
+    }
 
     /**
      * Any effect with a {@code when}: it runs for a player only if those gates hold for them at that
@@ -29,7 +64,7 @@ public final class RewardTypes {
 
         /** The effect underneath, for anything that looks for a type ({@code own_kill}'s spawn, by tag). */
         public static RewardSpec unwrap(RewardSpec r) {
-            return r instanceof When w ? unwrap(w.effect()) : r;
+            return r instanceof When w ? unwrap(w.effect()) : r instanceof Once o ? unwrap(o.effect()) : r;
         }
 
         static Codec<RewardSpec> wrap(Codec<RewardSpec> inner) {

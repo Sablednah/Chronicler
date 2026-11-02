@@ -698,6 +698,29 @@ public final class SelfTest {
                 check("settle: real content is unaffected unless it opts in", true);
             }
 
+            // once and objective scale: what a party quest's story boss is written with.
+            {
+                var ops = com.mojang.serialization.JsonOps.INSTANCE;
+                var once = com.sablednah.chronicler.data.RewardTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"type\":\"xp\",\"amount\":5,\"once\":true}")).result();
+                check("once: parses to the wrapper around the effect", once.isPresent()
+                        && once.get() instanceof com.sablednah.chronicler.data.RewardTypes.Once o && o.effect() instanceof com.sablednah.chronicler.data.RewardTypes.Xp);
+                check("once: written back out with once", once.flatMap(r -> com.sablednah.chronicler.data.RewardTypes.CODEC.encodeStart(ops, r).result())
+                        .map(j -> j.getAsJsonObject().has("once") && j.getAsJsonObject().get("type") != null).orElse(false));
+                check("once: false is the plain effect", com.sablednah.chronicler.data.RewardTypes.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"type\":\"xp\",\"amount\":5,\"once\":false}")).result().map(r -> r instanceof com.sablednah.chronicler.data.RewardTypes.Xp).orElse(false));
+                var staged = com.sablednah.chronicler.data.Stage.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"objectives\":[{\"type\":\"kill\",\"tag\":\"zarp_boss\",\"scale\":false},{\"type\":\"kill\",\"target\":\"minecraft:zombie\",\"count\":2}]}")).result();
+                check("scale: false on an objective is read off it", staged.map(st -> !st.scales(0) && st.scales(1)).orElse(false));
+                check("scale: one boss for a party of three, six zombies", staged.map(st -> QuestEngine.targetsFor(st, 3).equals(List.of(1, 6))).orElse(false));
+                check("scale: written back out", staged.flatMap(st -> com.sablednah.chronicler.data.Stage.CODEC.encodeStart(ops, st).result())
+                        .map(j -> j.getAsJsonObject().getAsJsonArray("objectives").get(0).getAsJsonObject().has("scale")
+                                && !j.getAsJsonObject().getAsJsonArray("objectives").get(1).getAsJsonObject().has("scale")).orElse(false));
+                check("scale: on a stageless quest's objectives is refused, by name", com.sablednah.chronicler.data.Quest.CODEC.parse(ops, com.google.gson.JsonParser.parseString(
+                        "{\"name\":\"x\",\"chapter\":\"chronicler:prologue\",\"objectives\":[{\"type\":\"kill\",\"target\":\"minecraft:zombie\",\"scale\":false}]}"))
+                        .error().map(err -> err.message().contains("belongs in stages")).orElse(false));
+            }
+
             // Party pooling: two players, targets scaled, one quest between them.
             FakePlayer a = fake(server, "ChroniclerTestB");
             FakePlayer b = fake(server, "ChroniclerTestC");
@@ -722,6 +745,15 @@ public final class SelfTest {
                         && QuestEngine.journal(b).isComplete(things));
                 check("both rewarded", Trackers.count(a, Identifier.parse("minecraft:iron_sword")) == 1
                         && Trackers.count(b, Identifier.parse("minecraft:iron_sword")) == 1);
+                // Shared effects: each member their own, except "once" (the lead's alone).
+                int sticksA = Trackers.count(a, Identifier.parse("minecraft:stick")), sticksB = Trackers.count(b, Identifier.parse("minecraft:stick"));
+                var stick = new com.sablednah.chronicler.data.RewardTypes.Item(Identifier.parse("minecraft:stick"), 1);
+                Rewards.grantShared(List.of(a, b), b, new com.sablednah.chronicler.data.RewardTypes.Once(stick), things, null);
+                check("once: a party effect runs for the lead alone", Trackers.count(b, Identifier.parse("minecraft:stick")) == sticksB + 1
+                        && Trackers.count(a, Identifier.parse("minecraft:stick")) == sticksA);
+                Rewards.grantShared(List.of(a, b), b, stick, things, null);
+                check("once: ...and without it, every member gets their own", Trackers.count(b, Identifier.parse("minecraft:stick")) == sticksB + 2
+                        && Trackers.count(a, Identifier.parse("minecraft:stick")) == sticksA + 1);
                 // Catch-up: a member who was away when the party finished it gets it on login -- done, and paid
                 // what belongs to a person (ZARP: one world, one party; a quest done is done for the party).
                 check("party ledger: the finished party quest is filed under the party", PartyLedger.get(server).doneCount("selftest|party") >= 1);
