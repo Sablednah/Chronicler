@@ -141,7 +141,10 @@ size (the quest's `scale: false` turns that off; so does `"scale": false` on one
 therefore asks it of every member online when it scales, and of any one of them when it does not.
 Each member gets their own effects and rewards, except **`"once": true`** on an effect, which runs
 for the member who moved the beat on and nobody else (the boss's spawn, its title), and `npc_say`,
-which a person says once to the party: heard in earshot, relayed to the rest.
+which a person says once to the party: heard in earshot, relayed to the rest. A `once` spawn may carry
+**`party_health`**: max health times `1 + party_health x (members - 1)` (0.5: a party of three
+fights a boss at double health), applied over the genus, `health` and `equipment`, logged when it
+fires.
 Its gates (`availability`, `requires`) are asked of the one who accepts it, and a member who does
 not meet them is not brought along. **A member who was away is caught up**: on login, or on
 joining the party, a party quest the party finished is marked done for them (with its endings and
