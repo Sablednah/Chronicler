@@ -66,9 +66,11 @@ public final class Waypoints {
 
         QuestEngine.quests(server).listElements().forEach(h -> {
             Identifier id = h.key().identifier();
+            var at = Givers.positionOf(server, id); // a map lookup; most quests have no giver standing anywhere
+            if (at.isEmpty()) return;
             if (!QuestEngine.visible(player, id, h.value())) return;
             if (JournalPanel.status(player, log, id, h.value()) != com.sablednah.chronicler.network.JournalPayload.AVAILABLE) return;
-            Givers.positionOf(server, id).ifPresent(where -> {
+            at.ifPresent(where -> {
                 String questName = Feedback.colored(h.value().name()).getString();
                 var pos = where.pos();
                 marks.add(new Mark(id + ":giver", Lang.fmt("waypoint.giver", "quest", questName),

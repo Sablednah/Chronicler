@@ -1746,6 +1746,19 @@ public final class SelfTest {
             }
         }
 
+        // --- the block-slot scan: section by section, the nearest one, and nothing for an unknown block ---
+        {
+            var lvl = server.overworld();
+            BlockPos at = solo.blockPosition().offset(7, 3, -5);
+            var was = lvl.getBlockState(at);
+            lvl.setBlock(at, net.minecraft.world.level.block.Blocks.LODESTONE.defaultBlockState(), 3);
+            var found = Minis.nearestBlock(lvl, solo.blockPosition(), "minecraft:lodestone", 24, false);
+            check("block scan: finds the one placed (" + found.orElse(null) + ")", found.map(at::equals).orElse(false));
+            check("block scan: a bare id means minecraft:", Minis.nearestBlock(lvl, solo.blockPosition(), "lodestone", 24, false).map(at::equals).orElse(false));
+            check("block scan: an unknown block finds nothing", Minis.nearestBlock(lvl, solo.blockPosition(), "minecraft:no_such_block", 24, false).isEmpty());
+            lvl.setBlock(at, was, 3);
+        }
+
         // --- an arrived charge walks to one spot, not a new room every second ---
         {
             java.util.UUID charge = java.util.UUID.randomUUID();
