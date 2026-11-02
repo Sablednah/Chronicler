@@ -563,11 +563,13 @@ public final class Givers {
         Map<Identifier, Offer> out = new java.util.LinkedHashMap<>();
         QuestEngine.quests(server).listElements().forEach(h -> {
             Identifier id = h.key().identifier();
-            if (!QuestEngine.visible(player, id, h.value()) || !QuestEngine.available(player, id, h.value())) return;
-            Quest q = QuestEngine.questFor(player, id).orElse(h.value());
+            // Where first: it is a map lookup, and with a radius most quests are out of it -- asked every second
+            // for the HUD's Nearby, the visibility and availability tests were the cost, for quests miles off.
             var where = positionOf(server, id);
             double d = where.filter(w -> w.level().equals(here)).map(w -> player.position().distanceTo(w.pos())).orElse(Double.NaN);
             if (radius >= 0 && (Double.isNaN(d) || d > radius)) return;
+            if (!QuestEngine.visible(player, id, h.value()) || !QuestEngine.available(player, id, h.value())) return;
+            Quest q = QuestEngine.questFor(player, id).orElse(h.value());
             out.put(id, new Offer(id, q, describe(server, q), d));
         });
         // Op-placed blocks: known by block, not by quest.
@@ -653,8 +655,11 @@ public final class Givers {
                 });
                 continue;
             }
+            // The cheap question first: a person offers on a click, never here, and a spot is a distance test.
+            if (e.giver() instanceof GiverTypes.NpcGiver) continue;
+            if (e.giver() instanceof GiverTypes.Position && !present(player, e.id(), e.giver())) continue;
             if (!QuestEngine.available(player, e.id(), e.quest())) continue;
-            if (present(player, e.id(), e.giver())) offer(player, e.id(), e.quest(), describe(server, e.quest()));
+            if (e.giver() instanceof GiverTypes.Position || present(player, e.id(), e.giver())) offer(player, e.id(), e.quest(), describe(server, e.quest()));
         }
         GiverStore store = GiverStore.get(server);
         if (store.size() > 0) {

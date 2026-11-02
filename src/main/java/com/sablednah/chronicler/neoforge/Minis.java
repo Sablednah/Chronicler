@@ -638,23 +638,41 @@ public final class Minis {
      * the door of Sable's own hut at camp, and he was shut in behind the offer.
      */
     static Optional<BlockPos> nearestBlock(ServerLevel level, BlockPos from, String want, int radius, boolean unclaimedOnly) {
+        java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> match = QuestEngine.blockMatcher(want);
+        if (match == null) return Optional.empty();
         BlockPos best = null;
         double bestD = Double.MAX_VALUE;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                int x = from.getX() + dx, z = from.getZ() + dz;
-                if (!level.hasChunk(x >> 4, z >> 4)) continue;
-                for (int dy = -radius; dy <= radius; dy++) {
-                    p.set(x, from.getY() + dy, z);
-                    if (!QuestEngine.blockMatches(level, p, want)) continue;
-                    if (unclaimedOnly && Claims.claimed(level, p)) continue;
-                    var state = level.getBlockState(p);
-                    if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.DOUBLE_BLOCK_HALF)
-                            && state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DOUBLE_BLOCK_HALF)
-                                    != net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) continue;
-                    double d = p.distSqr(from);
-                    if (d < bestD) { bestD = d; best = p.immutable(); }
+        int x0 = from.getX() - radius, x1 = from.getX() + radius, z0 = from.getZ() - radius, z1 = from.getZ() + radius;
+        int y0 = Math.max(level.getMinY(), from.getY() - radius), y1 = Math.min(level.getMaxY(), from.getY() + radius);
+        // Section by section, skipping any whose palette cannot hold the block: a 48-block cube is ~900,000
+        // blocks, and every one was looked up (and the wanted id parsed again) on the tick a wild door was rolled.
+        for (int cx = x0 >> 4; cx <= x1 >> 4; cx++) {
+            for (int cz = z0 >> 4; cz <= z1 >> 4; cz++) {
+                if (!level.hasChunk(cx, cz)) continue;
+                var chunk = level.getChunk(cx, cz);
+                for (int sy = y0 >> 4; sy <= y1 >> 4; sy++) {
+                    int index = level.getSectionIndexFromSectionY(sy);
+                    if (index < 0 || index >= chunk.getSections().length) continue;
+                    var section = chunk.getSection(index);
+                    if (section.hasOnlyAir() || !section.maybeHas(match)) continue;
+                    for (int x = Math.max(x0, cx << 4); x <= Math.min(x1, (cx << 4) + 15); x++) {
+                        for (int z = Math.max(z0, cz << 4); z <= Math.min(z1, (cz << 4) + 15); z++) {
+                            for (int y = Math.max(y0, sy << 4); y <= Math.min(y1, (sy << 4) + 15); y++) {
+                                var state = section.getBlockState(x & 15, y & 15, z & 15);
+                                if (!match.test(state)) continue;
+                                if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.DOUBLE_BLOCK_HALF)
+                                        && state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DOUBLE_BLOCK_HALF)
+                                                != net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) continue;
+                                p.set(x, y, z);
+                                double d = p.distSqr(from);
+                                if (d >= bestD) continue;
+                                if (unclaimedOnly && Claims.claimed(level, p)) continue;
+                                bestD = d;
+                                best = p.immutable();
+                            }
+                        }
+                    }
                 }
             }
         }
