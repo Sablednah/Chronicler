@@ -21,9 +21,11 @@ public final class ChroniclerClientConfig {
                         "button flip this and it is remembered.")
                 .define("shown", true);
         HUD_TOP = BUILDER
-                .comment("Where its top sits, as a fraction of the screen's height. 0.3 clears a",
-                        "top-left minimap and stays above the chat.")
-                .defineInRange("top", 0.3D, 0D, 0.9D);
+                .comment("Where its top sits, as a fraction of the screen's height. Near the top by default:",
+                        "the top-left corner is the quiet one (JourneyMap's minimap, toasts and potion effects sit",
+                        "top-right, Jade top-centre), and the higher it starts the more quests fit above the chat.",
+                        "With a minimap in the top-left (Xaero's), 0.3 clears it.")
+                .defineInRange("top", 0.04D, 0D, 0.9D);
         HUD_WIDTH = BUILDER
                 .comment("Widest it grows, in GUI pixels; longer lines are cut short with an ellipsis.")
                 .defineInRange("width", 170, 80, 400);
