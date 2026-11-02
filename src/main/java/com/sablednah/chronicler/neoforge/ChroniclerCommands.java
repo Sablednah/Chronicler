@@ -417,6 +417,7 @@ public final class ChroniclerCommands {
             return 0;
         }
         if (refusal.get() == QuestEngine.Refusal.UNRESOLVED) return 0; // the reason was already said, with the missing place named
+        if (refusal.get() == QuestEngine.Refusal.LOOKING) return 1; // under way, and said so
         Feedback.chat(player, Lang.get(switch (refusal.get()) {
             case UNKNOWN -> "msg.refuse.unknown";
             case ALREADY_ACTIVE -> "msg.refuse.active";

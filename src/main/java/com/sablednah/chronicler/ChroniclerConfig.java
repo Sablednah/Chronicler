@@ -139,11 +139,12 @@ public final class ChroniclerConfig {
                         "placed for it leaves. Wild offers carry their own 'lapse'.")
                 .defineInRange("offerSeconds", 300, 10, 86400);
         MINI_WILD_SEARCH_MS = BUILDER
-                .comment("Milliseconds a wild offer may spend each second looking for a CityWorld lot it needs. Asking",
-                        "about land nobody has walked to makes CityWorld plan the city there, which is slow; past this",
-                        "the search stops, keeps what it learned, and carries on the next second. 0 = a wild offer never",
-                        "asks about land it has not asked about before.")
-                .defineInRange("wildSearchMillis", 20, 0, 1000);
+                .comment("Milliseconds each second that mini quests -- wild offers, starts and accepts alike -- may spend",
+                        "looking for the CityWorld lots they need. Asking about land nobody has walked to makes CityWorld",
+                        "plan the city there, which is slow; past this the looking stops, keeps what it learned, and carries",
+                        "on the next second. Nobody is placed until every lot is known. At least one new chunk is asked each",
+                        "second, so it always gets there.")
+                .defineInRange("wildSearchMillis", 20, 1, 1000);
         ESCORT_PICKUP = BUILDER
                 .comment("An escorted person follows whoever is within this many blocks of them. Further, they stop",
                         "and wait where they are until someone comes back for them.")
