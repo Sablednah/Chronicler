@@ -964,6 +964,8 @@ public final class QuestEngine {
             for (int n = 0; n < objectives.size(); n++) {
                 ObjectiveSpec spec = objectives.get(n);
                 var tracker = Trackers.of(spec);
+                // Done and latched: nothing it could say would change it, and asking can cost (an escort's walk).
+                if (tracker.latching(spec) && n < e.targets.size() && n < e.progress.size() && e.progress.get(n) >= e.targets.get(n)) continue;
                 int sum = 0;
                 boolean polled = false;
                 for (ServerPlayer m : members) {

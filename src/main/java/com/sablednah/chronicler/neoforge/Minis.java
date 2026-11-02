@@ -329,6 +329,23 @@ public final class Minis {
         }
     }
 
+    /**
+     * Where an arrived charge walks to: one sheltered spot near {@code to}, chosen once per charge. Chosen
+     * again every second, a party's settle time had them dithering between rooms. Session state.
+     */
+    private static final Map<UUID, BlockPos> ESCORT_TARGETS = new HashMap<>();
+
+    static BlockPos escortTarget(ServerLevel level, BlockPos to, UUID who) {
+        BlockPos had = ESCORT_TARGETS.get(who);
+        if (had != null && had.closerThan(to, 32)) return had;
+        BlockPos inside = interiorNear(level, to, 10);
+        if (ESCORT_TARGETS.size() > 1024) ESCORT_TARGETS.clear();
+        ESCORT_TARGETS.put(who, inside);
+        return inside;
+    }
+
+    public static int escortTargetCount() { return ESCORT_TARGETS.size(); }
+
     /** {@link #interiorNear(ServerLevel, BlockPos, int, int, int)}, bounded to near sea level. */
     static BlockPos interiorNear(ServerLevel level, BlockPos from, int radius) {
         return interiorNear(level, from, radius, defaultInteriorMinY(level), defaultInteriorMaxY(level));
@@ -864,6 +881,7 @@ public final class Minis {
         PENDING.clear();
         ROLLED.clear();
         SEARCHES.clear();
+        ESCORT_TARGETS.clear();
     }
 
     /** Once a second: offers that lapse, and a roll for each wild template this player is standing in the place of. */
