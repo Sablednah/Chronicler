@@ -149,6 +149,13 @@ public final class QuestEngine {
                 ? Party.members(player) : List.of(player);
     }
 
+    /** How many online members are on this quest with the player, the player included: a party's head count right now. */
+    static int sharingCount(ServerPlayer player, Identifier id, Quest quest) {
+        int n = 0;
+        for (ServerPlayer m : sharers(player, quest)) if (journal(m).isActive(id)) n++;
+        return Math.max(1, n);
+    }
+
     /** The objectives the player is currently working on. */
     public static List<ObjectiveSpec> currentObjectives(Quest quest, QuestLog.Entry entry) {
         return quest.objectivesAt(entry.stage);
