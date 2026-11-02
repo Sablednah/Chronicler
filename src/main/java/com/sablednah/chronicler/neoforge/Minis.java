@@ -153,9 +153,7 @@ public final class Minis {
                 }
                 case "lot" -> {
                     if (Lots.describe(level, from.pos()).isEmpty()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.no_city", "what", label)); }
-                    Optional<BlockPos> at = slot.find().schematic().isPresent()
-                            ? nearestLot(level, from.pos(), words -> Places.schematicMatches(words, slot.find().schematic().get()), slot.searchRadius())
-                            : nearestLot(level, from.pos(), words -> Places.lotMatches(words, slot.find().lot().get()), slot.searchRadius());
+                    Optional<BlockPos> at = nearestLot(level, from.pos(), lotMatcher(slot), slot.searchRadius());
                     if (at.isEmpty()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.lot", "what", label, "radius", slot.searchRadius())); }
                     Slots.putPlace(v, name, label, dim, at.get().getX(), at.get().getY(), at.get().getZ());
                 }
@@ -343,10 +341,34 @@ public final class Minis {
             Chronicler.LOGGER.warn("Chronicler: mini quest names unknown structure '{}'", want);
             return Optional.empty();
         }
-        var found = level.getChunkSource().getGenerator().findNearestMapStructure(level, set.get(), from, Math.max(1, radius / 16), false);
+        var found = level.getChunkSource().getGenerator().findNearestMapStructure(level, set.get(), from, structureCells(level, set.get(), radius), false);
         if (found == null) return Optional.empty();
         BlockPos p = found.getFirst();
         return Optional.of(new BlockPos(p.getX(), heightAt(level, p.getX(), p.getZ()), p.getZ()));
+    }
+
+    /** The most cells a structure search looks through, whatever the radius says: vanilla's /locate stops at 100. */
+    static final int MAX_STRUCTURE_CELLS = 64;
+
+    /**
+     * {@code radius} blocks as the search radius vanilla wants, which for a spread-out structure is in its
+     * placement's cells (spacing chunks each), not chunks. Passing chunks searched a radius of 2400 out to some
+     * 80,000 blocks: every cell's start decided, jigsaw villages planned, all on the tick. Counted against the
+     * finest spacing in the set so the nearest kind is still covered, and capped.
+     */
+    static int structureCells(ServerLevel level, HolderSet<Structure> set, int radius) {
+        int chunks = Math.max(1, radius / 16);
+        int spacing = Integer.MAX_VALUE;
+        var state = level.getChunkSource().getGeneratorState();
+        for (var h : set) {
+            for (var placement : state.getPlacementsForStructure(h)) {
+                if (placement instanceof net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement spread) {
+                    spacing = Math.min(spacing, Math.max(1, spread.spacing()));
+                }
+            }
+        }
+        if (spacing == Integer.MAX_VALUE) spacing = 1; // concentric rings (strongholds) and the like: vanilla reads it as chunks
+        return Math.min(MAX_STRUCTURE_CELLS, Math.max(1, (chunks + spacing - 1) / spacing));
     }
 
     private static int heightAt(ServerLevel level, int x, int z) {
@@ -356,24 +378,152 @@ public final class Minis {
 
     /** When a lot search must stop (System.nanoTime); unbounded except while a wild offer is being looked for. Server thread only. */
     private static long deadline = Long.MAX_VALUE;
-    /** The deadline that means "ask nothing new at all" (wildSearchMillis = 0). */
-    private static final long NEVER_ASK = Long.MIN_VALUE;
+    /** New questions put to CityWorld in this budget slice: one is always allowed, so a carried-on search moves. */
+    private static int asked;
     /** Did the last lot search stop at {@link #deadline} rather than finish? */
     private static boolean outOfTime;
 
+    /** What a search was for, so carrying it on does the same thing again. */
+    enum Kind { WILD, START, ACCEPT }
+
     /**
-     * Wild offers whose lot search ran out of time: (player, template). Each is carried on the next second
-     * without a new roll, until it is found, comes up empty, or the player leaves the place. Session state.
+     * A mini quest waiting for its lot searches: a wild offer, a start someone asked for, or an accept with no
+     * standing offer. Carried on each second, in turn, inside one shared budget, until the lots are known --
+     * and only then filled, people placed and all (so a slow search never places and removes a cashier every
+     * second). Session state.
      */
-    private static final java.util.Set<String> SEARCHING = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    record Search(UUID player, Identifier id, Kind kind, Map<String, String> given, Anchor anchor, boolean offer) {}
 
-    public static int searchingCount() { return SEARCHING.size(); }
+    private static final Map<String, Search> SEARCHES = new LinkedHashMap<>();
 
-    /** The self-test's handle on a budgeted search: {@code millis} as wildSearchMillis, and whether it stopped short. */
+    public static int searchingCount() { return SEARCHES.size(); }
+
+    /** Is the budget slice spent? Never before one new question has been asked in it. */
+    private static boolean spent() {
+        return asked > 0 && System.nanoTime() > deadline;
+    }
+
+    /**
+     * Run {@code body} inside a budget slice: the one already running (the second's shared slice), or a fresh one
+     * of {@code minis.wildSearchMillis} for a call that comes from outside it (a command, a click).
+     */
+    private static <T> T budgeted(java.util.function.Supplier<T> body) {
+        outOfTime = false; // only what THIS run ran out on counts; a stale flag once turned "no city here" into "still looking"
+        if (deadline != Long.MAX_VALUE) return body.get();
+        deadline = System.nanoTime() + ChroniclerConfig.MINI_WILD_SEARCH_MS.get() * 1_000_000L;
+        asked = 0;
+        try {
+            return body.get();
+        } finally {
+            deadline = Long.MAX_VALUE;
+        }
+    }
+
+    /** The self-test's handle on a budgeted search: {@code millis} of slice, and whether it stopped short. */
     static Optional<BlockPos> nearestLotWithin(ServerLevel level, BlockPos from, java.util.function.Predicate<List<String>> matches, int radius, int millis) {
-        deadline = millis == 0 ? NEVER_ASK : System.nanoTime() + millis * 1_000_000L;
+        deadline = System.nanoTime() + millis * 1_000_000L;
+        asked = 0;
         try {
             return nearestLot(level, from, matches, radius);
+        } finally {
+            deadline = Long.MAX_VALUE;
+        }
+    }
+
+    /** What a lot slot matches: its schematic, or its lot words. */
+    private static java.util.function.Predicate<List<String>> lotMatcher(Mini.Slot slot) {
+        return slot.find().schematic().isPresent()
+                ? words -> Places.schematicMatches(words, slot.find().schematic().get())
+                : words -> Places.lotMatches(words, slot.find().lot().get());
+    }
+
+    /**
+     * Ask, inside the current budget, everything this template's lot slots will need -- those searched from
+     * the anchor, or from another lot slot -- without placing anybody. True once all of it is known, so the
+     * real fill that follows reads only answers already given. A lot slot near anything else (a person, a
+     * random spot) cannot be known before the fill and is searched there, as before.
+     */
+    static boolean lotsKnown(Quest base, Map<String, String> given, Anchor anchor) {
+        Map<String, Anchor> found = new HashMap<>();
+        for (var e : base.mini().get().slots().entrySet()) {
+            Mini.Slot slot = e.getValue();
+            if (!slot.type().equals("lot") || given.containsKey(e.getKey())) continue;
+            Anchor from = slot.near().isEmpty() ? anchor : found.get(slot.near().get());
+            if (from == null) continue;
+            if (Lots.describe(from.level(), from.pos()).isEmpty()) continue; // no city here: the fill says so, at once
+            Optional<BlockPos> at = nearestLot(from.level(), from.pos(), lotMatcher(slot), slot.searchRadius());
+            if (outOfTime) return false;
+            at.ifPresent(p -> found.put(e.getKey(), new Anchor(from.level(), p)));
+        }
+        return true;
+    }
+
+    /**
+     * The accept path's question, for a mini quest taken up with no standing offer (a typed /quest accept, an
+     * old Accept button): are its lots known yet? If not, it waits in the queue and the player is told; the
+     * accept runs again by itself when they are. Every fill is budgeted: no click or command searches 640 blocks
+     * of unplanned city on the tick.
+     */
+    public static boolean readyToAccept(ServerPlayer player, Identifier id, Quest base) {
+        Anchor anchor = Anchor.of(player);
+        if (budgeted(() -> lotsKnown(base, Map.of(), anchor))) return true;
+        acceptLater(player, id, base);
+        return false;
+    }
+
+    /** Queue an accept to run again once the looking is done; the player is told the first time. */
+    public static void acceptLater(ServerPlayer player, Identifier id, Quest base) {
+        outOfTime = false;
+        boolean already = SEARCHES.containsKey(player.getUUID() + "|" + id);
+        queue(new Search(player.getUUID(), id, Kind.ACCEPT, Map.of(), Anchor.of(player), false));
+        if (!already) Feedback.chat(player, Lang.fmt("msg.mini.looking", "name", base.name()));
+    }
+
+    /** The fill itself, inside a budget: a lot slot the warm-up could not reach still cannot stall the tick. */
+    public static Resolved resolveBudgeted(ServerPlayer player, Identifier id, Quest base, Map<String, String> given, Anchor anchor, boolean pending) {
+        return budgeted(() -> resolve(player, id, base, given, anchor, pending));
+    }
+
+    /** Put a search on the queue (replacing one for the same player and template). */
+    private static void queue(Search s) {
+        SEARCHES.put(s.player() + "|" + s.id(), s);
+    }
+
+    /**
+     * Once a second: carry on waiting searches in turn, sharing one budget slice. Each is taken off the queue
+     * and run again as what it was; it queues itself again if the slice runs out on it. The rest wait.
+     */
+    static void carryOn(MinecraftServer server) {
+        carryOn(server, id -> server.getPlayerList().getPlayer(id));
+    }
+
+    /** As above, finding players through {@code who}: the self-test's FakePlayers are not in the player list. */
+    static void carryOn(MinecraftServer server, java.util.function.Function<UUID, ServerPlayer> who) {
+        if (SEARCHES.isEmpty()) return;
+        deadline = System.nanoTime() + ChroniclerConfig.MINI_WILD_SEARCH_MS.get() * 1_000_000L;
+        asked = 0;
+        try {
+            for (Search s : List.copyOf(SEARCHES.values())) {
+                if (spent()) break;
+                SEARCHES.remove(s.player() + "|" + s.id());
+                ServerPlayer player = who.apply(s.player());
+                if (player == null) continue;
+                var holder = QuestEngine.quest(server, s.id());
+                if (holder.isEmpty()) continue;
+                switch (s.kind()) {
+                    case WILD -> {
+                        Quest base = holder.get().value();
+                        Mini.Wild wild = base.mini().get().spawn().get();
+                        if (!Places.isAt(player, wild.place()) || !QuestEngine.available(player, s.id(), base)
+                                || PENDING.getOrDefault(player.getUUID(), Map.of()).containsKey(s.id()) || standing(s.id()) >= wild.cap()) continue;
+                        offerWild(player, s.id(), base);
+                    }
+                    case START -> start(player, s.id(), s.given(), s.anchor(), s.offer());
+                    case ACCEPT -> QuestEngine.accept(player, s.id());
+                }
+                // Done with this one for now: whatever is still waiting goes to the back, so nobody is starved.
+            }
+            // Anything not reached this second keeps its place at the front of the queue.
         } finally {
             deadline = Long.MAX_VALUE;
         }
@@ -385,7 +535,6 @@ public final class Minis {
     static Optional<BlockPos> nearestLot(ServerLevel level, BlockPos from, java.util.function.Predicate<List<String>> matches, int radius) {
         int cx = from.getX() >> 4, cz = from.getZ() >> 4;
         outOfTime = false;
-        int asked = 0; // new questions put to CityWorld this call: at least one each time, so a resumed search moves
         int rings = Math.max(1, radius / 16);
         for (int r = 0; r <= rings; r++) {
             for (int dx = -r; dx <= r; dx++) {
@@ -395,7 +544,7 @@ public final class Minis {
                     BlockPos probe = new BlockPos(x, from.getY(), z);
                     // A wild search stops at its budget; what it learned is cached, so the next second carries on.
                     if (!Lots.known(level, cx + dx, cz + dz)) {
-                        if (System.nanoTime() > deadline && (asked > 0 || deadline == NEVER_ASK)) { outOfTime = true; return Optional.empty(); }
+                        if (spent()) { outOfTime = true; return Optional.empty(); }
                         asked++;
                     }
                     var words = Lots.describe(level, probe);
@@ -459,7 +608,18 @@ public final class Minis {
             Feedback.chat(player, why);
             return Optional.of(why);
         }
-        Resolved r = resolve(player, id, base, given, anchor, offer);
+        if (!budgeted(() -> lotsKnown(base, given, anchor))) {
+            boolean already = SEARCHES.containsKey(player.getUUID() + "|" + id);
+            queue(new Search(player.getUUID(), id, Kind.START, Map.copyOf(given), anchor, offer));
+            if (!already) Feedback.chat(player, Lang.fmt("msg.mini.looking", "name", base.name()));
+            return Optional.empty(); // under way: it starts (or says why not) when the looking is done
+        }
+        Resolved r = budgeted(() -> resolve(player, id, base, given, anchor, offer));
+        if (r.failure().isPresent() && outOfTime) {
+            outOfTime = false; // a lot only the fill could search for ran out of time: not "none there", just "not yet"
+            queue(new Search(player.getUUID(), id, Kind.START, Map.copyOf(given), anchor, offer));
+            return Optional.empty();
+        }
         if (r.failure().isPresent()) {
             Feedback.chat(player, Lang.fmt("msg.mini.unresolved", "name", base.name(), "why", r.failure().get()));
             return r.failure();
@@ -643,7 +803,7 @@ public final class Minis {
         INSTANCES.clear();
         PENDING.clear();
         ROLLED.clear();
-        SEARCHING.clear();
+        SEARCHES.clear();
     }
 
     /** Once a second: offers that lapse, and a roll for each wild template this player is standing in the place of. */
@@ -656,6 +816,7 @@ public final class Minis {
                 return true;
             });
         }
+        carryOn(server);
         if (!ChroniclerConfig.MINI_WILD.get() || WILD.isEmpty()) return;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) tickWild(player);
     }
@@ -669,30 +830,17 @@ public final class Minis {
             if (holder.isEmpty()) continue;
             Quest base = holder.get().value();
             Mini.Wild wild = base.mini().get().spawn().get();
-            String searchKey = player.getUUID() + "|" + id;
-            boolean resuming = SEARCHING.remove(searchKey); // put back below only if it runs out of time again
+            if (SEARCHES.containsKey(player.getUUID() + "|" + id)) continue; // still looking from the last roll
             Map<Identifier, Long> mine = ROLLED.computeIfAbsent(player.getUUID(), k -> new HashMap<>());
-            if (!resuming) {
-                Long last = mine.get(id);
-                if (last != null && now - last < wild.every() * 20L) continue;
-                mine.put(id, now);
-            }
+            Long last = mine.get(id);
+            if (last != null && now - last < wild.every() * 20L) continue;
+            mine.put(id, now);
             if (!Places.isAt(player, wild.place())) continue;
             if (!QuestEngine.available(player, id, base)) continue;
             if (PENDING.getOrDefault(player.getUUID(), Map.of()).containsKey(id)) continue;
             if (standing(id) >= wild.cap()) continue;
-            if (!resuming && player.getRandom().nextDouble() >= wild.chance()) continue;
-            int budget = ChroniclerConfig.MINI_WILD_SEARCH_MS.get();
-            deadline = budget == 0 ? NEVER_ASK : System.nanoTime() + budget * 1_000_000L;
-            try {
-                offerWild(player, id, base);
-            } finally {
-                deadline = Long.MAX_VALUE;
-            }
-            if (outOfTime) {
-                outOfTime = false;
-                if (budget > 0) SEARCHING.add(searchKey); // at 0 there is nothing more it would ever ask
-            }
+            if (player.getRandom().nextDouble() >= wild.chance()) continue;
+            offerWild(player, id, base);
         }
     }
 
@@ -701,8 +849,13 @@ public final class Minis {
         MinecraftServer server = player.level().getServer();
         Mini.Wild wild = base.mini().get().spawn().get();
         Anchor anchor = Anchor.of(player);
-        Resolved r = resolve(player, id, base, Map.of(), anchor, true);
+        if (!budgeted(() -> lotsKnown(base, Map.of(), anchor))) {
+            queue(new Search(player.getUUID(), id, Kind.WILD, Map.of(), anchor, true));
+            return Optional.of("searching");
+        }
+        Resolved r = budgeted(() -> resolve(player, id, base, Map.of(), anchor, true));
         if (r.failure().isPresent()) {
+            if (outOfTime) { outOfTime = false; queue(new Search(player.getUUID(), id, Kind.WILD, Map.of(), anchor, true)); }
             Chronicler.LOGGER.debug("Chronicler: wild {} for {} not offered: {}", id, player.getName().getString(), r.failure().get());
             return r.failure();
         }

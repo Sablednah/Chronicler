@@ -317,6 +317,7 @@ public final class Lang {
         def("giver.someone", "the one who asked");
         def("rew.npc_say", "Someone has something to say.");
         // npc_say out of earshot, to the player whose quest said it ({name}, {text}); a file's far: overrides it.
+        def("msg.mini.looking", "&7Finding where &f{name}&7 happens. A moment; it carries on by itself.");
         def("msg.party.caught_up", "&7While you were away, your party finished &f{quests}&7. It is in your journal.");
         def("msg.party.joined", "&7Your party is on &f{quests}&7; you are with them.");
         def("msg.say.far", "&8(word reaches you) &f{name}&8: &7{text}");
