@@ -133,7 +133,7 @@ public final class Trackers {
                     // Arrived is not the same as settled: the last few steps, indoors and out of the
                     // fight the destination is often braced for, are worth walking on their own rather
                     // than leaving them stood wherever the radius happened to catch them.
-                    BlockPos inside = Minis.interiorNear(player.level(), spec.to(), 10);
+                    BlockPos inside = Minis.escortTarget(player.level(), spec.to(), who);
                     if (!cast.walkTo(server, who, net.minecraft.world.phys.Vec3.atBottomCenterOf(inside))) cast.stopFollowing(server, who);
                     return OptionalInt.of(1);
                 }

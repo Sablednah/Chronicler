@@ -66,16 +66,21 @@ public final class QuestEvents {
     /** Polled objectives (inventory, position) on the configured interval, not every tick. */
     @SubscribeEvent
     static void onTick(ServerTickEvent.Post event) {
-        if (++tickCounter < ChroniclerConfig.TRACKER_INTERVAL_TICKS.get()) return;
-        tickCounter = 0;
-        Givers.tickMarkers(event.getServer());
+        int interval = ChroniclerConfig.TRACKER_INTERVAL_TICKS.get();
+        // Each player on their own tick of the interval, not all of them on one: twenty players' polls, HUDs and
+        // waypoints were one tick's work once a second (ZARP's audit). Same cadence per player as before.
+        int tick = event.getServer().getTickCount();
         for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+            if (Math.floorMod(tick + player.getUUID().hashCode(), interval) != 0) continue;
             QuestEngine.poll(player);
             Givers.tick(player);
             Waypoints.sync(player);
             Hud.sync(player);
             EscortBars.sync(player);
         }
+        if (++tickCounter < interval) return;
+        tickCounter = 0;
+        Givers.tickMarkers(event.getServer());
         Minis.tick(event.getServer());
         // Someone who joined a party since logging in catches up too, without waiting for the next login.
         if (++catchUpCounter >= 30) {
@@ -175,7 +180,7 @@ public final class QuestEvents {
     /** How much per-world in-memory state is held right now; the self-test's window onto {@link #clearSession}. */
     static int sessionStateCount() {
         return Givers.sessionStateCount() + Hud.sessionStateCount() + JournalPanel.sessionStateCount()
-                + EscortBars.activeCount() + Rewards.spawnedCount() + QuestEngine.settlingCount() + QuestEngine.wordedCount() + PartyLedger.sessionStateCount() + Lots.sessionStateCount() + Minis.searchingCount()
+                + EscortBars.activeCount() + Rewards.spawnedCount() + QuestEngine.settlingCount() + QuestEngine.wordedCount() + PartyLedger.sessionStateCount() + Lots.sessionStateCount() + Minis.searchingCount() + Minis.escortTargetCount()
                 + (FlagStore.cached() == null ? 0 : 1) + (com.sablednah.chronicler.data.QuestItem.CURRENT == null ? 0 : 1);
     }
 
