@@ -167,6 +167,8 @@ public final class QuestEvents {
     static void clearSession() {
         Givers.clearSession();
         Hud.clearSession();
+        Waypoints.clearSession();
+        Trackers.clearSession();
         JournalPanel.clearSession();
         EscortBars.clearSession();
         Rewards.clearSession();
@@ -181,7 +183,7 @@ public final class QuestEvents {
     /** How much per-world in-memory state is held right now; the self-test's window onto {@link #clearSession}. */
     static int sessionStateCount() {
         return Givers.sessionStateCount() + Hud.sessionStateCount() + JournalPanel.sessionStateCount()
-                + EscortBars.activeCount() + Rewards.spawnedCount() + QuestEngine.settlingCount() + QuestEngine.wordedCount() + PartyLedger.sessionStateCount() + Lots.sessionStateCount() + Minis.searchingCount() + Minis.escortTargetCount()
+                + EscortBars.activeCount() + Rewards.spawnedCount() + QuestEngine.settlingCount() + QuestEngine.wordedCount() + PartyLedger.sessionStateCount() + Lots.sessionStateCount() + Waypoints.sessionStateCount() + Trackers.sessionStateCount() + Minis.searchingCount() + Minis.escortTargetCount()
                 + (FlagStore.cached() == null ? 0 : 1) + (com.sablednah.chronicler.data.QuestItem.CURRENT == null ? 0 : 1);
     }
 
@@ -191,6 +193,8 @@ public final class QuestEvents {
         Markers.forget(event.getEntity().getUUID());
         JournalPanel.forget(event.getEntity().getUUID());
         Hud.forget(event.getEntity().getUUID());
+        Waypoints.forget(event.getEntity().getUUID());
+        Trackers.forget(event.getEntity().getUUID());
         PartyLedger.forget(event.getEntity().getUUID());
         if (event.getEntity() instanceof ServerPlayer player) EscortBars.forget(player);
     }
