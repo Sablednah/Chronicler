@@ -55,7 +55,9 @@ import net.minecraft.world.entity.LivingEntity;
  */
 public final class QuestEngine {
 
-    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS, COOLDOWN, UNRESOLVED }
+    public enum Refusal { UNKNOWN, ALREADY_ACTIVE, ALREADY_COMPLETE, LOCKED, CONDITIONS, COOLDOWN, UNRESOLVED,
+        /** A mini quest still looking for where it happens; it carries on by itself, and the player was told. */
+        LOOKING }
 
     // --- lookups ---
 
@@ -283,7 +285,9 @@ public final class QuestEngine {
             } else {
                 bound = slots != null ? slots : Minis.claim(player, id);
                 if (bound == null) {
-                    Minis.Resolved r = Minis.resolve(player, id, base, java.util.Map.of(), Minis.Anchor.of(player), false);
+                    if (!Minis.readyToAccept(player, id, base)) return Optional.of(Refusal.LOOKING);
+                    Minis.Resolved r = Minis.resolveBudgeted(player, id, base, java.util.Map.of(), Minis.Anchor.of(player), false);
+                    if (r.failure().isPresent() && Minis.ranOutOfTime()) { Minis.acceptLater(player, id, base); return Optional.of(Refusal.LOOKING); }
                     if (r.failure().isPresent()) {
                         Feedback.chat(player, Lang.fmt("msg.mini.unresolved", "name", base.name(), "why", r.failure().get()));
                         return Optional.of(Refusal.UNRESOLVED);

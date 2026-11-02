@@ -727,7 +727,7 @@ public final class SelfTest {
                     Minis.nearestLotWithin(lvl, new BlockPos(8, 64, 8), w -> w.contains("the_bank"), 200, 0);
                     check("lots: the same search again asks nothing new", calls[0] == total && firstGo > 0);
                     Minis.nearestLotWithin(lvl, new BlockPos(100000, 64, 8), w -> w.contains("the_bank"), 64, 0);
-                    check("lots: a budget of 0 asks nothing it has not asked", calls[0] == total && Minis.ranOutOfTime());
+                    check("lots: a spent slice still asks one new chunk, then stops", calls[0] == total + 1 && Minis.ranOutOfTime());
                 } finally {
                     Lots.install(before);
                 }
@@ -1703,6 +1703,43 @@ public final class SelfTest {
         var noCity = Minis.start(solo, hall, java.util.Map.of(), Minis.Anchor.of(solo), false);
         check("refusal: a city errand where there is no city says so (" + noCity.orElse("") + ")", noCity.isPresent() && !log.isActive(hall));
         check("refusal: the person placed before the search failed was taken away again", GiverStore.get(server).minis().size() == before);
+        // --- a structure search's radius is in its placement's cells, not chunks ---
+        {
+            var villages = server.overworld().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.STRUCTURE)
+                    .get(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.STRUCTURE, Identifier.withDefaultNamespace("village")));
+            if (villages.isPresent()) {
+                int cells = Minis.structureCells(server.overworld(), villages.get(), 2400);
+                check("structure: 2400 blocks of villages is a few dozen cells, not 150 (" + cells + ")", cells < 150 && cells >= 150 / 34);
+                check("structure: never more than the cap", Minis.structureCells(server.overworld(), villages.get(), 1_000_000) == Minis.MAX_STRUCTURE_CELLS);
+            } else {
+                check("structure: the village tag to test with", false);
+            }
+        }
+
+        // --- a slow city: the looking is spread over seconds, and nobody is placed until it is done ---
+        {
+            var lotsBefore = Lots.current();
+            int[] asks = {0};
+            int hallX = (solo.blockPosition().getX() >> 4) + 12, hallZ = solo.blockPosition().getZ() >> 4;
+            try {
+                Lots.install((lvl, pos) -> {
+                    asks[0]++;
+                    try { Thread.sleep(3); } catch (InterruptedException ignored) {}
+                    return java.util.Optional.of(List.of("selftest", (pos.getX() >> 4) == hallX && (pos.getZ() >> 4) == hallZ ? "government" : "residential"));
+                });
+                int people = GiverStore.get(server).minis().size();
+                var looking = Minis.start(solo, hall, java.util.Map.of(), Minis.Anchor.of(solo), false);
+                check("looking: a far lot is not searched on the tick (" + looking.orElse("") + ")", looking.isEmpty() && Minis.searchingCount() == 1 && !log.isActive(hall));
+                check("looking: ...and nobody was placed while it looks", GiverStore.get(server).minis().size() == people);
+                int seconds = 0;
+                while (Minis.searchingCount() > 0 && seconds++ < 300) Minis.carryOn(server, u -> u.equals(solo.getUUID()) ? solo : null);
+                check("looking: carried on, a second at a time, it starts (" + seconds + " s)", seconds > 1 && log.isActive(hall));
+                check("looking: one person placed, once", GiverStore.get(server).minis().size() == people + 1);
+            } finally {
+                if (log.isActive(hall)) QuestEngine.abandon(solo, hall);
+                Lots.install(lotsBefore);
+            }
+        }
         check("refusal: a quest that is not a mini quest is refused", Minis.start(solo, ChroniclerIds.of("first_steps"), java.util.Map.of(), Minis.Anchor.of(solo), false).isPresent());
 
         // --- an escort: follows, arrives only with the player, and offers the next errand ---
