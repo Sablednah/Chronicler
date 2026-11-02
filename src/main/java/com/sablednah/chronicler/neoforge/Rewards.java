@@ -501,7 +501,14 @@ public final class Rewards {
 
     /** Spawn one more of what this was, for the same player: the one that got away comes back. */
     public static void respawnOne(Spawned was, ServerPlayer player) {
-        grant(player, was.spec().withCount(1), was.questId(), was.quest());
+        // The one that comes back is the boss the party is fighting: as strong as the party now on it. Both the
+        // live record and the restart fallback land here, and neither runs inside grantShared.
+        sharing = was.quest() == null ? 1 : QuestEngine.sharingCount(player, was.questId(), was.quest());
+        try {
+            grant(player, was.spec().withCount(1), was.questId(), was.quest());
+        } finally {
+            sharing = 1;
+        }
     }
 
     private static void decorate(net.minecraft.world.entity.Entity entity, RewardTypes.Spawn r, ServerPlayer player, Identifier questId, Quest quest) {
