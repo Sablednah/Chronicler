@@ -188,7 +188,12 @@ public final class RewardTypes {
      */
     public record Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius,
             Optional<String> name, Optional<String> tag, double health, java.util.Map<String, String> equipment,
-            boolean override, String around, double minRadius) implements RewardSpec {
+            boolean override, String around, double minRadius, double partyHealth) implements RewardSpec {
+        /** Before {@code party_health}. */
+        public Spawn(Optional<Identifier> entity, Optional<String> genus, int count, double radius, Optional<String> name,
+                Optional<String> tag, double health, java.util.Map<String, String> equipment, boolean override, String around, double minRadius) {
+            this(entity, genus, count, radius, name, tag, health, equipment, override, around, minRadius, 0D);
+        }
         /** What {@code around} may name: the player (the default), world spawn, or this quest's giver. */
         public static final java.util.List<String> AROUND = java.util.List.of("player", "spawn", "giver");
 
@@ -201,7 +206,7 @@ public final class RewardTypes {
         }
         /** The same spawn, {@code count} changed: a respawn is one more of what this was, placed the same way. */
         public Spawn withCount(int n) {
-            return new Spawn(entity, genus, n, radius, name, tag, health, equipment, override, around, minRadius);
+            return new Spawn(entity, genus, n, radius, name, tag, health, equipment, override, around, minRadius, partyHealth);
         }
         /**
          * {@code around}: where the ring is centred -- {@code player} (default), {@code spawn} (world
@@ -217,6 +222,9 @@ public final class RewardTypes {
          * genus on one server and a named wither skeleton on another). {@code name}
          * is shown over the head, {@code tag} is what a {@code kill} objective's
          * {@code tag} matches, {@code health} (>0) sets a stand-in's max health.
+         * {@code party_health}: on a {@code once} spawn in a party quest, max health times
+         * {@code 1 + party_health x (members - 1)} -- one story boss facing three people is not the
+         * fight it was for one. Applied last, over the genus, {@code health} and {@code equipment}.
          */
         public static final MapCodec<Spawn> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Identifier.CODEC.optionalFieldOf("entity").forGetter(Spawn::entity),
@@ -231,7 +239,8 @@ public final class RewardTypes {
                 Codec.STRING.validate(a -> AROUND.contains(a) ? com.mojang.serialization.DataResult.success(a)
                         : com.mojang.serialization.DataResult.error(() -> "spawn: around must be one of " + AROUND + ", not '" + a + "'"))
                         .optionalFieldOf("around", "player").forGetter(Spawn::around),
-                Codec.DOUBLE.optionalFieldOf("min_radius", 2D).forGetter(Spawn::minRadius))
+                Codec.DOUBLE.optionalFieldOf("min_radius", 2D).forGetter(Spawn::minRadius),
+                Codec.doubleRange(0D, 100D).optionalFieldOf("party_health", 0D).forGetter(Spawn::partyHealth))
                 .apply(i, Spawn::new));
 
         @Override public MapCodec<Spawn> codec() { return MAP_CODEC; }
