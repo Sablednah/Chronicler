@@ -1,6 +1,7 @@
 package com.sablednah.chronicler.neoforge;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -57,6 +58,55 @@ public final class Rewards {
         if (how.equalsIgnoreCase("none")) return Optional.empty();
         String format = how.isBlank() ? Lang.get("msg.say.far") : how;
         return Optional.of(format.replace("{name}", p.name()).replace("{text}", r.text()));
+    }
+
+    /** Do all the {@code when} gates wrapped round this effect hold for the player now? */
+    static boolean gatesMet(ServerPlayer player, RewardSpec r) {
+        while (true) {
+            if (r instanceof RewardTypes.When w) {
+                if (!Conditions.met(player, w.when())) return false;
+                r = w.effect();
+            } else if (r instanceof RewardTypes.Once o) {
+                r = o.effect();
+            } else {
+                return true;
+            }
+        }
+    }
+
+    /**
+     * One effect for everyone sharing a beat. Each member gets their own, as ever -- except a {@code once}
+     * effect, which runs for {@code lead} (the member who moved the beat on) alone, and an {@code npc_say},
+     * which is said once (the first member whose gates hold) and only relayed to the members out of earshot.
+     * Three of them online once meant every line three times and three Patient Zeros (ZARP).
+     */
+    public static void grantShared(List<ServerPlayer> members, ServerPlayer lead, RewardSpec r, Identifier questId, Quest quest) {
+        if (members.size() <= 1) {
+            for (ServerPlayer m : members) grant(m, r, questId, quest);
+            return;
+        }
+        if (r instanceof RewardTypes.Once o) {
+            grant(members.contains(lead) ? lead : members.getFirst(), o.effect(), questId, quest);
+            return;
+        }
+        if (RewardTypes.When.unwrap(r) instanceof RewardTypes.NpcSay say) {
+            List<ServerPlayer> order = new java.util.ArrayList<>(members);
+            if (order.remove(lead)) order.addFirst(lead);
+            boolean said = false;
+            for (ServerPlayer m : order) {
+                if (!gatesMet(m, r)) continue;
+                if (!said) { grant(m, say, questId, quest); said = true; } else hear(m, say, questId);
+            }
+            return;
+        }
+        for (ServerPlayer m : members) grant(m, r, questId, quest);
+    }
+
+    /** A line somebody else's {@code npc_say} already spoke: relayed if this member was out of earshot. */
+    private static void hear(ServerPlayer player, RewardTypes.NpcSay r, Identifier questId) {
+        var npc = r.npc().isPresent() ? npcById(player, r.npc().get()) : npcFor(player, r.quest().orElse(questId));
+        if (npc.isEmpty()) { Feedback.chat(player, r.text()); return; }
+        farLine(player, Npcs.provider().get().byId(player.level().getServer(), npc.get()), r).ifPresent(line -> Feedback.chat(player, line));
     }
 
     public static <R extends RewardSpec> void grant(ServerPlayer player, R reward, Identifier questId, Quest quest) {
@@ -188,6 +238,8 @@ public final class Rewards {
         register(RewardTypes.When.class, (player, r, questId, quest) -> {
             if (Conditions.met(player, r.when())) grant(player, r.effect(), questId, quest);
         });
+        // Solo, or anywhere one player is in hand, "once" is simply the effect; grantShared is where it differs.
+        register(RewardTypes.Once.class, (player, r, questId, quest) -> grant(player, r.effect(), questId, quest));
         register(RewardTypes.NpcRestore.class, (player, r, questId, quest) -> {
             Identifier of = r.quest().orElse(questId);
             boolean back = Givers.restoreNpc(player.level().getServer(), of);
