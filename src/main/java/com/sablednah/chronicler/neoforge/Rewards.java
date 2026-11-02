@@ -463,15 +463,22 @@ public final class Rewards {
         double near = Math.max(0, Math.min(minRadius, radius));
         int minY = Minis.defaultInteriorMinY(level), maxY = Minis.defaultInteriorMaxY(level);
         net.minecraft.core.BlockPos last = null;
+        int ux = (int) Math.round(cx), uz = (int) Math.round(cz);
         for (int attempt = 0; attempt < 6; attempt++) {
             double angle = rng.nextDouble() * Math.PI * 2;
             double dist = near + rng.nextDouble() * Math.max(0, radius - near);
             int x = (int) Math.round(cx + Math.cos(angle) * dist);
             int z = (int) Math.round(cz + Math.sin(angle) * dist);
+            // An unloaded column's heightmap answers the bottom of the world: a mob put there spawned in bedrock.
+            if (!level.hasChunk(x >> 4, z >> 4)) { ux = x; uz = z; continue; }
             last = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new net.minecraft.core.BlockPos(x, 0, z));
             if (last.getY() >= minY && last.getY() <= maxY) return last;
         }
-        return last;
+        if (last != null) return last;
+        // Nowhere in the ring is loaded (round world spawn, nobody there): load the one chunk the spawn lands in --
+        // a single, deliberate load for an effect that happens once, rather than a creature in the floor of the world.
+        level.getChunk(ux >> 4, uz >> 4);
+        return level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new net.minecraft.core.BlockPos(ux, 0, uz));
     }
 
     private static void character(ServerPlayer player, RewardSpec r, boolean landed) {

@@ -830,13 +830,23 @@ public final class QuestEngine {
     }
 
     static boolean blockMatches(ServerLevel level, BlockPos pos, String want) {
-        var state = level.getBlockState(pos);
+        var match = blockMatcher(want);
+        return match != null && match.test(level.getBlockState(pos));
+    }
+
+    /** {@code want} (a block id, bare means minecraft:, or a #tag) as a test, parsed once; null if it is not one. */
+    static java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> blockMatcher(String want) {
         if (want.startsWith("#")) {
             Identifier tag = Identifier.tryParse(want.substring(1));
-            return tag != null && state.is(TagKey.create(Registries.BLOCK, tag));
+            if (tag == null) return null;
+            TagKey<net.minecraft.world.level.block.Block> key = TagKey.create(Registries.BLOCK, tag);
+            return state -> state.is(key);
         }
         Identifier id = Identifier.tryParse(want.contains(":") ? want : "minecraft:" + want);
-        return id != null && id.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
+        if (id == null) return null;
+        var block = BuiltInRegistries.BLOCK.getOptional(id).orElse(null);
+        if (block == null) return null;
+        return state -> state.is(block);
     }
 
     // --- endings, progress, replay ---

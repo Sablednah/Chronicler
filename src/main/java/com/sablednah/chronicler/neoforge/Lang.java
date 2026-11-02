@@ -496,7 +496,23 @@ public final class Lang {
         return out.toString();
     }
 
+    /**
+     * Templates with their {@code {prefix}} and {@code {term.*}} already put in, by template. Every word a
+     * player sees passes through here -- the HUD, waypoints and marks every second -- and a template that
+     * used a term walked the whole catalogue to fill it. Cleared when messages.yml is read again.
+     */
+    private static final Map<String, String> SUBSTITUTED = new java.util.concurrent.ConcurrentHashMap<>();
+
     private static String substitute(String template) {
+        if (!template.contains("{")) return template;
+        String done = SUBSTITUTED.get(template);
+        if (done != null) return done;
+        done = substituteNow(template);
+        if (SUBSTITUTED.size() < 8192) SUBSTITUTED.put(template, done);
+        return done;
+    }
+
+    private static String substituteNow(String template) {
         String out = template;
         if (out.contains("{prefix}")) {
             out = out.replace("{prefix}", active.getOrDefault("prefix", DEFAULTS.get("prefix")));
@@ -549,12 +565,14 @@ public final class Lang {
                 });
             }
             active = loaded;
+            SUBSTITUTED.clear();
             Files.writeString(knownFile(), String.join("\n", DEFAULTS.keySet()) + "\n", StandardCharsets.UTF_8);
             Chronicler.LOGGER.info("Chronicler: {} message override(s) from messages.yml ({} keys in the catalogue)",
                     loaded.size(), DEFAULTS.size());
         } catch (Exception e) {
             Chronicler.LOGGER.error("Could not load messages.yml -- using defaults", e);
             active = new LinkedHashMap<>();
+            SUBSTITUTED.clear();
         }
     }
 
