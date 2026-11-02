@@ -88,7 +88,7 @@ public final class Trackers {
 
             @Override
             public OptionalInt poll(ServerPlayer player, ObjectiveTypes.Collect spec) {
-                return OptionalInt.of(count(player, matcher(spec)));
+                return OptionalInt.of(count(player, matcher(spec), spec));
             }
 
             @Override
@@ -105,7 +105,7 @@ public final class Trackers {
                 var at = deliveryPoint(player, spec);
                 if (at.isEmpty() || !at.get().level().equals(player.level().dimension().identifier())
                         || player.position().distanceToSqr(at.get().pos()) > spec.radius() * spec.radius()) return OptionalInt.of(0);
-                int held = count(player, matcher(spec));
+                int held = count(player, matcher(spec), spec);
                 return OptionalInt.of(held >= spec.count() ? spec.count() : 0);
             }
             @Override
@@ -246,6 +246,7 @@ public final class Trackers {
      * pockets, then inside the containers carried or worn (a backpack, a shulker box).
      */
     public static int take(ServerPlayer player, Predicate<ItemStack> match, int amount) {
+        INSIDE.remove(player.getUUID()); // whatever was counted inside the bags is about to be wrong
         int taken = player.getInventory().clearOrCountMatchingItems(match, amount, player.inventoryMenu.getCraftSlots());
         if (taken < amount) taken += Pockets.take(player, match, amount - taken);
         if (taken < amount) taken += Containers.take(player, match, amount - taken);
@@ -311,6 +312,43 @@ public final class Trackers {
         }
         return total + Pockets.count(player, match) + Containers.count(player, match);
     }
+
+    /**
+     * As {@link #count(ServerPlayer, Predicate)}, but what is inside carried containers is remembered per
+     * player and objective ({@code key}, by identity) and only looked at again when the inventory changes or
+     * {@link #INSIDE_SECONDS} pass -- opening every backpack of loot for every collect, every second, was the
+     * cost (ZARP's audit). A bag's own contents can change without the inventory counting it as a change
+     * (Sophisticated Backpacks keeps them server-side), hence the clock as well. Anything taken forgets it.
+     */
+    public static int count(ServerPlayer player, Predicate<ItemStack> match, Object key) {
+        int total = 0;
+        var inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack s = inv.getItem(i);
+            if (match.test(s)) total += s.getCount();
+        }
+        total += Pockets.count(player, match);
+        long now = player.level().getGameTime();
+        int changed = inv.getTimesChanged();
+        var mine = INSIDE.computeIfAbsent(player.getUUID(), k -> new java.util.IdentityHashMap<>());
+        long[] had = mine.get(key);
+        if (had == null || had[0] != changed || now - had[1] >= INSIDE_SECONDS * 20L || now < had[1]) {
+            had = new long[] { changed, now, Containers.count(player, match) };
+            mine.put(key, had);
+        }
+        return total + (int) had[2];
+    }
+
+    static final int INSIDE_SECONDS = 5;
+
+    /** player -> objective -> {inventory change count, game time, count inside}. Session state. */
+    private static final Map<java.util.UUID, java.util.IdentityHashMap<Object, long[]>> INSIDE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void forget(java.util.UUID player) { INSIDE.remove(player); }
+
+    static void clearSession() { INSIDE.clear(); }
+
+    static int sessionStateCount() { return INSIDE.size(); }
 
     /** Touch the class so the built-ins are registered before anything asks. */
     public static void init() {}
