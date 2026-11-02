@@ -754,6 +754,26 @@ public final class SelfTest {
                 Rewards.grantShared(List.of(a, b), b, stick, things, null);
                 check("once: ...and without it, every member gets their own", Trackers.count(b, Identifier.parse("minecraft:stick")) == sticksB + 2
                         && Trackers.count(a, Identifier.parse("minecraft:stick")) == sticksA + 1);
+                // party_health: one boss, three people, half again per extra member.
+                {
+                    var zt = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.withDefaultNamespace("zombie"));
+                    var z = zt.isPresent() ? zt.get().value().create(a.level(), net.minecraft.world.entity.EntitySpawnReason.EVENT) : null;
+                    if (z instanceof net.minecraft.world.entity.LivingEntity boss) {
+                        double base = boss.getMaxHealth();
+                        check("party_health: a party of one is the fight as written", Rewards.partyHealth(boss, 0.5, 1) == 1D && boss.getMaxHealth() == base);
+                        double f = Rewards.partyHealth(boss, 0.5, 3);
+                        check("party_health: x2 for a party of three, at full health", f == 2D && Math.abs(boss.getMaxHealth() - base * 2) < 0.01
+                                && Math.abs(boss.getHealth() - boss.getMaxHealth()) < 0.01);
+                        Rewards.partyHealth(boss, 0.5, 3);
+                        check("party_health: applied twice is still x2", Math.abs(boss.getMaxHealth() - base * 2) < 0.01);
+                        boss.discard();
+                    } else {
+                        check("party_health: a zombie to test on", false);
+                    }
+                    check("party_health: read from a spawn", com.sablednah.chronicler.data.RewardTypes.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,
+                            com.google.gson.JsonParser.parseString("{\"type\":\"spawn\",\"entity\":\"minecraft:zombie\",\"party_health\":0.5,\"once\":true}")).result()
+                            .map(r -> com.sablednah.chronicler.data.RewardTypes.When.unwrap(r) instanceof com.sablednah.chronicler.data.RewardTypes.Spawn sp && sp.partyHealth() == 0.5).orElse(false));
+                }
                 // Catch-up: a member who was away when the party finished it gets it on login -- done, and paid
                 // what belongs to a person (ZARP: one world, one party; a quest done is done for the party).
                 check("party ledger: the finished party quest is filed under the party", PartyLedger.get(server).doneCount("selftest|party") >= 1);

@@ -60,6 +60,36 @@ public final class Rewards {
         return Optional.of(format.replace("{name}", p.name()).replace("{text}", r.text()));
     }
 
+    /** How many members a {@code once} effect is standing in for, while it runs; 1 otherwise. Server thread only. */
+    private static int sharing = 1;
+
+    static final Identifier PARTY_HEALTH = Identifier.fromNamespaceAndPath("chronicler", "party_health");
+
+    /**
+     * A once-spawned boss facing a party: max health times {@code 1 + per x (members - 1)}, as a permanent
+     * modifier of our own (so it multiplies whatever the genus and {@code health} made of it, and saves with
+     * the mob), then healed to full. Nothing for a party of one. Returns the factor applied.
+     */
+    static double partyHealth(net.minecraft.world.entity.LivingEntity mob, double per, int members) {
+        if (per <= 0 || members <= 1) return 1D;
+        var attr = mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        if (attr == null) return 1D;
+        double extra = per * (members - 1);
+        attr.removeModifier(PARTY_HEALTH);
+        attr.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(PARTY_HEALTH, extra,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        mob.setHealth(mob.getMaxHealth());
+        return 1D + extra;
+    }
+
+    private static void partyHealth(net.minecraft.world.entity.Entity e, RewardTypes.Spawn r, Identifier questId) {
+        if (r.partyHealth() <= 0 || sharing <= 1 || !(e instanceof net.minecraft.world.entity.LivingEntity mob)) return;
+        double f = partyHealth(mob, r.partyHealth(), sharing);
+        Chronicler.LOGGER.info("Chronicler: quest {} spawned {} at x{} health ({}) for a party of {}", questId,
+                r.name().orElse(r.genus().orElse(String.valueOf(r.entity().orElse(null)))), String.format(java.util.Locale.ROOT, "%.2f", f),
+                (int) mob.getMaxHealth(), sharing);
+    }
+
     /** Do all the {@code when} gates wrapped round this effect hold for the player now? */
     static boolean gatesMet(ServerPlayer player, RewardSpec r) {
         while (true) {
@@ -86,7 +116,12 @@ public final class Rewards {
             return;
         }
         if (r instanceof RewardTypes.Once o) {
-            grant(members.contains(lead) ? lead : members.getFirst(), o.effect(), questId, quest);
+            sharing = members.size(); // what a spawn's party_health scales by
+            try {
+                grant(members.contains(lead) ? lead : members.getFirst(), o.effect(), questId, quest);
+            } finally {
+                sharing = 1;
+            }
             return;
         }
         if (RewardTypes.When.unwrap(r) instanceof RewardTypes.NpcSay say) {
@@ -349,6 +384,7 @@ public final class Rewards {
                             if (attr != null) { attr.setBaseValue(r.health()); mob.get().setHealth((float) r.health()); }
                         }
                         decorate(mob.get(), r, player, questId, quest); // after ZombieMod: the genus dressed it, we fill the gaps
+                        partyHealth(mob.get(), r, questId); // last: it multiplies whatever the rest made of it
                         lastSpawned++;
                         continue;
                     }
@@ -377,6 +413,7 @@ public final class Rewards {
                     }
                 }
                 decorate(spawned, r, player, questId, quest);
+                partyHealth(spawned, r, questId);
                 if (level.addFreshEntity(spawned)) lastSpawned++;
             }
         });
