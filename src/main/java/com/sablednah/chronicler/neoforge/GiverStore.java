@@ -194,6 +194,29 @@ public final class GiverStore extends SavedData {
         if (placed.remove("mini:" + npcId) != null) setDirty();
     }
 
+    /**
+     * A person placed in land nobody had loaded, standing at a provisional height until it loads and their
+     * real spot can be picked without loading anything ({@code Minis.settle}). Saved: a restart in between
+     * must not leave them at sea level inside a hill.
+     */
+    public void setSettle(java.util.UUID npcId, String how) {
+        placed.put("settle:" + npcId, how);
+        setDirty();
+    }
+
+    public void clearSettle(java.util.UUID npcId) {
+        if (placed.remove("settle:" + npcId) != null) setDirty();
+    }
+
+    public Map<java.util.UUID, String> settles() {
+        Map<java.util.UUID, String> out = new LinkedHashMap<>();
+        placed.forEach((k, v) -> {
+            if (!k.startsWith("settle:")) return;
+            try { out.put(java.util.UUID.fromString(k.substring(7)), v); } catch (IllegalArgumentException ignored) {}
+        });
+        return out;
+    }
+
     /** npcId -> "pending|quest" or "active|quest". */
     public Map<java.util.UUID, String> minis() {
         Map<java.util.UUID, String> out = new LinkedHashMap<>();

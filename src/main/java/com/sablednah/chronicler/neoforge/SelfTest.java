@@ -1716,6 +1716,31 @@ public final class SelfTest {
             }
         }
 
+        // --- a person placed in land nobody has loaded: nothing is loaded to place them; they settle when it is ---
+        {
+            var lvl = server.overworld();
+            BlockPos far = new BlockPos(3_000_000, 64, 3_000_000);
+            boolean wasLoaded = lvl.hasChunk(far.getX() >> 4, far.getZ() >> 4);
+            BlockPos spot = Minis.around(lvl, far, 16, 48);
+            BlockPos inside = Minis.interiorNear(lvl, far, 10);
+            check("settle: choosing a spot in unloaded land loads nothing", !wasLoaded && !lvl.hasChunk(far.getX() >> 4, far.getZ() >> 4)
+                    && !lvl.hasChunk(spot.getX() >> 4, spot.getZ() >> 4) && !lvl.hasChunk(inside.getX() >> 4, inside.getZ() >> 4));
+            if (Npcs.available()) {
+                var npcs = Npcs.provider().get();
+                BlockPos here = solo.blockPosition();
+                java.util.UUID floating = npcs.spawnHuman(lvl, new Vec3(here.getX() + 0.5, here.getY() + 30, here.getZ() + 0.5), 0F, "Settler", java.util.Optional.empty());
+                java.util.UUID ghost = java.util.UUID.randomUUID();
+                GiverStore.get(server).setSettle(floating, lvl.dimension().identifier() + "|around");
+                GiverStore.get(server).setSettle(ghost, lvl.dimension().identifier() + "|around");
+                Minis.settle(server);
+                double y = npcs.byId(server, floating).map(p -> p.pos().y).orElse(-1D);
+                check("settle: once the land is loaded they are put on the ground (" + y + ")", y >= 0 && y < here.getY() + 29);
+                check("settle: ...and forgotten, as is anyone whose quest ended first", !GiverStore.get(server).settles().containsKey(floating)
+                        && !GiverStore.get(server).settles().containsKey(ghost));
+                npcs.remove(server, floating);
+            }
+        }
+
         // --- a slow city: the looking is spread over seconds, and nobody is placed until it is done ---
         {
             var lotsBefore = Lots.current();
