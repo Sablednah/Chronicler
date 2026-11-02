@@ -42,8 +42,23 @@ public final class Conditions {
      */
     public static boolean met(ServerPlayer player, Availability a) {
         if (gatesClosed(player, a)) return false;
-        if (a.karmaMin().isEmpty() && a.karmaMax().isEmpty() && a.levelMin().isEmpty() && a.levelMax().isEmpty() && a.reputation().isEmpty()) return true;
-        return unmet(player, a).isEmpty();
+        // The same tests as unmet(), answered yes or no: every quest's availability is asked every second for
+        // the HUD, the waypoints and the marks, and wording each reason only to see whether there was one cost.
+        boolean numbers = a.karmaMin().isPresent() || a.karmaMax().isPresent() || a.levelMin().isPresent() || a.levelMax().isPresent();
+        if (numbers) {
+            if (!Sheet.available()) return false;
+            long karma = Sheet.karma(player).orElse(0L);
+            int level = Sheet.level(player).orElse(0);
+            if (a.karmaMin().isPresent() && karma < a.karmaMin().get()) return false;
+            if (a.karmaMax().isPresent() && karma > a.karmaMax().get()) return false;
+            if (a.levelMin().isPresent() && level < a.levelMin().get()) return false;
+            if (a.levelMax().isPresent() && level > a.levelMax().get()) return false;
+        }
+        if (!a.reputation().isEmpty()) {
+            if (!Rep.available()) return false;
+            for (var e : a.reputation().entrySet()) if (Rep.get(player, e.getKey()) < e.getValue()) return false;
+        }
+        return true;
     }
 
     /** The effects and rewards this player would be given: a {@code when} that does not hold for them is left out. */

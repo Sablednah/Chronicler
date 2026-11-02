@@ -183,7 +183,7 @@ public final class QuestEngine {
         for (Identifier r : quest.requires()) {
             if (!log.isComplete(r)) return Optional.of(Refusal.LOCKED);
         }
-        if (quest.availability().isPresent() && !Conditions.unmet(player, quest.availability().get()).isEmpty()) {
+        if (quest.availability().isPresent() && !Conditions.met(player, quest.availability().get())) {
             return Optional.of(Refusal.CONDITIONS);
         }
         return Optional.empty();

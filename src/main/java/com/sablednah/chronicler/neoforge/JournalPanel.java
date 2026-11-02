@@ -69,6 +69,14 @@ public final class JournalPanel {
 
     /** What the client asked for, decided here. */
     public static void request(ServerPlayer player, int action, String arg) {
+        if (action == JournalRequestPayload.OPEN || action == JournalRequestPayload.RUN) {
+            // Each of these builds the whole journal (and RUN runs a command first): faster than a hand clicks,
+            // it is a client asking the server to do that work for nothing.
+            long now = player.level().getGameTime();
+            Long last = LAST_ACTION.get(player.getUUID());
+            if (last != null && now >= last && now - last < ACTION_TICKS) return;
+            LAST_ACTION.put(player.getUUID(), now);
+        }
         switch (action) {
             case JournalRequestPayload.OPEN -> {
                 if (wants(player)) send(player, true, arg);
@@ -91,12 +99,18 @@ public final class JournalPanel {
         }
     }
 
-    public static void clearSession() { LAST_REFRESH.clear(); }
+    /** Open and button clicks: at most one per this many ticks (a quarter second), per player. */
+    static final int ACTION_TICKS = 5;
 
-    static int sessionStateCount() { return LAST_REFRESH.size(); }
+    private static final java.util.Map<UUID, Long> LAST_ACTION = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void clearSession() { LAST_REFRESH.clear(); LAST_ACTION.clear(); }
+
+    static int sessionStateCount() { return LAST_REFRESH.size() + LAST_ACTION.size(); }
 
     public static void forget(UUID player) {
         LAST_REFRESH.remove(player);
+        LAST_ACTION.remove(player);
     }
 
     // --- building ---

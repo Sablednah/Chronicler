@@ -91,8 +91,21 @@ public final class Waypoints {
 
     /** Sent once a second, same cadence as the polled objectives -- a marker is not journal text, it is not tied to the panel being open. */
     public static void sync(ServerPlayer player) {
-        Net.sendIfAble(player, build(player));
+        // Only when it changed, like the HUD: the same marks every second were a packet a second per player.
+        WaypointsPayload now = build(player);
+        if (now.equals(LAST.get(player.getUUID()))) return;
+        LAST.put(player.getUUID(), now);
+        Net.sendIfAble(player, now);
     }
+
+    /** What each player was last sent. Session state: forgotten on logout (a rejoin is sent afresh) and on stop. */
+    private static final java.util.Map<UUID, WaypointsPayload> LAST = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void forget(UUID player) { LAST.remove(player); }
+
+    static void clearSession() { LAST.clear(); }
+
+    static int sessionStateCount() { return LAST.size(); }
 
     private Waypoints() {}
 }
