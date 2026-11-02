@@ -195,7 +195,10 @@ public record Quest(
             Codec.STRING.optionalFieldOf("description").forGetter(Quest::description),
             ChroniclerIds.CODEC.fieldOf("chapter").forGetter(Quest::chapter),
             ChroniclerIds.CODEC.listOf().optionalFieldOf("requires", List.of()).forGetter(Quest::requires),
-            ObjectiveTypes.CODEC.listOf().optionalFieldOf("objectives", List.of()).forGetter(Quest::objectives),
+            Stage.OBJECTIVES.comapFlatMap(o -> o.unscaled().isEmpty() ? com.mojang.serialization.DataResult.success(o.list())
+                            : com.mojang.serialization.DataResult.<List<ObjectiveSpec>>error(() -> "scale on an objective belongs in stages; a quest without stages has its own scale: false"),
+                    l -> new Stage.Objectives(l, java.util.Set.of()))
+                    .optionalFieldOf("objectives", List.of()).forGetter(Quest::objectives),
             RewardTypes.CODEC.listOf().optionalFieldOf("rewards", List.of()).forGetter(Quest::rewards),
             Codec.BOOL.optionalFieldOf("repeatable", false).forGetter(Quest::repeatable),
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(Quest::hidden),
