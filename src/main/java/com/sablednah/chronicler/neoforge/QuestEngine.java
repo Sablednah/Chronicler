@@ -154,9 +154,13 @@ public final class QuestEngine {
         return quest.objectivesAt(entry.stage);
     }
 
-    private static List<Integer> targetsFor(List<ObjectiveSpec> objectives, int factor) {
+    /** Each objective's target: as written, times the party for those that scale. */
+    static List<Integer> targetsFor(Stage stage, int factor) {
         List<Integer> targets = new ArrayList<>();
-        for (ObjectiveSpec o : objectives) targets.add(Math.max(1, o.required() * factor));
+        List<ObjectiveSpec> objectives = stage.objectives();
+        for (int n = 0; n < objectives.size(); n++) {
+            targets.add(Math.max(1, objectives.get(n).required() * (stage.scales(n) ? factor : 1)));
+        }
         return targets;
     }
 
@@ -286,7 +290,7 @@ public final class QuestEngine {
         boolean party = scopeOf(server, quest) == QuestScope.PARTY;
         int factor = party && quest.scale() ? members.size() : 1;
         Stage first = quest.beats().getFirst();
-        List<Integer> targets = targetsFor(first.objectives(), factor);
+        List<Integer> targets = targetsFor(first, factor);
 
         List<ServerPlayer> started = new ArrayList<>();
         for (ServerPlayer m : members) {
@@ -313,7 +317,7 @@ public final class QuestEngine {
                 if (stage.isDecision()) presentChoices(m, id, quest, stage);
             }
         } else {
-            enterStage(started, id, quest, 0, false);
+            enterStage(started, player, id, quest, 0, false);
         }
         for (ServerPlayer m : members) poll(m);
         return Optional.empty();
@@ -325,7 +329,7 @@ public final class QuestEngine {
      * need setting (a choice or a failure sent us here); a fresh accept has
      * them already.
      */
-    private static void enterStage(List<ServerPlayer> members, Identifier id, Quest quest, int index, boolean jump) {
+    private static void enterStage(List<ServerPlayer> members, ServerPlayer lead, Identifier id, Quest quest, int index, boolean jump) {
         List<Stage> beats = quest.beats();
         if (members.isEmpty() || beats.isEmpty()) return;
         index = Math.min(Math.max(index, 0), beats.size() - 1);
@@ -333,7 +337,7 @@ public final class QuestEngine {
         if (jump) {
             boolean party = scopeOf(members.getFirst().level().getServer(), quest) == QuestScope.PARTY;
             int factor = party && quest.scale() ? members.size() : 1;
-            List<Integer> targets = targetsFor(stage.objectives(), factor);
+            List<Integer> targets = targetsFor(stage, factor);
             for (ServerPlayer m : members) {
                 QuestLog.Entry e = journal(m).entry(id);
                 if (e != null) e.jump(index, targets);
@@ -346,9 +350,9 @@ public final class QuestEngine {
             if (e != null) { e.deadlineAt = deadlineAt; e.enteredAt = now; }
             narrate(m, quest, stage, index);
             if (deadlineAt >= 0) Feedback.chat(m, Lang.fmt("msg.deadline.set", "time", clock(stage.deadline().get() * 20L)));
-            effects(m, stage.onEnter(), id, quest);
-            if (stage.isDecision()) presentChoices(m, id, quest, stage);
         }
+        effects(members, lead, stage.onEnter(), id, quest);
+        if (stage.isDecision()) for (ServerPlayer m : members) presentChoices(m, id, quest, stage);
     }
 
     /** How many times the choices have been put in front of anyone; the self-test's window onto a re-presentation. */
@@ -421,7 +425,9 @@ public final class QuestEngine {
         for (ServerPlayer m : members) {
             Feedback.chat(m, Lang.fmt("msg.choice.made", "label", choice.label()));
             choice.text().ifPresent(t -> Feedback.chat(m, Lang.fmt("msg.choice.text", "text", t)));
-            effects(m, choice.effects(), id, quest);
+        }
+        effects(members, player, choice.effects(), id, quest);
+        for (ServerPlayer m : members) {
             choice.ending().ifPresent(end -> reachEnding(m, quest, end));
             choice.start().ifPresent(other -> accept(m, other));
         }
@@ -434,7 +440,7 @@ public final class QuestEngine {
             complete(members, player, id, quest);
             return true;
         }
-        enterStage(members, id, quest, next, true);
+        enterStage(members, player, id, quest, next, true);
         for (ServerPlayer m : members) {
             poll(m);
             if (journal(m).entry(id) != null) showTracker(m, id);
@@ -496,10 +502,10 @@ public final class QuestEngine {
         Stage stage = quest.beats().get(Math.min(lead.stage, quest.beats().size() - 1));
         for (ServerPlayer m : members) {
             Feedback.chat(m, why);
-            effects(m, stage.onFail(), id, quest);
         }
+        effects(members, player, stage.onFail(), id, quest);
         if (stage.fail().isPresent()) {
-            enterStage(members, id, quest, stage.fail().get() - 1, true);
+            enterStage(members, player, id, quest, stage.fail().get() - 1, true);
             for (ServerPlayer m : members) {
                 poll(m);
                 if (journal(m).entry(id) != null) showTracker(m, id);
@@ -528,8 +534,9 @@ public final class QuestEngine {
         }
     }
 
-    private static void effects(ServerPlayer player, List<RewardSpec> effects, Identifier id, Quest quest) {
-        for (RewardSpec r : effects) Rewards.grant(player, r, id, quest);
+    /** A beat's effects for everyone sharing it -- each their own, but {@code once} and {@code npc_say} once (see {@link Rewards#grantShared}). */
+    private static void effects(List<ServerPlayer> members, ServerPlayer lead, List<RewardSpec> effects, Identifier id, Quest quest) {
+        for (RewardSpec r : effects) Rewards.grantShared(members, lead, r, id, quest);
     }
 
     public static boolean abandon(ServerPlayer player, Identifier id) {
@@ -1048,14 +1055,14 @@ public final class QuestEngine {
                 remaining -= tracker.settle(m, spec, remaining);
             }
         }
-        for (ServerPlayer m : members) effects(m, stage.onComplete(), id, quest);
+        effects(members, player, stage.onComplete(), id, quest);
         stage.ending().ifPresent(end -> { for (ServerPlayer m : members) reachEnding(m, quest, end); });
 
         if (!stage.end() && index + 1 < beats.size()) {
             for (ServerPlayer m : members) {
                 Feedback.chat(m, Lang.fmt("msg.stage.done", "stage", index + 1, "stages", beats.size()));
             }
-            enterStage(members, id, quest, index + 1, true);
+            enterStage(members, player, id, quest, index + 1, true);
             for (ServerPlayer m : members) {
                 poll(m);
                 if (journal(m).entry(id) != null) showTracker(m, id);
@@ -1073,7 +1080,9 @@ public final class QuestEngine {
             Feedback.fanfare(m, Lang.fmt("msg.complete", "name", quest.name()),
                     Lang.fmt("msg.complete.title", "name", quest.name()),
                     Lang.get("msg.complete.subtitle"));
-            for (RewardSpec r : quest.rewards()) Rewards.grant(m, r, id, quest);
+        }
+        for (RewardSpec r : quest.rewards()) Rewards.grantShared(members, player, r, id, quest);
+        for (ServerPlayer m : members) {
             announceUnlocked(m, id);
             PartyLedger.recordDone(m, id, quest); // for the members who are not here
             journal(m).tracked().ifPresent(t -> showTracker(m, t));
