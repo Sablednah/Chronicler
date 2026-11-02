@@ -734,6 +734,7 @@ public final class SelfTest {
                 Party.installId(p -> java.util.Optional.of("selftest|party"));
                 check("party accept by A", QuestEngine.accept(a, things).isEmpty());
                 check("party accept reached B", QuestEngine.journal(b).isActive(things));
+                check("party_health: a boss that comes back counts the two on the quest", QuestEngine.sharingCount(a, things, QuestEngine.questFor(a, things).orElseThrow()) == 2);
                 check("party target scaled to 10", QuestEngine.journal(a).entry(things).targets.get(0) == 10
                         && QuestEngine.journal(b).entry(things).targets.get(0) == 10);
                 for (int i = 0; i < 6; i++) QuestEngine.onKill(a, zombie);
