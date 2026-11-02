@@ -167,6 +167,7 @@ public final class QuestEvents {
         QuestEngine.clearSession();
         PartyLedger.clearSession();
         Minis.clear();
+        Lots.clearSession();
         FlagStore.forget();
         com.sablednah.chronicler.data.QuestItem.CURRENT = null;
     }
@@ -174,7 +175,7 @@ public final class QuestEvents {
     /** How much per-world in-memory state is held right now; the self-test's window onto {@link #clearSession}. */
     static int sessionStateCount() {
         return Givers.sessionStateCount() + Hud.sessionStateCount() + JournalPanel.sessionStateCount()
-                + EscortBars.activeCount() + Rewards.spawnedCount() + QuestEngine.settlingCount() + QuestEngine.wordedCount() + PartyLedger.sessionStateCount()
+                + EscortBars.activeCount() + Rewards.spawnedCount() + QuestEngine.settlingCount() + QuestEngine.wordedCount() + PartyLedger.sessionStateCount() + Lots.sessionStateCount() + Minis.searchingCount()
                 + (FlagStore.cached() == null ? 0 : 1) + (com.sablednah.chronicler.data.QuestItem.CURRENT == null ? 0 : 1);
     }
 

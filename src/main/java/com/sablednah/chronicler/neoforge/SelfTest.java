@@ -698,6 +698,41 @@ public final class SelfTest {
                 check("settle: real content is unaffected unless it opts in", true);
             }
 
+            // Lot lookups: asked once per chunk, and a wild search stops at its budget instead of freezing the server
+            // (ZARP: a 640-block Bank Job search froze the server for 55 seconds as CityWorld planned far-off cities).
+            {
+                var before = Lots.current();
+                int[] calls = {0};
+                try {
+                    Lots.install((lvl, pos) -> {
+                        calls[0]++;
+                        try { Thread.sleep(2); } catch (InterruptedException ignored) {}
+                        return java.util.Optional.of(List.of("selftest", (pos.getX() >> 4) == 10 && (pos.getZ() >> 4) == 0 ? "the_bank" : "nothing"));
+                    });
+                    var lvl = server.overworld();
+                    Lots.describe(lvl, new BlockPos(5, 64, 5));
+                    Lots.describe(lvl, new BlockPos(9, 70, 12));
+                    check("lots: one question per chunk, whatever the block", calls[0] == 1 && Lots.known(lvl, 0, 0));
+                    calls[0] = 0;
+                    var cut = Minis.nearestLotWithin(lvl, new BlockPos(8, 64, 8), w -> w.contains("the_bank"), 200, 10);
+                    check("lots: a budgeted search stops short and says so", cut.isEmpty() && Minis.ranOutOfTime() && calls[0] > 0 && calls[0] < 100);
+                    int firstGo = calls[0];
+                    java.util.Optional<BlockPos> found = java.util.Optional.empty();
+                    for (int go = 0; go < 400 && found.isEmpty(); go++) {
+                        found = Minis.nearestLotWithin(lvl, new BlockPos(8, 64, 8), w -> w.contains("the_bank"), 200, 10);
+                        if (found.isEmpty() && !Minis.ranOutOfTime()) break;
+                    }
+                    check("lots: ...and carried on, it gets there", found.map(p -> (p.getX() >> 4) == 10 && (p.getZ() >> 4) == 0).orElse(false));
+                    int total = calls[0];
+                    Minis.nearestLotWithin(lvl, new BlockPos(8, 64, 8), w -> w.contains("the_bank"), 200, 0);
+                    check("lots: the same search again asks nothing new", calls[0] == total && firstGo > 0);
+                    Minis.nearestLotWithin(lvl, new BlockPos(100000, 64, 8), w -> w.contains("the_bank"), 64, 0);
+                    check("lots: a budget of 0 asks nothing it has not asked", calls[0] == total && Minis.ranOutOfTime());
+                } finally {
+                    Lots.install(before);
+                }
+            }
+
             // once and objective scale: what a party quest's story boss is written with.
             {
                 var ops = com.mojang.serialization.JsonOps.INSTANCE;
