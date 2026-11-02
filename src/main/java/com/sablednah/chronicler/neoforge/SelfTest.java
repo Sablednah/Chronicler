@@ -214,10 +214,15 @@ public final class SelfTest {
 
             // The panel's buttons run as the player -- and only /quest ones.
             QuestEngine.journal(solo).track(firstSteps);
+            JournalPanel.forget(solo.getUUID());
             JournalPanel.request(solo, com.sablednah.chronicler.network.JournalRequestPayload.RUN, "quests abandon " + things);
             check("panel runs nothing that is not /quest (an abandon under /quests was refused)", QuestEngine.journal(solo).isActive(things));
+            JournalPanel.forget(solo.getUUID());
             JournalPanel.request(solo, com.sablednah.chronicler.network.JournalRequestPayload.RUN, "quest track " + things);
             check("panel runs its own buttons as the player", QuestEngine.journal(solo).tracked().map(things::equals).orElse(false));
+            JournalPanel.request(solo, com.sablednah.chronicler.network.JournalRequestPayload.RUN, "quest track " + firstSteps);
+            check("panel: a click faster than a hand is dropped", QuestEngine.journal(solo).tracked().map(things::equals).orElse(false));
+            JournalPanel.forget(solo.getUUID());
 
             Zombie zombie = new Zombie(server.overworld());
             Cow cow = new Cow(net.minecraft.world.entity.EntityTypes.COW, server.overworld());
@@ -1926,6 +1931,7 @@ public final class SelfTest {
                     && !targetMark.label().contains("waypoint.") && !targetMark.label().contains("§")
                     && !npcMark.label().contains("waypoint.") && !npcMark.label().contains("§"));
             var wpWire = io.netty.buffer.Unpooled.buffer();
+            check("waypoints: the same marks are not sent twice", Waypoints.build(solo).equals(Waypoints.build(solo)));
             var wpPayload = Waypoints.build(solo);
             WaypointsPayload.CODEC.encode(wpWire, wpPayload);
             var wpBack = WaypointsPayload.CODEC.decode(wpWire);
