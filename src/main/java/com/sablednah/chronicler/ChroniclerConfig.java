@@ -38,6 +38,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.BooleanValue ACHIEVEMENTS;
     public static final ModConfigSpec.ConfigValue<String> ACHIEVEMENT_BACKGROUND;
     public static final ModConfigSpec.IntValue MINI_OFFER_SECONDS;
+    public static final ModConfigSpec.IntValue MINI_WILD_SEARCH_MS;
     public static final ModConfigSpec.DoubleValue ESCORT_PICKUP;
 
     static {
@@ -137,6 +138,12 @@ public final class ChroniclerConfig {
                 .comment("How long a mini quest offered by another quest's ending stands before it lapses and anyone",
                         "placed for it leaves. Wild offers carry their own 'lapse'.")
                 .defineInRange("offerSeconds", 300, 10, 86400);
+        MINI_WILD_SEARCH_MS = BUILDER
+                .comment("Milliseconds a wild offer may spend each second looking for a CityWorld lot it needs. Asking",
+                        "about land nobody has walked to makes CityWorld plan the city there, which is slow; past this",
+                        "the search stops, keeps what it learned, and carries on the next second. 0 = a wild offer never",
+                        "asks about land it has not asked about before.")
+                .defineInRange("wildSearchMillis", 20, 0, 1000);
         ESCORT_PICKUP = BUILDER
                 .comment("An escorted person follows whoever is within this many blocks of them. Further, they stop",
                         "and wait where they are until someone comes back for them.")

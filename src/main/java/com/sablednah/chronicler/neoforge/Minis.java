@@ -354,9 +354,38 @@ public final class Minis {
         return level.getSeaLevel();
     }
 
+    /** When a lot search must stop (System.nanoTime); unbounded except while a wild offer is being looked for. Server thread only. */
+    private static long deadline = Long.MAX_VALUE;
+    /** The deadline that means "ask nothing new at all" (wildSearchMillis = 0). */
+    private static final long NEVER_ASK = Long.MIN_VALUE;
+    /** Did the last lot search stop at {@link #deadline} rather than finish? */
+    private static boolean outOfTime;
+
+    /**
+     * Wild offers whose lot search ran out of time: (player, template). Each is carried on the next second
+     * without a new roll, until it is found, comes up empty, or the player leaves the place. Session state.
+     */
+    private static final java.util.Set<String> SEARCHING = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public static int searchingCount() { return SEARCHING.size(); }
+
+    /** The self-test's handle on a budgeted search: {@code millis} as wildSearchMillis, and whether it stopped short. */
+    static Optional<BlockPos> nearestLotWithin(ServerLevel level, BlockPos from, java.util.function.Predicate<List<String>> matches, int radius, int millis) {
+        deadline = millis == 0 ? NEVER_ASK : System.nanoTime() + millis * 1_000_000L;
+        try {
+            return nearestLot(level, from, matches, radius);
+        } finally {
+            deadline = Long.MAX_VALUE;
+        }
+    }
+
+    static boolean ranOutOfTime() { return outOfTime; }
+
     /** The nearest CityWorld lot whose words contain {@code want}, chunk by chunk outward. CityWorld answers for chunks never generated. */
     static Optional<BlockPos> nearestLot(ServerLevel level, BlockPos from, java.util.function.Predicate<List<String>> matches, int radius) {
         int cx = from.getX() >> 4, cz = from.getZ() >> 4;
+        outOfTime = false;
+        int asked = 0; // new questions put to CityWorld this call: at least one each time, so a resumed search moves
         int rings = Math.max(1, radius / 16);
         for (int r = 0; r <= rings; r++) {
             for (int dx = -r; dx <= r; dx++) {
@@ -364,6 +393,11 @@ public final class Minis {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
                     int x = ((cx + dx) << 4) + 8, z = ((cz + dz) << 4) + 8;
                     BlockPos probe = new BlockPos(x, from.getY(), z);
+                    // A wild search stops at its budget; what it learned is cached, so the next second carries on.
+                    if (!Lots.known(level, cx + dx, cz + dz)) {
+                        if (System.nanoTime() > deadline && (asked > 0 || deadline == NEVER_ASK)) { outOfTime = true; return Optional.empty(); }
+                        asked++;
+                    }
                     var words = Lots.describe(level, probe);
                     if (words.isPresent() && matches.test(words.get())) {
                         return Optional.of(new BlockPos(x, heightAt(level, x, z), z));
@@ -609,6 +643,7 @@ public final class Minis {
         INSTANCES.clear();
         PENDING.clear();
         ROLLED.clear();
+        SEARCHING.clear();
     }
 
     /** Once a second: offers that lapse, and a roll for each wild template this player is standing in the place of. */
@@ -634,16 +669,30 @@ public final class Minis {
             if (holder.isEmpty()) continue;
             Quest base = holder.get().value();
             Mini.Wild wild = base.mini().get().spawn().get();
+            String searchKey = player.getUUID() + "|" + id;
+            boolean resuming = SEARCHING.remove(searchKey); // put back below only if it runs out of time again
             Map<Identifier, Long> mine = ROLLED.computeIfAbsent(player.getUUID(), k -> new HashMap<>());
-            Long last = mine.get(id);
-            if (last != null && now - last < wild.every() * 20L) continue;
-            mine.put(id, now);
+            if (!resuming) {
+                Long last = mine.get(id);
+                if (last != null && now - last < wild.every() * 20L) continue;
+                mine.put(id, now);
+            }
             if (!Places.isAt(player, wild.place())) continue;
             if (!QuestEngine.available(player, id, base)) continue;
             if (PENDING.getOrDefault(player.getUUID(), Map.of()).containsKey(id)) continue;
             if (standing(id) >= wild.cap()) continue;
-            if (player.getRandom().nextDouble() >= wild.chance()) continue;
-            offerWild(player, id, base);
+            if (!resuming && player.getRandom().nextDouble() >= wild.chance()) continue;
+            int budget = ChroniclerConfig.MINI_WILD_SEARCH_MS.get();
+            deadline = budget == 0 ? NEVER_ASK : System.nanoTime() + budget * 1_000_000L;
+            try {
+                offerWild(player, id, base);
+            } finally {
+                deadline = Long.MAX_VALUE;
+            }
+            if (outOfTime) {
+                outOfTime = false;
+                if (budget > 0) SEARCHING.add(searchKey); // at 0 there is nothing more it would ever ask
+            }
         }
     }
 
