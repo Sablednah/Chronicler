@@ -1196,7 +1196,7 @@ public final class SelfTest {
                 for (int n = 0; n < 12; n++) {
                     var at = Rewards.spawnPoint(solo, fenceSpec, beacon);
                     double d = Math.hypot(at.pos().getX() + 0.5D - (spawn.getX() + 0.5D), at.pos().getZ() + 0.5D - (spawn.getZ() + 0.5D));
-                    if (at.dimension() != net.minecraft.world.level.Level.OVERWORLD || d < 16D || d > 25D) ring = false;
+                    if (at.dimension() != net.minecraft.world.level.Level.OVERWORLD || d < 15D || d > 25D) ring = false; // whole blocks: a spot at min_radius can round half a block inside it
                     var by = Rewards.spawnPoint(solo, nearSpec, ChroniclerIds.of("no_such_quest"));
                     if (Math.hypot(by.pos().getX() + 0.5D - solo.getX(), by.pos().getZ() + 0.5D - solo.getZ()) > 5D) near = false;
                 }
@@ -1739,6 +1739,15 @@ public final class SelfTest {
                         && !GiverStore.get(server).settles().containsKey(ghost));
                 npcs.remove(server, floating);
             }
+        }
+
+        // --- an arrived charge walks to one spot, not a new room every second ---
+        {
+            java.util.UUID charge = java.util.UUID.randomUUID();
+            BlockPos first = Minis.escortTarget(server.overworld(), solo.blockPosition(), charge);
+            boolean same = true;
+            for (int i = 0; i < 5; i++) same &= Minis.escortTarget(server.overworld(), solo.blockPosition(), charge).equals(first);
+            check("escort: the spot an arrived charge walks to is chosen once", same);
         }
 
         // --- a slow city: the looking is spread over seconds, and nobody is placed until it is done ---
