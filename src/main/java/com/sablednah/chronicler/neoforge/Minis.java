@@ -191,6 +191,7 @@ public final class Minis {
                     // fixed once already to step outdoors, still not what "near a house" should mean for
                     // a person). Placed exactly AT one (no near) is left alone -- that is a deliberate
                     // coordinate (a giver's own spot, a chapter's camp).
+                    provisional = false;
                     BlockPos at = slot.max() > 0 ? around(level, from.pos(), slot.min(), slot.max())
                             : slot.near().isPresent() ? interiorNear(level, from.pos(), 10,
                                     slot.yMin().orElseGet(() -> defaultInteriorMinY(level)), slot.yMax().orElseGet(() -> defaultInteriorMaxY(level)))
@@ -208,6 +209,15 @@ public final class Minis {
                         return Resolved.fail(Lang.fmt("mini.why.npc", "name", npcName));
                     }
                     placed.add(uid);
+                    if (provisional) {
+                        // Their land is not loaded: they stand at a stand-in height until it is, then settle.
+                        boolean inside = slot.max() <= 0 && slot.near().isPresent();
+                        GiverStore.get(server).setSettle(uid, dim + "|" + (inside
+                                ? "interior|" + from.pos().getX() + "|" + from.pos().getY() + "|" + from.pos().getZ() + "|"
+                                        + slot.yMin().orElseGet(() -> defaultInteriorMinY(level)) + "|" + slot.yMax().orElseGet(() -> defaultInteriorMaxY(level))
+                                : "around"));
+                        provisional = false;
+                    }
                     if (!slot.person().equipment().isEmpty()) Npcs.provider().get().equip(server, uid, slot.person().equipment());
                     if (slot.person().scale() != 1D) Npcs.provider().get().setScale(server, uid, slot.person().scale());
                     GiverStore store = GiverStore.get(server);
@@ -265,11 +275,58 @@ public final class Minis {
     }
 
     /** A dry surface spot {@code min}..{@code max} blocks away, at a random bearing. */
-    private static BlockPos around(ServerLevel level, BlockPos from, int min, int max) {
+    static BlockPos around(ServerLevel level, BlockPos from, int min, int max) {
         var rng = level.getRandom();
         double angle = rng.nextDouble() * Math.PI * 2;
         double dist = min + rng.nextDouble() * Math.max(0, max - min);
-        return Givers.dryColumn(level, (int) Math.round(from.getX() + Math.cos(angle) * dist), (int) Math.round(from.getZ() + Math.sin(angle) * dist));
+        int x = (int) Math.round(from.getX() + Math.cos(angle) * dist), z = (int) Math.round(from.getZ() + Math.sin(angle) * dist);
+        if (!loaded(level, x, z, 8)) { provisional = true; return new BlockPos(x, heightAt(level, x, z), z); }
+        return Givers.dryColumn(level, x, z);
+    }
+
+    /**
+     * Set when a spot was chosen without its land loaded: the height is a stand-in (sea level), and the person
+     * put there is settled properly once it loads. Choosing a spot never loads (or generates) a chunk -- a
+     * Mum placed 480 blocks off used to generate the land around her house on the tick. Server thread only.
+     */
+    private static boolean provisional;
+
+    /** Are the chunks within {@code r} blocks of x, z all loaded -- can blocks there be read without loading any? */
+    static boolean loaded(ServerLevel level, int x, int z, int r) {
+        return level.hasChunk((x - r) >> 4, (z - r) >> 4) && level.hasChunk((x + r) >> 4, (z - r) >> 4)
+                && level.hasChunk((x - r) >> 4, (z + r) >> 4) && level.hasChunk((x + r) >> 4, (z + r) >> 4);
+    }
+
+    /**
+     * Once a second: anyone placed at a provisional height whose land has since loaded is moved to the spot
+     * they were meant to have -- the same choice, made now that it costs nothing. Someone whose quest ended
+     * first (taken away by then) is simply forgotten, so nobody appears later for a dead quest.
+     */
+    static void settle(MinecraftServer server) {
+        if (!Npcs.available()) return;
+        GiverStore store = GiverStore.get(server);
+        for (var e : store.settles().entrySet()) {
+            var who = Npcs.provider().get().byId(server, e.getKey());
+            if (who.isEmpty()) { store.clearSettle(e.getKey()); continue; }
+            String[] f = e.getValue().split("\\|");
+            ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, Identifier.parse(f[0])));
+            if (level == null) { store.clearSettle(e.getKey()); continue; }
+            BlockPos now = BlockPos.containing(who.get().pos());
+            BlockPos at;
+            provisional = false;
+            if (f[1].equals("interior")) {
+                BlockPos from = new BlockPos(Integer.parseInt(f[2]), Integer.parseInt(f[3]), Integer.parseInt(f[4]));
+                if (!loaded(level, from.getX(), from.getZ(), 28)) continue;
+                at = interiorNear(level, from, 10, Integer.parseInt(f[5]), Integer.parseInt(f[6]));
+            } else {
+                if (!loaded(level, now.getX(), now.getZ(), 8)) continue;
+                at = Givers.dryColumn(level, now.getX(), now.getZ());
+            }
+            if (provisional) continue; // still something unloaded at the edge: next second
+            Npcs.provider().get().teleport(server, e.getKey(), new net.minecraft.world.phys.Vec3(at.getX() + 0.5, at.getY(), at.getZ() + 0.5));
+            store.clearSettle(e.getKey());
+            Chronicler.LOGGER.info("Chronicler: {} settled at {} now that the land there is loaded", who.get().name(), at);
+        }
     }
 
     /** {@link #interiorNear(ServerLevel, BlockPos, int, int, int)}, bounded to near sea level. */
@@ -302,6 +359,7 @@ public final class Minis {
             double dist = rng.nextDouble() * radius;
             int x = (int) Math.round(from.getX() + Math.cos(angle) * dist);
             int z = (int) Math.round(from.getZ() + Math.sin(angle) * dist);
+            if (!level.hasChunk(x >> 4, z >> 4)) continue; // reading it would load it; the person is settled when it loads
             BlockPos found = interiorColumn(level, x, z, minY, maxY);
             if (found != null) return found;
         }
@@ -760,6 +818,7 @@ public final class Minis {
         GiverStore store = GiverStore.get(server);
         for (UUID n : p.npcs()) {
             store.clearMini(n);
+            store.clearSettle(n);
             store.removeNpc(n);
             if (Npcs.available()) Npcs.provider().get().remove(server, n);
         }
@@ -769,6 +828,7 @@ public final class Minis {
         GiverStore store = GiverStore.get(server);
         for (UUID n : placed) {
             store.clearMini(n);
+            store.clearSettle(n);
             store.removeNpc(n);
             if (Npcs.available()) Npcs.provider().get().remove(server, n);
         }
@@ -817,6 +877,7 @@ public final class Minis {
             });
         }
         carryOn(server);
+        settle(server);
         if (!ChroniclerConfig.MINI_WILD.get() || WILD.isEmpty()) return;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) tickWild(player);
     }
