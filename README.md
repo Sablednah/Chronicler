@@ -45,7 +45,8 @@ in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
   starts a replayable chapter over, keeping the endings you found.
 - With [JourneyMap](https://www.curseforge.com/minecraft/mc-mods/journeymap) installed too, a
   quest's "go here", a giver waiting to be found, and an escort's charge all show up on the map,
-  live -- entirely optional, on both sides.
+  live -- entirely optional, on both sides. The quests' people within 64 blocks show on the minimap
+  and the full map by name, gold when they have a quest for you (`tracker.mapPeopleRadius`).
 
 ## Requirements
 

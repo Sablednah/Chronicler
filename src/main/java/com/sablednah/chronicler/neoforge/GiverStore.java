@@ -103,6 +103,43 @@ public final class GiverStore extends SavedData {
         return had;
     }
 
+    /**
+     * Every person this store knows as Chronicler's -- given a quest by an op or {@code giver_for}, placed by data
+     * for a quest, or placed for a mini -- with the quests they give (none for a mini's person). The map's radar.
+     */
+    public Map<java.util.UUID, java.util.List<Identifier>> people() {
+        Map<java.util.UUID, java.util.List<Identifier>> out = new LinkedHashMap<>();
+        for (var e : byKey.entrySet()) {
+            if (!e.getKey().startsWith("npc|")) continue;
+            uuid(e.getKey().substring(4)).ifPresent(id -> out.computeIfAbsent(id, k -> new java.util.ArrayList<>()).add(e.getValue()));
+        }
+        for (var e : npcQuests.entrySet()) {
+            if (!e.getKey().startsWith("npc|")) continue;
+            uuid(e.getKey().substring(4)).ifPresent(id -> {
+                var quests = out.computeIfAbsent(id, k -> new java.util.ArrayList<>());
+                for (Identifier q : e.getValue()) if (!quests.contains(q)) quests.add(q);
+            });
+        }
+        for (var e : placed.entrySet()) {
+            String k = e.getKey();
+            if (k.startsWith("mini:")) {
+                uuid(k.substring(5)).ifPresent(id -> out.computeIfAbsent(id, x -> new java.util.ArrayList<>()));
+            } else if (!k.startsWith("block:") && !k.startsWith("left:") && !k.startsWith("gone:") && !k.startsWith("settle:")) {
+                Identifier quest = Identifier.tryParse(k); // a bare quest id: the person data placed for it
+                if (quest == null) continue;
+                uuid(e.getValue()).ifPresent(id -> {
+                    var quests = out.computeIfAbsent(id, x -> new java.util.ArrayList<>());
+                    if (!quests.contains(quest)) quests.add(quest);
+                });
+            }
+        }
+        return out;
+    }
+
+    private static Optional<java.util.UUID> uuid(String s) {
+        try { return Optional.of(java.util.UUID.fromString(s)); } catch (IllegalArgumentException e) { return Optional.empty(); }
+    }
+
     /** The NPC that data placed for a quest, so it is placed once, not once per start. */
     public Optional<java.util.UUID> placedFor(Identifier quest) {
         String v = placed.get(quest.toString());

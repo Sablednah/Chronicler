@@ -438,6 +438,24 @@ public final class SelfTest {
                 UUID npc = cast.spawnHuman(server.overworld(), solo.position().add(2, 0, 0), 0F, "Test Giver", java.util.Optional.empty());
                 try {
                     GiverStore.get(server).setNpc(npc, firstSteps);
+                    // The map's radar: our people near you, by name, gold while they have a quest for you; nobody else's.
+                    {
+                        UUID stranger = cast.spawnHuman(server.overworld(), solo.position().add(-2, 0, 0), 0F, "Not Ours", java.util.Optional.empty());
+                        try {
+                            var people = Waypoints.build(solo).marks().stream()
+                                    .filter(m -> m.kind() == com.sablednah.chronicler.network.WaypointsPayload.PERSON
+                                            || m.kind() == com.sablednah.chronicler.network.WaypointsPayload.PERSON_OFFERS).toList();
+                            var giver = people.stream().filter(m -> m.id().equals("person:" + npc)).findFirst();
+                            check("map people: a giver nearby is drawn by name (" + giver.map(m -> m.label()).orElse("missing") + ")",
+                                    giver.map(m -> m.label().equals("Test Giver")).orElse(false));
+                            check("map people: ...in gold while they have a quest for you",
+                                    giver.map(m -> m.kind() == com.sablednah.chronicler.network.WaypointsPayload.PERSON_OFFERS).orElse(false));
+                            check("map people: a person Chronicler did not place is not ours to show",
+                                    people.stream().noneMatch(m -> m.id().equals("person:" + stranger)));
+                        } finally {
+                            cast.remove(server, stranger);
+                        }
+                    }
                     check("npc mark: an ordinary person's mark sits where it always did (2.35)", Math.abs(Givers.markerHeight(1.8D) - 2.35D) < 1e-9);
                     try {
                         double plain = cast.byId(server, npc).map(Npcs.Placed::height).orElse(-1D);
