@@ -280,6 +280,7 @@ public final class Lang {
         def("hud.offer", "&e! &f{quest} &7-- {where}, {distance}m");
         def("waypoint.giver", "{quest} (quest)");
         def("waypoint.npc", "{name} ({quest})");
+        def("waypoint.person", "{name}");
         def("msg.mini.unresolved", "{prefix}&7Not now: &f{name}&7 -- {why}.");
         def("msg.mini.refused", "{prefix}&7Not now: &f{name}&7 -- {why}.");
         def("msg.mini.refusal.unknown", "no such quest");

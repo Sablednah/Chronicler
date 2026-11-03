@@ -24,8 +24,13 @@ import net.minecraft.resources.Identifier;
  */
 public record WaypointsPayload(List<Mark> marks) implements CustomPacketPayload {
 
-    /** A quest's "go here"; {@link #GIVER} a quest waiting to be offered; {@link #NPC} someone being escorted. */
-    public static final byte TARGET = 0, GIVER = 1, NPC = 2;
+    /**
+     * A quest's "go here"; {@link #GIVER} a quest waiting to be offered; {@link #NPC} someone being escorted;
+     * {@link #PERSON} one of the quests' people within radar range, by name ({@link #PERSON_OFFERS}: with a quest
+     * for this player). People are a map's radar, not waypoints: a client draws them as marks, never saves them.
+     * The two person kinds came in with channel version 3, so a client that predates them never receives one.
+     */
+    public static final byte TARGET = 0, GIVER = 1, NPC = 2, PERSON = 3, PERSON_OFFERS = 4;
 
     /**
      * @param id        stable across resends for the same thing, so a client can update rather than
