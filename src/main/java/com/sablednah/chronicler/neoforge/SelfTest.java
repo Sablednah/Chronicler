@@ -738,6 +738,44 @@ public final class SelfTest {
                 }
             }
 
+            // CityWorld 6.12's non-blocking pair: a cold plan is asked for off the server thread, the search waits for
+            // the ring rather than calling something further out nearest, and the answer lands in the cache.
+            {
+                var before = Lots.current();
+                java.util.Map<String, java.util.concurrent.CompletableFuture<java.util.Optional<List<String>>>> planning = new java.util.HashMap<>();
+                int[] blocking = {0};
+                try {
+                    Lots.install((lvl, pos) -> { blocking[0]++; return java.util.Optional.empty(); });
+                    Lots.installAsker((lvl, pos, mayPlan) -> {
+                        int cx = pos.getX() >> 4, cz = pos.getZ() >> 4;
+                        String patch = (cx >> 3) + "," + (cz >> 3);
+                        var f = planning.get(patch);
+                        if (f != null && f.isDone()) return java.util.concurrent.CompletableFuture.completedFuture(
+                                java.util.Optional.of(List.of("selftest", cx == 3 && cz == 0 ? "the_vault" : "nothing")));
+                        if (!mayPlan) return null;
+                        return planning.computeIfAbsent(patch, k -> new java.util.concurrent.CompletableFuture<>());
+                    });
+                    var lvl = server.overworld();
+                    var first = Minis.nearestLotWithin(lvl, new BlockPos(8, 64, 8), w -> w.contains("the_vault"), 96, 1000);
+                    check("lots async: a cold plan is not waited for (" + Lots.asking() + " asked)",
+                            first.isEmpty() && Minis.ranOutOfTime() && Lots.asking() > 0 && Lots.asking() <= Lots.ASKING_MAX && blocking[0] == 0);
+                    var again = Minis.nearestLotWithin(lvl, new BlockPos(8, 64, 8), w -> w.contains("the_vault"), 96, 1000);
+                    check("lots async: still planning, still waiting", again.isEmpty() && Minis.ranOutOfTime());
+                    java.util.Optional<BlockPos> found = java.util.Optional.empty();
+                    for (int go = 0; go < 20 && found.isEmpty(); go++) {
+                        // CityWorld's planner finishing: everything asked for so far
+                        for (var f : List.copyOf(planning.values())) f.complete(java.util.Optional.of(List.of("selftest", "nothing")));
+                        found = Minis.nearestLotWithin(lvl, new BlockPos(8, 64, 8), w -> w.contains("the_vault"), 96, 1000);
+                        if (found.isEmpty() && !Minis.ranOutOfTime()) break;
+                    }
+                    check("lots async: once planned, the search gets there (" + found.orElse(null) + ")",
+                            found.map(p -> (p.getX() >> 4) == 3 && (p.getZ() >> 4) == 0).orElse(false) && blocking[0] == 0 && Lots.asking() == 0);
+                } finally {
+                    Lots.install(before);
+                }
+                check("lots async: the fixture put back what was there", Lots.nonBlocking() == (before.asker() != null));
+            }
+
             // once and objective scale: what a party quest's story boss is written with.
             {
                 var ops = com.mojang.serialization.JsonOps.INSTANCE;
