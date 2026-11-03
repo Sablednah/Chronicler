@@ -13,7 +13,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-INSTANCES="/mnt/c/Users/darre/curseforge/minecraft/Instances"
+INSTANCES="/mnt/d/minecraft/Instances"   # CurseForge moved to D:\minecraft (2026-11)
 
 # Any JDK that can launch gradle will do; the toolchain provisions the rest.
 for candidate in "$ROOT/tools/jdk21" \
