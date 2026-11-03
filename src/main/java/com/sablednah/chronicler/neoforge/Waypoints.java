@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.sablednah.chronicler.ChroniclerConfig;
 import com.sablednah.chronicler.core.QuestLog;
 import com.sablednah.chronicler.data.ObjectiveSpec;
 import com.sablednah.chronicler.data.ObjectiveTypes;
@@ -78,7 +79,46 @@ public final class Waypoints {
             });
         });
 
+        people(player, marks);
         return new WaypointsPayload(marks);
+    }
+
+    /**
+     * The quests' people near this player, by the name over their heads, for a map to draw as a radar does -- a
+     * phantom is no player JourneyMap's radar can find (it lists the tab, which Cast leaves), and a mob body's
+     * name is off with the pack's villager and NPC names. Only Chronicler's own people (a lurker, a scene's
+     * extra, anyone else Cast holds is not ours to point at), only within {@code tracker.mapPeopleRadius}, only
+     * where the body is actually there, and not someone already marked as on a quest's errand.
+     */
+    private static void people(ServerPlayer player, List<Mark> marks) {
+        double r = ChroniclerConfig.MAP_PEOPLE_RADIUS.get();
+        if (r <= 0 || !Npcs.available()) return;
+        MinecraftServer server = player.level().getServer();
+        Identifier here = player.level().dimension().identifier();
+        java.util.Set<String> marked = new java.util.HashSet<>();
+        for (Mark m : marks) marked.add(m.id());
+        QuestLog log = QuestEngine.journal(player);
+        for (var e : GiverStore.get(server).people().entrySet()) {
+            UUID id = e.getKey();
+            if (marked.contains(id.toString())) continue;
+            var placed = Npcs.provider().get().byId(server, id);
+            if (placed.isEmpty() || !placed.get().dimension().equals(here)) continue;
+            Npcs.Placed p = placed.get();
+            if (player.position().distanceToSqr(p.pos()) > r * r) continue;
+            if (!player.level().isLoaded(net.minecraft.core.BlockPos.containing(p.pos()))) continue;
+            boolean offers = false;
+            for (Identifier q : e.getValue()) {
+                var h = QuestEngine.quest(server, q);
+                if (h.isPresent() && QuestEngine.visible(player, q, h.get().value())
+                        && JournalPanel.status(player, log, q, h.get().value()) == com.sablednah.chronicler.network.JournalPayload.AVAILABLE) {
+                    offers = true;
+                    break;
+                }
+            }
+            marks.add(new Mark("person:" + id, Lang.fmt("waypoint.person", "name", Feedback.colored(p.name()).getString()),
+                    (int) Math.floor(p.pos().x), (int) Math.floor(p.pos().y), (int) Math.floor(p.pos().z), p.dimension(),
+                    offers ? WaypointsPayload.PERSON_OFFERS : WaypointsPayload.PERSON));
+        }
     }
 
     /** A person the quest placed, wherever Cast says they are right now -- a mark that moves as they do. */
