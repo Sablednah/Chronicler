@@ -20,6 +20,7 @@ public final class ChroniclerConfig {
     public static final ModConfigSpec.IntValue HUD_MAX_QUESTS;
     public static final ModConfigSpec.DoubleValue HUD_OFFER_RADIUS;
     public static final ModConfigSpec.IntValue HUD_MAX_OFFERS;
+    public static final ModConfigSpec.DoubleValue MAP_PEOPLE_RADIUS;
     public static final ModConfigSpec.BooleanValue SHOW_HIDDEN_TO_OPS;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> PARTY_GROUP_KINDS;
     public static final ModConfigSpec.BooleanValue PARTY_CATCH_UP_REWARDS;
@@ -67,6 +68,11 @@ public final class ChroniclerConfig {
                 .comment("How near (blocks) a quest's giver must be for the HUD to list it under Nearby:",
                         "what is on offer around you, before you walk up to anyone. 0 turns the section off.")
                 .defineInRange("hudOfferRadius", 24.0D, 0D, 512D);
+        MAP_PEOPLE_RADIUS = BUILDER
+                .comment("How near (blocks) a quest's person must be to show on a client's map (JourneyMap), by name:",
+                        "givers, the people a mini quest placed, anyone on a quest's errand. Gold when they have a quest",
+                        "for you. A radar, not a directory -- people further off stay off the map. 0 turns it off.")
+                .defineInRange("mapPeopleRadius", 64.0D, 0D, 512D);
         HUD_MAX_OFFERS = BUILDER
                 .comment("How many nearby offers the HUD lists, nearest first.")
                 .defineInRange("hudMaxOffers", 6, 1, 20);
