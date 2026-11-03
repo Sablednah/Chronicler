@@ -611,23 +611,35 @@ public final class Minis {
         int cx = from.getX() >> 4, cz = from.getZ() >> 4;
         outOfTime = false;
         int rings = Math.max(1, radius / 16);
+        boolean waiting = false; // a nearer chunk is still being planned: nothing further out can be called nearest yet
         for (int r = 0; r <= rings; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
                     int x = ((cx + dx) << 4) + 8, z = ((cz + dz) << 4) + 8;
                     BlockPos probe = new BlockPos(x, from.getY(), z);
+                    if (!Lots.known(level, cx + dx, cz + dz) && Lots.nonBlocking()) {
+                        // CityWorld 6.12+: plans off the server thread. The rest of this ring is still asked, so
+                        // its plans run together; the search waits for the ring, and the next second carries on.
+                        var now = Lots.peek(level, probe);
+                        if (now.isEmpty()) { waiting = true; continue; }
+                        if (!waiting && now.get().isPresent() && matches.test(now.get().get())) {
+                            return Optional.of(new BlockPos(x, heightAt(level, x, z), z));
+                        }
+                        continue;
+                    }
                     // A wild search stops at its budget; what it learned is cached, so the next second carries on.
                     if (!Lots.known(level, cx + dx, cz + dz)) {
                         if (spent()) { outOfTime = true; return Optional.empty(); }
                         asked++;
                     }
                     var words = Lots.describe(level, probe);
-                    if (words.isPresent() && matches.test(words.get())) {
+                    if (!waiting && words.isPresent() && matches.test(words.get())) {
                         return Optional.of(new BlockPos(x, heightAt(level, x, z), z));
                     }
                 }
             }
+            if (waiting) { outOfTime = true; return Optional.empty(); }
         }
         return Optional.empty();
     }
