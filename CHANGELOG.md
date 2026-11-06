@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.5.0 — 2026-11-06
 
 - With JourneyMap: the quests' people (givers, a mini quest's people) within 64 blocks are drawn on the minimap and full map by the name over their heads, gold while they have a quest for you. JourneyMap's own radar never showed them -- a phantom NPC is not on the tab list it reads, and a mob body's name hides with villager names. Only Chronicler's own people, only nearby, only where they actually stand; marks, not saved waypoints. `tracker.mapPeopleRadius` (0 turns it off). The network channel moves to version 3, so an older Chronicler client simply gets no map payloads from a newer server rather than misreading them.
 - With CityWorld 6.12.0 or later, a mini quest's `lot` search asks for a cold city's plan on CityWorld's own threads (`lotAtAsync`) and reads what is already planned at once (`lotAtIfPlanned`), so a wild Bank Job never waits on the server thread; the search waits for the nearer ring, then carries on next second ("still looking" while it does). At most four plans are asked for at once. An older CityWorld keeps the budgeted search, and the log says which.
