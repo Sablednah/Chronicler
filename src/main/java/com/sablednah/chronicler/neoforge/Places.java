@@ -36,13 +36,16 @@ public final class Places {
         if (place.structure().isPresent() && !structureMatches(level, pos, place.structure().get())) {
             return false;
         }
+        // Never waited for: asked every second, for the ground a player stands on -- which after a restart has no plan in
+        // memory, and planning it here froze ZARP's login for 20 seconds. Still being planned reads "not here yet" and the
+        // next second's check sees the answer. (An older CityWorld has no other way to ask, and does wait.)
         if (place.schematic().isPresent()) {
-            Optional<java.util.List<String>> tokens = Lots.describe(level, pos);
+            Optional<java.util.List<String>> tokens = Lots.peek(level, pos).orElse(Optional.empty());
             if (tokens.isEmpty() || !schematicMatches(tokens.get(), place.schematic().get())) return false;
         }
         if (place.lot().isPresent()) {
-            Optional<java.util.List<String>> tokens = Lots.describe(level, pos);
-            if (tokens.isEmpty()) return false; // no CityWorld, or not a CityWorld level
+            Optional<java.util.List<String>> tokens = Lots.peek(level, pos).orElse(Optional.empty());
+            if (tokens.isEmpty()) return false; // no CityWorld, not a CityWorld level, or not planned yet
             String want = place.lot().get().toLowerCase(Locale.ROOT);
             if (tokens.get().stream().noneMatch(t -> t.toLowerCase(Locale.ROOT).contains(want))) return false;
         }
