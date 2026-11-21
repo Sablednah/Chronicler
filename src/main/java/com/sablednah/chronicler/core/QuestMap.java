@@ -80,6 +80,48 @@ public final class QuestMap {
         return out;
     }
 
+    /** A quest for {@link #overview}: {@code open} is anything not locked (on offer, under way, done). */
+    public record Entry(String id, List<String> requires, boolean open) {}
+
+    /** The id prefix of a stand-in for what is not open yet; the rest is what it waits on, comma-separated. */
+    public static final String HIDDEN = "?";
+
+    /**
+     * A chapter as the overview shows it: its open quests, linked only to each other, plus one stand-in for each
+     * distinct set of open quests that locked ones wait on -- and one for locked quests that wait on nothing in this
+     * chapter (another chapter, a flag). A locked quest behind another locked quest is not drawn at all: the overview
+     * says "more here, after this", never what or how much.
+     */
+    public static List<Node> overview(List<Entry> quests) {
+        Set<String> mine = new HashSet<>();
+        Set<String> open = new HashSet<>();
+        for (Entry q : quests) {
+            mine.add(q.id());
+            if (q.open()) open.add(q.id());
+        }
+        List<Node> nodes = new ArrayList<>();
+        Map<String, List<String>> hidden = new LinkedHashMap<>();
+        int order = 0;
+        for (Entry q : quests) {
+            if (q.open()) {
+                nodes.add(new Node(q.id(), q.requires().stream().filter(open::contains).toList(), order++));
+                continue;
+            }
+            List<String> waits = q.requires().stream().filter(open::contains).sorted().toList();
+            boolean root = q.requires().stream().noneMatch(mine::contains);
+            if (waits.isEmpty() && !root) continue; // behind something itself hidden
+            hidden.putIfAbsent(HIDDEN + String.join(",", waits), waits);
+        }
+        for (var h : hidden.entrySet()) nodes.add(new Node(h.getKey(), h.getValue(), order++));
+        return nodes;
+    }
+
+    /** What a stand-in from {@link #overview} waits on; empty for anything else. */
+    public static List<String> waitsOn(String id) {
+        if (!id.startsWith(HIDDEN) || id.length() == HIDDEN.length()) return List.of();
+        return List.of(id.substring(HIDDEN.length()).split(","));
+    }
+
     private static int depthOf(String id, Map<String, Node> byId, int base, Map<String, Integer> memo, Set<String> visiting) {
         Integer known = memo.get(id);
         if (known != null) return known;
