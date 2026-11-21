@@ -54,6 +54,7 @@ public final class JournalPanel {
             "panel.home", "panel.home.active", "panel.home.nothing_active", "panel.home.offers", "panel.home.nothing_offered",
             "panel.home.recap", "panel.home.no_recap",
             "panel.map.hint", "panel.map.none",
+            "panel.overview", "panel.overview.hint", "panel.overview.locked", "panel.overview.unknown",
             "panel.glyph.locked", "panel.glyph.available", "panel.glyph.active", "panel.glyph.complete",
             "panel.glyph.cooldown", "panel.glyph.tracked", "panel.glyph.open", "panel.glyph.closed",
             "status.locked", "status.available", "status.active", "status.complete");
