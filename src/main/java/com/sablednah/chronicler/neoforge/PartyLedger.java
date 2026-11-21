@@ -101,7 +101,12 @@ public final class PartyLedger extends SavedData {
         });
     }
 
-    /** A replayed chapter starts over for the party as well, or catching up would finish it again. */
+    /**
+     * A replayed chapter starts over for the party as well, or catching up would finish it again: its quests and the
+     * player flags its choices set. Not its endings: like each member's journal, the party keeps every ending it has
+     * found across replays, so someone catching up later is credited with all of them (ZARP: Cure went when Sable
+     * replayed to Mercy, while his own journal kept both).
+     */
     static void forgetChapter(ServerPlayer player, Identifier chapter, List<Identifier> quests) {
         MinecraftServer server = player.level().getServer();
         Party.id(player).ifPresent(p -> {
@@ -109,8 +114,6 @@ public final class PartyLedger extends SavedData {
             boolean changed = false;
             Set<String> d = l.done.get(p);
             if (d != null) for (Identifier q : quests) changed |= d.remove(q.toString());
-            Set<String> e = l.endings.get(p);
-            if (e != null) changed |= e.removeIf(k -> k.startsWith(chapter + "|"));
             Map<String, Boolean> f = l.flags.get(p);
             if (f != null) changed |= f.keySet().removeIf(k -> k.startsWith(chapter + "|"));
             if (changed) l.setDirty();
@@ -209,5 +212,13 @@ public final class PartyLedger extends SavedData {
     /** How many quests the ledger has this party finishing; the self-test's window. */
     int doneCount(String party) {
         return done.getOrDefault(party, Set.of()).size();
+    }
+
+    boolean hasDone(String party, Identifier quest) {
+        return done.getOrDefault(party, Set.of()).contains(quest.toString());
+    }
+
+    boolean hasEnding(String party, Identifier chapter, String ending) {
+        return endings.getOrDefault(party, Set.of()).contains(chapter + "|" + ending.trim().toLowerCase(java.util.Locale.ROOT));
     }
 }

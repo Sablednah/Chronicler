@@ -916,6 +916,15 @@ public final class SelfTest {
                     check("party catch-up: a reward that is the world's is never re-run",
                             !PartyLedger.personal(new com.sablednah.chronicler.data.RewardTypes.Command("say hi", true))
                                     && PartyLedger.personal(new com.sablednah.chronicler.data.RewardTypes.Xp(5)));
+                    // A replay starts the chapter over for the party, but keeps its endings, as each journal does.
+                    {
+                        Quest thingsQuest = quests.get(ResourceKey.create(ChroniclerRegistries.QUEST, things)).get().value();
+                        PartyLedger.recordEnding(a, thingsQuest, "selftest_end");
+                        PartyLedger.forgetChapter(a, thingsQuest.chapter(), List.of(things));
+                        PartyLedger ledger = PartyLedger.get(server);
+                        check("party ledger: a replay forgets the chapter's quests but keeps its endings",
+                                !ledger.hasDone("selftest|party", things) && ledger.hasEnding("selftest|party", thingsQuest.chapter(), "selftest_end"));
+                    }
                     Party.installId(p -> java.util.Optional.empty());
                     FakePlayer loner = fake(server, "ChroniclerTestF");
                     QuestEngine.journal(loner).clear();
