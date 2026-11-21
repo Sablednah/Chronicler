@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.5.1 — 2026-11-21
 
 - Fix: with CityWorld, joining a world could freeze the server for 20 seconds, and the quest people "dropped in" a minute later (ZARP). After a restart CityWorld keeps no plan of any city in memory, not even of the ground a player stands on, and a place check (`lot`/`schematic` in a `place`, a wild mini quest's place, an in-place giver) asked for one on the server thread every second. With CityWorld 6.12.0 or later these now never wait: ground still being planned is "not here yet" for a second, and a mini quest's "is there a city here at all" is "still looking", never "no city".
 
