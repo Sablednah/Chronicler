@@ -788,6 +788,17 @@ public final class SelfTest {
                     }
                     check("lots async: once planned, the search gets there (" + found.orElse(null) + ")",
                             found.map(p -> (p.getX() >> 4) == 3 && (p.getZ() >> 4) == 0).orElse(false) && blocking[0] == 0 && Lots.asking() == 0);
+                    // Where a player stands, asked every second by a place check: never waited for (ZARP's login froze 20 s
+                    // planning the ground under a player whose world had just restarted), and true once the plan lands.
+                    planning.clear();
+                    Lots.clearSession();
+                    var inLot = new com.sablednah.chronicler.data.Place(java.util.Optional.empty(), java.util.Optional.empty(),
+                            java.util.Optional.empty(), java.util.Optional.of("nothing"), List.of());
+                    boolean early = Places.isAt(solo, inLot);
+                    check("lots async: a place check on unplanned ground is \"not here yet\", not a wait",
+                            !early && blocking[0] == 0 && Lots.asking() > 0);
+                    for (var f : List.copyOf(planning.values())) f.complete(java.util.Optional.of(List.of("selftest", "nothing")));
+                    check("lots async: ...and here once the plan lands", Places.isAt(solo, inLot) && blocking[0] == 0);
                 } finally {
                     Lots.install(before);
                 }
