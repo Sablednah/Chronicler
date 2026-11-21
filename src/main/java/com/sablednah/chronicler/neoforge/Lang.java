@@ -439,6 +439,10 @@ public final class Lang {
         def("panel.external", "&8From {chapter}");
         def("panel.map.hint", "&8Click a {term.quest} to read it. Drag to look around.");
         def("panel.map.none", "&8No {term.quests} to show here yet.");
+        def("panel.overview", "&6&lOverview");
+        def("panel.overview.hint", "&8Every {term.chapter} at once. Click a {term.quest} or a title to open it; drag to look around.");
+        def("panel.overview.locked", "&7Not yet. Finish what leads here.");
+        def("panel.overview.unknown", "&8?");
         def("panel.glyph.locked", "&8○");
         def("panel.glyph.available", "&e&l!");
         def("panel.glyph.active", "&b◆");

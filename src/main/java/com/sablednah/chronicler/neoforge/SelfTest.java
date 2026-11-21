@@ -84,6 +84,24 @@ public final class SelfTest {
         check("map: no two quests share a cell", map.stream().map(m -> m.col() + "," + m.row()).distinct().count() == map.size());
         check("map: a cycle is laid out, not recursed into for ever", QuestMap.layout(List.of(
                 new QuestMap.Node("p", List.of("q"), 0), new QuestMap.Node("q", List.of("p"), 1))).size() == 2);
+        // The overview: what is open, a "?" where it leads on into what is not, nothing behind that.
+        {
+            var ov = QuestMap.overview(List.of(
+                    new QuestMap.Entry("a", List.of(), true),          // done
+                    new QuestMap.Entry("b", List.of("a"), false),      // locked, waiting on a: a "?" after a
+                    new QuestMap.Entry("c", List.of("b"), false),      // locked behind a locked one: not drawn
+                    new QuestMap.Entry("d", List.of("a"), false),      // also waiting on a alone: the same "?"
+                    new QuestMap.Entry("e", List.of("a"), true),       // open
+                    new QuestMap.Entry("f", List.of("x:elsewhere"), false))); // waits on another chapter: a lone "?"
+            var ids = ov.stream().map(QuestMap.Node::id).toList();
+            check("overview: open quests are drawn, a locked chain shows one \"?\" and no more (" + ids + ")",
+                    ids.containsAll(List.of("a", "e", "?a", "?")) && !ids.contains("b") && !ids.contains("c") && !ids.contains("d") && ids.size() == 4);
+            check("overview: the \"?\" hangs off what it waits on", QuestMap.waitsOn("?a").equals(List.of("a")) && QuestMap.waitsOn("?").isEmpty()
+                    && ov.stream().filter(n -> n.id().equals("?a")).findFirst().map(n -> n.requires().equals(List.of("a"))).orElse(false));
+            check("overview: a chapter with nothing open is one \"?\"", QuestMap.overview(List.of(
+                    new QuestMap.Entry("p", List.of(), false), new QuestMap.Entry("q", List.of("p"), false))).stream().map(QuestMap.Node::id).toList().equals(List.of("?")));
+            check("overview: it lays out like any map", QuestMap.layout(ov).size() == 4);
+        }
 
         check("lang catalogue is non-trivial", Lang.catalogueSize() > 60);
         check("lang resolves terms", Lang.get("cmd.list.header").contains(Lang.term("quests")));
