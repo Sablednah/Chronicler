@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix: with CityWorld, joining a world could freeze the server for 20 seconds, and the quest people "dropped in" a minute later (ZARP). After a restart CityWorld keeps no plan of any city in memory, not even of the ground a player stands on, and a place check (`lot`/`schematic` in a `place`, a wild mini quest's place, an in-place giver) asked for one on the server thread every second. With CityWorld 6.12.0 or later these now never wait: ground still being planned is "not here yet" for a second, and a mini quest's "is there a city here at all" is "still looking", never "no city".
+
 ## 1.5.0 — 2026-11-06
 
 - With JourneyMap: the quests' people (givers, a mini quest's people) within 64 blocks are drawn on the minimap and full map by the name over their heads, gold while they have a quest for you. JourneyMap's own radar never showed them -- a phantom NPC is not on the tab list it reads, and a mob body's name hides with villager names. Only Chronicler's own people, only nearby, only where they actually stand; marks, not saved waypoints. `tracker.mapPeopleRadius` (0 turns it off). The network channel moves to version 3, so an older Chronicler client simply gets no map payloads from a newer server rather than misreading them.

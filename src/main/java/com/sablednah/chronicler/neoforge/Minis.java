@@ -152,7 +152,12 @@ public final class Minis {
                     Slots.putPlace(v, name, label, dim, at.get().getX(), at.get().getY(), at.get().getZ());
                 }
                 case "lot" -> {
-                    if (Lots.describe(level, from.pos()).isEmpty()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.no_city", "what", label)); }
+                    // Is there a city here at all? Not waited for: after a restart even the ground a player stands on has no
+                    // plan in memory, and planning it on this thread froze ZARP's login for 20 seconds. Not known yet is
+                    // "still looking", carried on next second like a search that ran out of time -- never "no city".
+                    var city = Lots.peek(level, from.pos());
+                    if (city.isEmpty()) { outOfTime = true; undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.no_city", "what", label)); }
+                    if (city.get().isEmpty()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.no_city", "what", label)); }
                     Optional<BlockPos> at = nearestLot(level, from.pos(), lotMatcher(slot), slot.searchRadius());
                     if (at.isEmpty()) { undo(server, placed); return Resolved.fail(Lang.fmt("mini.why.lot", "what", label, "radius", slot.searchRadius())); }
                     Slots.putPlace(v, name, label, dim, at.get().getX(), at.get().getY(), at.get().getZ());
@@ -525,7 +530,9 @@ public final class Minis {
             if (!slot.type().equals("lot") || given.containsKey(e.getKey())) continue;
             Anchor from = slot.near().isEmpty() ? anchor : found.get(slot.near().get());
             if (from == null) continue;
-            if (Lots.describe(from.level(), from.pos()).isEmpty()) continue; // no city here: the fill says so, at once
+            var city = Lots.peek(from.level(), from.pos());
+            if (city.isEmpty()) { outOfTime = true; return false; } // still being planned, off this thread: next second
+            if (city.get().isEmpty()) continue; // no city here: the fill says so, at once
             Optional<BlockPos> at = nearestLot(from.level(), from.pos(), lotMatcher(slot), slot.searchRadius());
             if (outOfTime) return false;
             at.ifPresent(p -> found.put(e.getKey(), new Anchor(from.level(), p)));
