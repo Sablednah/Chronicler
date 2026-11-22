@@ -80,46 +80,102 @@ public final class QuestMap {
         return out;
     }
 
-    /** A quest for {@link #overview}: {@code open} is anything not locked (on offer, under way, done). */
+    /** A quest for {@link #web}: {@code open} is anything not locked (on offer, under way, done). */
     public record Entry(String id, List<String> requires, boolean open) {}
 
-    /** The id prefix of a stand-in for what is not open yet; the rest is what it waits on, comma-separated. */
-    public static final String HIDDEN = "?";
+    /** A chapter for {@link #web}, its quests in file order. */
+    public record Chapter(String id, List<Entry> quests) {}
+
+    /** A line on the overview: {@code hidden} when it leads into a stand-in for what is not open yet (drawn dotted). */
+    public record Link(String from, String to, boolean hidden) {}
 
     /**
-     * A chapter as the overview shows it: its open quests, linked only to each other, plus one stand-in for each
-     * distinct set of open quests that locked ones wait on -- and one for locked quests that wait on nothing in this
-     * chapter (another chapter, a flag). A locked quest behind another locked quest is not drawn at all: the overview
-     * says "more here, after this", never what or how much.
+     * One chapter's box: its column among the boxes (a chapter sits right of every chapter it follows), the
+     * chapters it follows ({@code after}, for lining a box up with them), and its own map inside.
      */
-    public static List<Node> overview(List<Entry> quests) {
-        Set<String> mine = new HashSet<>();
-        Set<String> open = new HashSet<>();
-        for (Entry q : quests) {
-            mine.add(q.id());
-            if (q.open()) open.add(q.id());
-        }
-        List<Node> nodes = new ArrayList<>();
-        Map<String, List<String>> hidden = new LinkedHashMap<>();
-        int order = 0;
-        for (Entry q : quests) {
-            if (q.open()) {
-                nodes.add(new Node(q.id(), q.requires().stream().filter(open::contains).toList(), order++));
-                continue;
-            }
-            List<String> waits = q.requires().stream().filter(open::contains).sorted().toList();
-            boolean root = q.requires().stream().noneMatch(mine::contains);
-            if (waits.isEmpty() && !root) continue; // behind something itself hidden
-            hidden.putIfAbsent(HIDDEN + String.join(",", waits), waits);
-        }
-        for (var h : hidden.entrySet()) nodes.add(new Node(h.getKey(), h.getValue(), order++));
-        return nodes;
+    public record Area(String chapter, int col, List<String> after, List<Placed> placed) {}
+
+    /** The whole overview: a box per chapter and every line, within a box or between two. */
+    public record Web(List<Area> areas, List<Link> links) {}
+
+    /** The id prefix of a stand-in for what is not open yet. */
+    public static final String HIDDEN = "?";
+
+    public static boolean hidden(String id) {
+        return id.startsWith(HIDDEN);
     }
 
-    /** What a stand-in from {@link #overview} waits on; empty for anything else. */
-    public static List<String> waitsOn(String id) {
-        if (!id.startsWith(HIDDEN) || id.length() == HIDDEN.length()) return List.of();
-        return List.of(id.substring(HIDDEN.length()).split(","));
+    /**
+     * Every chapter at once, joined up. A box holds a chapter's open quests, laid out on their links within the
+     * chapter; a line runs to each from what it needs, in this chapter or another. Where open quests lead on into
+     * locked ones, a stand-in takes their place -- one per chapter per distinct set of open quests they wait on,
+     * however many there are -- and a locked quest that waits on nothing drawn at all (a flag, a quest out of sight)
+     * gets the chapter's lone stand-in. A locked quest behind another locked quest is not drawn, so the overview says
+     * "more here, after this", never what or how much. A chapter with nothing to draw is one stand-in.
+     * <p>The boxes run left to right by what follows what: a chapter's column is one past the furthest chapter any of
+     * its quests needs (locked ones included -- that places a box, it shows nothing about it).
+     */
+    public static Web web(List<Chapter> chapters) {
+        Map<String, String> chapterOf = new HashMap<>();
+        Set<String> open = new HashSet<>();
+        for (Chapter c : chapters) {
+            for (Entry q : c.quests()) {
+                chapterOf.putIfAbsent(q.id(), c.id());
+                if (q.open()) open.add(q.id());
+            }
+        }
+        // What follows what, from every requirement, so a locked act still sits after the act that opens it.
+        Map<String, Set<String>> follows = new LinkedHashMap<>();
+        for (Chapter c : chapters) {
+            Set<String> after = new java.util.LinkedHashSet<>();
+            for (Entry q : c.quests()) {
+                for (String r : q.requires()) {
+                    String rc = chapterOf.get(r);
+                    if (rc != null && !rc.equals(c.id())) after.add(rc);
+                }
+            }
+            follows.put(c.id(), after);
+        }
+        Map<String, Integer> col = new HashMap<>();
+        for (Chapter c : chapters) chapterDepth(c.id(), follows, col, new HashSet<>());
+
+        List<Area> areas = new ArrayList<>();
+        List<Link> links = new ArrayList<>();
+        for (Chapter c : chapters) {
+            List<Node> nodes = new ArrayList<>();
+            Map<String, List<String>> standIns = new LinkedHashMap<>();
+            int order = 0;
+            for (Entry q : c.quests()) {
+                if (q.open()) {
+                    List<String> needs = q.requires().stream().filter(open::contains).toList();
+                    nodes.add(new Node(q.id(), needs.stream().filter(r -> c.id().equals(chapterOf.get(r))).toList(), order++));
+                    for (String r : needs) links.add(new Link(r, q.id(), false));
+                    continue;
+                }
+                List<String> waits = q.requires().stream().filter(open::contains).sorted().toList();
+                boolean root = q.requires().stream().noneMatch(chapterOf::containsKey);
+                if (waits.isEmpty() && !root) continue; // behind something itself hidden
+                standIns.putIfAbsent(HIDDEN + c.id() + "|" + String.join(",", waits), waits);
+            }
+            if (nodes.isEmpty() && standIns.isEmpty()) standIns.put(HIDDEN + c.id() + "|", List.of());
+            for (var h : standIns.entrySet()) {
+                nodes.add(new Node(h.getKey(), h.getValue().stream().filter(r -> c.id().equals(chapterOf.get(r))).toList(), order++));
+                for (String w : h.getValue()) links.add(new Link(w, h.getKey(), true));
+            }
+            areas.add(new Area(c.id(), col.getOrDefault(c.id(), 0), List.copyOf(follows.get(c.id())), layout(nodes)));
+        }
+        return new Web(areas, links);
+    }
+
+    private static int chapterDepth(String id, Map<String, Set<String>> follows, Map<String, Integer> memo, Set<String> visiting) {
+        Integer known = memo.get(id);
+        if (known != null) return known;
+        if (!visiting.add(id)) return 0; // a cycle between chapters: break it here
+        int d = 0;
+        for (String before : follows.getOrDefault(id, Set.of())) d = Math.max(d, chapterDepth(before, follows, memo, visiting) + 1);
+        visiting.remove(id);
+        memo.put(id, d);
+        return d;
     }
 
     private static int depthOf(String id, Map<String, Node> byId, int base, Map<String, Integer> memo, Set<String> visiting) {
