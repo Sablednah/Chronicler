@@ -94,6 +94,9 @@ public final class JournalScreen extends Screen {
     private static final String OVERVIEW = "~overview";
     private static final int BOX_HEAD = 15;
     private static final int BOX_GAP = 8;
+    private static final int COL_GAP = 28;
+    private QuestMap.Web web;
+    private JournalPayload webFor;
     private String chapterId = "";
     private String questId = ""; // empty: the chapter's map
     private double listScroll, maxListScroll;
@@ -496,12 +499,10 @@ public final class JournalScreen extends Screen {
         if (tooltip != null) g.setTooltipForNextFrame(font, tooltip, Optional.empty(), mouseX, mouseY);
     }
 
-    /** On the go, on offer, the story so far: every line was worded by the server; a quest line is a link to its page. */
     /**
-     * Every chapter at once, each in a box of its own, laid out as its map is (a column per step, a row per branch).
-     * What is not open yet stays hidden: where the story carries on into it, a dotted line leads to a "?" -- one per
-     * set of quests it waits on, so the box says "more here, after this" and not what or how much. A chapter with
-     * nothing open yet is its title and a single "?".
+     * Every chapter at once, joined up ({@link QuestMap#web}): a box per chapter, left to right by what follows what,
+     * each lined up with the first chapter it follows; inside, the chapter's own map; between boxes, a line from the
+     * quest that opens the next. What is not open yet stays hidden behind a dotted line to a "?".
      */
     private void renderOverview(GuiGraphicsExtractor g, JournalPayload p, int mouseX, int mouseY) {
         int px = paneX(), pw = paneW(), y = top();
@@ -518,105 +519,135 @@ public final class JournalScreen extends Screen {
         frame(g, cx0, cy0, cx1, cy1, BRASS_DIM, 1);
         if (cy1 - cy0 < 20) return;
 
-        // Measure first: every box as wide as the widest, so the acts line up down the page.
-        List<ChapterView> chapters = p.chapters();
-        List<List<QuestMap.Placed>> placed = new ArrayList<>();
-        int cols = 1, totalH = 0;
-        List<Integer> heights = new ArrayList<>();
-        for (ChapterView c : chapters) {
-            List<QuestMap.Placed> pl = overviewLayout(c);
-            placed.add(pl);
-            int rows = 1;
-            for (QuestMap.Placed q : pl) {
-                cols = Math.max(cols, q.col() + 1);
-                rows = Math.max(rows, q.row() + 1);
+        // Where every box goes, in canvas units (pan applied below): columns as wide as their widest box.
+        QuestMap.Web web = web(p);
+        Map<String, ChapterView> chapters = new HashMap<>();
+        for (ChapterView c : p.chapters()) chapters.put(c.id(), c);
+        Map<Integer, Integer> colW = new HashMap<>();
+        Map<String, int[]> size = new HashMap<>();
+        int lastCol = 0;
+        for (QuestMap.Area a : web.areas()) {
+            int cols = 1, rows = 1;
+            for (QuestMap.Placed pl : a.placed()) {
+                cols = Math.max(cols, pl.col() + 1);
+                rows = Math.max(rows, pl.row() + 1);
             }
-            int h = BOX_HEAD + rows * CELL_H + 2;
-            heights.add(h);
-            totalH += h + BOX_GAP;
+            int w = Math.max(cols * CELL_W + 8, CELL_W + 8), h = BOX_HEAD + rows * CELL_H + 2;
+            size.put(a.chapter(), new int[] {w, h});
+            colW.merge(a.col(), w, Math::max);
+            lastCol = Math.max(lastCol, a.col());
         }
-        int boxW = cols * CELL_W + 8;
-        maxPanX = Math.max(0, boxW + 12 - (cx1 - cx0));
-        maxPanY = Math.max(0, totalH + 8 - (cy1 - cy0));
+        int[] colX = new int[lastCol + 2];
+        for (int c = 0; c <= lastCol; c++) colX[c + 1] = colX[c] + colW.getOrDefault(c, 0) + (colW.containsKey(c) ? COL_GAP : 0);
+        Map<String, int[]> box = new HashMap<>(); // chapter -> x, y, w, h
+        Map<Integer, Integer> colBottom = new HashMap<>();
+        List<QuestMap.Area> byCol = new ArrayList<>(web.areas());
+        byCol.sort(java.util.Comparator.comparingInt(QuestMap.Area::col)); // stable: story order within a column
+        int totalW = 0, totalH = 0;
+        for (QuestMap.Area a : byCol) {
+            int[] wh = size.get(a.chapter());
+            int by = colBottom.getOrDefault(a.col(), 0);
+            for (String before : a.after()) { // level with the act it follows, so a chain reads straight across
+                int[] b = box.get(before);
+                if (b != null) { by = Math.max(by, b[1]); break; }
+            }
+            box.put(a.chapter(), new int[] {colX[a.col()], by, wh[0], wh[1]});
+            colBottom.put(a.col(), by + wh[1] + BOX_GAP);
+            totalW = Math.max(totalW, colX[a.col()] + wh[0]);
+            totalH = Math.max(totalH, by + wh[1]);
+        }
+        maxPanX = Math.max(0, totalW + 12 - (cx1 - cx0));
+        maxPanY = Math.max(0, totalH + 12 - (cy1 - cy0));
         panX = clamp(panX, 0, maxPanX);
         panY = clamp(panY, 0, maxPanY);
+        int ox = cx0 + 6 - (int) panX, oy = cy0 + 6 - (int) panY;
+
+        Map<String, Cell> at = new HashMap<>();
+        Map<String, int[]> boxOf = new HashMap<>();
+        Map<String, Byte> statusOf = new HashMap<>();
+        for (ChapterView c : p.chapters()) for (QuestView q : c.quests()) statusOf.put(q.id(), q.status());
+        for (QuestMap.Area a : web.areas()) {
+            int[] b = box.get(a.chapter());
+            int nx = ox + b[0] + 4 + (CELL_W - NODE) / 2 - 4, ny = oy + b[1] + BOX_HEAD + 4;
+            for (QuestMap.Placed pl : a.placed()) {
+                at.put(pl.id(), new Cell(nx + pl.col() * CELL_W, ny + pl.row() * CELL_H));
+                boxOf.put(pl.id(), b);
+            }
+        }
 
         g.enableScissor(cx0 + 1, cy0 + 1, cx1 - 1, cy1 - 1);
         boolean mouseInCanvas = mouseX >= cx0 && mouseX < cx1 && mouseY >= cy0 && mouseY < cy1;
         List<Component> tooltip = null;
-        int bx = cx0 + 6 - (int) panX;
-        int by = cy0 + 6 - (int) panY;
-        for (int i = 0; i < chapters.size(); i++) {
-            ChapterView c = chapters.get(i);
-            int bh = heights.get(i);
-            if (by + bh >= cy0 && by <= cy1) {
-                g.fill(bx, by, bx + boxW, by + bh, 0x18000000);
-                frame(g, bx, by, bx + boxW, by + bh, BRASS_DIM, 1);
-                // The title opens the chapter's own map.
-                Component title = bold(c.name());
-                int tw = Math.min(font.width(title), boxW - 12);
-                boolean titleHover = mouseInCanvas && mouseX >= bx + 4 && mouseX < bx + 8 + tw && mouseY >= by + 2 && mouseY < by + BOX_HEAD - 2;
-                g.text(font, ellipsis(titleHover ? title.copy().withStyle(ChatFormatting.UNDERLINE) : title, boxW - 12), bx + 6, by + 4, GOLD);
-                String chapterIdHere = c.id();
+        // Boxes first, then every line over them, then the quests on top.
+        for (QuestMap.Area a : web.areas()) {
+            ChapterView c = chapters.get(a.chapter());
+            int[] b = box.get(a.chapter());
+            int bx = ox + b[0], by = oy + b[1];
+            if (bx > cx1 || bx + b[2] < cx0 || by > cy1 || by + b[3] < cy0) continue;
+            g.fill(bx, by, bx + b[2], by + b[3], 0x18000000);
+            frame(g, bx, by, bx + b[2], by + b[3], BRASS_DIM, 1);
+            Component title = bold(c.name());
+            int tw = Math.min(font.width(title), b[2] - 12);
+            boolean titleHover = mouseInCanvas && mouseX >= bx + 4 && mouseX < bx + 8 + tw && mouseY >= by + 2 && mouseY < by + BOX_HEAD - 2;
+            g.text(font, ellipsis(titleHover ? title.copy().withStyle(ChatFormatting.UNDERLINE) : title, b[2] - 12), bx + 6, by + 4, GOLD);
+            String chapter = c.id();
+            if (bx + 8 + tw > cx0 && bx + 4 < cx1 && by + BOX_HEAD - 2 > cy0 && by + 2 < cy1) {
                 hotspots.add(new Hot(Math.max(bx + 4, cx0), Math.max(by + 2, cy0), Math.min(bx + 8 + tw, cx1), Math.min(by + BOX_HEAD - 2, cy1),
-                        () -> goTo(chapterIdHere, "", true), true));
-
-                int ox = bx + 4 + (CELL_W - NODE) / 2 - 4;
-                int oy = by + BOX_HEAD + 4;
-                Map<String, Cell> at = new HashMap<>();
-                for (QuestMap.Placed pl : placed.get(i)) at.put(pl.id(), new Cell(ox + pl.col() * CELL_W, oy + pl.row() * CELL_H));
-                for (QuestMap.Placed pl : placed.get(i)) {
-                    Cell to = at.get(pl.id());
-                    boolean mystery = pl.id().startsWith(QuestMap.HIDDEN);
-                    for (String r : requiresOf(c, pl.id())) {
-                        Cell from = at.get(r);
-                        if (from == null) continue;
-                        if (mystery) dottedEdge(g, from, to, EDGE_OPEN);
-                        else edge(g, from, to, statusIn(c, r) == JournalPayload.COMPLETE ? EDGE_DONE : EDGE_OPEN);
-                    }
-                }
-                for (QuestMap.Placed pl : placed.get(i)) {
-                    Cell cell = at.get(pl.id());
-                    int nx0 = cell.x() - (CELL_W - NODE) / 2 + 2, nx1 = nx0 + CELL_W - 4;
-                    boolean hover = mouseInCanvas && mouseX >= nx0 && mouseX < nx1 && mouseY >= cell.y() - 2 && mouseY < cell.y() + NODE + 12;
-                    if (pl.id().startsWith(QuestMap.HIDDEN)) {
-                        mysteryNode(g, cell.x(), cell.y());
-                        if (hover && mouseX >= cell.x() && mouseX < cell.x() + NODE && mouseY >= cell.y() && mouseY < cell.y() + NODE) {
-                            tooltip = List.of(label("panel.overview.locked"));
-                        }
-                        continue;
-                    }
-                    QuestView q = findIn(c, pl.id());
-                    if (q == null) continue;
-                    node(g, cell.x(), cell.y(), q.icon(), q.status(), false, hover);
-                    FormattedCharSequence name = ellipsis(q.name(), CELL_W - 8);
-                    g.text(font, name, cell.x() + NODE / 2 - font.width(name) / 2, cell.y() + NODE + 3, nameColour(q.status()));
-                    if (hover) tooltip = List.of(q.name(), statusName(q.status()));
-                    String quest = q.id();
-                    hotspots.add(new Hot(Math.max(nx0, cx0), Math.max(cell.y() - 2, cy0), Math.min(nx1, cx1), Math.min(cell.y() + NODE + 12, cy1),
-                            () -> goTo(chapterIdHere, quest, true), true));
-                }
+                        () -> goTo(chapter, "", true), true));
             }
-            by += bh + BOX_GAP;
+        }
+        for (QuestMap.Link l : web.links()) {
+            Cell from = at.get(l.from()), to = at.get(l.to());
+            if (from == null || to == null) continue;
+            int colour = statusOf.getOrDefault(l.from(), JournalPayload.LOCKED) == JournalPayload.COMPLETE ? EDGE_DONE : EDGE_OPEN;
+            int[] fb = boxOf.get(l.from()), tb = boxOf.get(l.to());
+            // Between two boxes the line leaves its own box first and turns in the gap beyond it.
+            int turn = fb == tb ? Integer.MIN_VALUE : ox + fb[0] + fb[2] + COL_GAP / 2;
+            if (l.hidden()) dottedEdge(g, from, to, colour, turn);
+            else solidEdge(g, from, to, colour, turn);
+        }
+        for (QuestMap.Area a : web.areas()) {
+            ChapterView c = chapters.get(a.chapter());
+            for (QuestMap.Placed pl : a.placed()) {
+                Cell cell = at.get(pl.id());
+                if (cell.x() + CELL_W < cx0 || cell.x() - CELL_W > cx1 || cell.y() + CELL_H < cy0 || cell.y() > cy1) continue;
+                int nx0 = cell.x() - (CELL_W - NODE) / 2 + 2, nx1 = nx0 + CELL_W - 4;
+                boolean hover = mouseInCanvas && mouseX >= nx0 && mouseX < nx1 && mouseY >= cell.y() - 2 && mouseY < cell.y() + NODE + 12;
+                if (QuestMap.hidden(pl.id())) {
+                    mysteryNode(g, cell.x(), cell.y());
+                    if (hover && mouseX >= cell.x() && mouseX < cell.x() + NODE && mouseY >= cell.y() && mouseY < cell.y() + NODE) {
+                        tooltip = List.of(label("panel.overview.locked"));
+                    }
+                    continue;
+                }
+                QuestView q = findIn(c, pl.id());
+                if (q == null) continue;
+                node(g, cell.x(), cell.y(), q.icon(), q.status(), false, hover);
+                FormattedCharSequence name = ellipsis(q.name(), CELL_W - 8);
+                g.text(font, name, cell.x() + NODE / 2 - font.width(name) / 2, cell.y() + NODE + 3, nameColour(q.status()));
+                if (hover) tooltip = List.of(q.name(), statusName(q.status()));
+                String chapter = c.id(), quest = q.id();
+                hotspots.add(new Hot(Math.max(nx0, cx0), Math.max(cell.y() - 2, cy0), Math.min(nx1, cx1), Math.min(cell.y() + NODE + 12, cy1),
+                        () -> goTo(chapter, quest, true), true));
+            }
         }
         g.disableScissor();
         if (tooltip != null) g.setTooltipForNextFrame(font, tooltip, Optional.empty(), mouseX, mouseY);
     }
 
-    /** A chapter's overview map ({@link QuestMap#overview}: what is open, and a "?" where it leads on into what is not). */
-    private List<QuestMap.Placed> overviewLayout(ChapterView c) {
-        return layouts.computeIfAbsent("~overview|" + c.id(), k -> {
-            List<QuestMap.Entry> quests = new ArrayList<>();
-            for (QuestView q : c.quests()) quests.add(new QuestMap.Entry(q.id(), q.requires(), q.status() != JournalPayload.LOCKED));
-            return QuestMap.layout(QuestMap.overview(quests));
-        });
-    }
-
-    /** What a node on the overview is drawn from: a quest's prerequisites, or what a "?" waits on. */
-    private static List<String> requiresOf(ChapterView c, String id) {
-        if (id.startsWith(QuestMap.HIDDEN)) return QuestMap.waitsOn(id);
-        for (QuestView q : c.quests()) if (q.id().equals(id)) return q.requires();
-        return List.of();
+    /** The overview's web, worked out once per journal the server sends. */
+    private QuestMap.Web web(JournalPayload p) {
+        if (web == null || webFor != p) {
+            List<QuestMap.Chapter> chapters = new ArrayList<>();
+            for (ChapterView c : p.chapters()) {
+                List<QuestMap.Entry> quests = new ArrayList<>();
+                for (QuestView q : c.quests()) quests.add(new QuestMap.Entry(q.id(), q.requires(), q.status() != JournalPayload.LOCKED));
+                chapters.add(new QuestMap.Chapter(c.id(), quests));
+            }
+            web = QuestMap.web(chapters);
+            webFor = p;
+        }
+        return web;
     }
 
     /** Something not open yet: an empty frame of dots with a question mark. */
@@ -632,17 +663,33 @@ public final class JournalScreen extends Screen {
         g.text(font, q, x + NODE / 2 - font.width(q) / 2 + 1, y + NODE / 2 - 4, 0xFF8A837A);
     }
 
-    /** {@link #edge}, dotted: the way on into what is not open yet. */
-    private static void dottedEdge(GuiGraphicsExtractor g, Cell from, Cell to, int colour) {
-        int x0 = from.x() + NODE, y0 = from.y() + NODE / 2;
-        int x1 = to.x() - 1, y1 = to.y() + NODE / 2;
-        if (x1 <= x0) return;
-        int mid = Math.max(x0 + 2, x1 - (CELL_W - NODE) / 2);
-        for (int x = x0; x <= mid; x += 3) g.fill(x, y0, x + 1, y0 + 1, colour);
-        for (int y = Math.min(y0, y1); y <= Math.max(y0, y1); y += 3) g.fill(mid, y, mid + 1, y + 1, colour);
-        for (int x = mid; x <= x1; x += 3) g.fill(x, y1, x + 1, y1 + 1, colour);
+    /** The overview's line: {@link #edge}'s shape, but turning at {@code turn} when it crosses between boxes. */
+    private static void solidEdge(GuiGraphicsExtractor g, Cell from, Cell to, int colour, int turn) {
+        line(g, from, to, colour, turn, 1);
     }
 
+    /** {@link #solidEdge}, dotted: the way on into what is not open yet. */
+    private static void dottedEdge(GuiGraphicsExtractor g, Cell from, Cell to, int colour, int turn) {
+        line(g, from, to, colour, turn, 3);
+    }
+
+    private static void line(GuiGraphicsExtractor g, Cell from, Cell to, int colour, int turn, int step) {
+        int x0 = from.x() + NODE, y0 = from.y() + NODE / 2;
+        int x1 = to.x() - 1, y1 = to.y() + NODE / 2;
+        if (x1 <= x0) return; // only a cycle points backwards
+        int mid = turn == Integer.MIN_VALUE ? Math.max(x0 + 2, x1 - (CELL_W - NODE) / 2) : Math.min(Math.max(turn, x0 + 2), x1 - 2);
+        if (step == 1) {
+            g.fill(x0, y0, mid + 1, y0 + 1, colour);
+            g.fill(mid, Math.min(y0, y1), mid + 1, Math.max(y0, y1) + 1, colour);
+            g.fill(mid, y1, x1 + 1, y1 + 1, colour);
+            return;
+        }
+        for (int x = x0; x <= mid; x += step) g.fill(x, y0, x + 1, y0 + 1, colour);
+        for (int y = Math.min(y0, y1); y <= Math.max(y0, y1); y += step) g.fill(mid, y, mid + 1, y + 1, colour);
+        for (int x = mid; x <= x1; x += step) g.fill(x, y1, x + 1, y1 + 1, colour);
+    }
+
+    /** On the go, on offer, the story so far: every line was worded by the server; a quest line is a link to its page. */
     private void renderHome(GuiGraphicsExtractor g, JournalPayload p, int mouseX, int mouseY) {
         int px = paneX(), pw = paneW() - 6, top = top(), bottom = bottom();
         g.enableScissor(px, top, px + pw, bottom);
