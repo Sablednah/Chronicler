@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Overview** in the journal panel, under Home: every chapter on one map, each in a box of its own, laid out as its own map is. What is not open yet stays hidden -- where the story carries on into it a dotted line leads to a "?", one per set of quests it waits on, and a chapter with nothing open is its title and a single "?". Click a quest or a chapter's title to open it; drag or scroll to look around. (Sable.)
+- **Overview** in the journal panel, under Home: the whole story as one web. Each chapter is a box with its own map inside; the boxes run left to right by what follows what, and a line joins the quest that opens the next chapter to the quest it opens. What is not open yet stays hidden -- where the story carries on into it a dotted line leads to a "?", one per set of quests it waits on, and a chapter with nothing open is its title and a single "?". Click a quest or a chapter's title to open it; drag or scroll to look around. (Sable.)
 - **A party keeps its endings across a replay**, as each member's journal always has: replaying a chapter starts its quests over for the party but no longer forgets the endings it found, so someone catching up later is credited with all of them (ZARP: Cure went from the party when Sable replayed to Mercy).
 
 ## 1.5.1 — 2026-11-21
