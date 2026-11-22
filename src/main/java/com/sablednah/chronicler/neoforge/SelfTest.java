@@ -116,6 +116,18 @@ public final class SelfTest {
             check("overview: nothing locked is named", web.areas().stream().flatMap(a -> a.placed().stream()).map(QuestMap.Placed::id)
                     .noneMatch(id -> List.of("b", "c", "d", "s2", "h1", "x").contains(id)));
             check("overview: a box lays out only its own quests", area.get("signal").placed().stream().noneMatch(QuestMap.Placed::external));
+            // Where the lines run: never through a third chapter's box; where two unrelated ones cross, one fades.
+            var lay = com.sablednah.chronicler.core.WebLayout.of(web, com.sablednah.chronicler.core.WebLayout.JOURNAL);
+            check("overview: no line between chapters runs through another's box " + com.sablednah.chronicler.core.WebLayout.trespasses(lay),
+                    com.sablednah.chronicler.core.WebLayout.trespasses(lay).isEmpty());
+            var h = com.sablednah.chronicler.core.WebLayout.Seg.of(0, 10, 40, 10);
+            var v = com.sablednah.chronicler.core.WebLayout.Seg.of(20, 0, 20, 30);
+            check("overview: a crossing is found inside both lines, never at an end",
+                    new com.sablednah.chronicler.core.WebLayout.Point(20, 10).equals(com.sablednah.chronicler.core.WebLayout.crossing(h, v))
+                            && com.sablednah.chronicler.core.WebLayout.crossing(h, com.sablednah.chronicler.core.WebLayout.Seg.of(40, 0, 40, 30)) == null);
+            check("overview: lines that share a quest meet, they do not cross",
+                    com.sablednah.chronicler.core.WebLayout.related(new QuestMap.Link("a", "b", false), new QuestMap.Link("a", "c", false))
+                            && !com.sablednah.chronicler.core.WebLayout.related(new QuestMap.Link("a", "b", false), new QuestMap.Link("c", "d", false)));
         }
 
         check("lang catalogue is non-trivial", Lang.catalogueSize() > 60);
@@ -1546,6 +1558,29 @@ public final class SelfTest {
         check("replay: endings found stay found", log.endings(prologue).contains("kindness"));
         check("replay: the chapter's own player flags are cleared, others kept", !log.hasFlag("selftest_prologue_flag") && log.hasFlag("selftest_other_flag"));
         check("replay: a chapter that is not replayable is refused", !QuestEngine.replay(solo, ChroniclerIds.of("no_such_chapter")));
+
+        // --- the overview on the content actually loaded (ZARP with every sibling): the whole story open, as a
+        // finished player sees it, and no line between chapters through another chapter's box ---
+        {
+            java.util.Map<Identifier, List<QuestMap.Entry>> byChapter = new java.util.TreeMap<>(QuestEngine.chapterOrder(server));
+            for (var h : QuestEngine.quests(server).listElements().toList()) {
+                Quest q = h.value();
+                if (q.mini().isPresent()) continue; // a template, never on the map as itself
+                byChapter.computeIfAbsent(q.chapter(), k -> new ArrayList<>()).add(new QuestMap.Entry(h.key().identifier().toString(),
+                        q.requires().stream().map(Identifier::toString).toList(), true));
+            }
+            List<QuestMap.Chapter> chapters = new ArrayList<>();
+            byChapter.forEach((id, qs) -> chapters.add(new QuestMap.Chapter(id.toString(), qs)));
+            var lay = com.sablednah.chronicler.core.WebLayout.of(QuestMap.web(chapters), com.sablednah.chronicler.core.WebLayout.JOURNAL);
+            int crossings = lay.paths().stream().mapToInt(pa -> pa.fades().size()).sum();
+            var bad = com.sablednah.chronicler.core.WebLayout.trespasses(lay);
+            long between = lay.paths().stream().filter(pa -> !java.util.Objects.equals(lay.chapterOf().get(pa.link().from()), lay.chapterOf().get(pa.link().to()))).count();
+            Chronicler.LOGGER.info("SelfTest: overview of the loaded story -- {} chapters, {} lines ({} between chapters), {} crossings faded, {}x{}",
+                    chapters.size(), lay.paths().size(), between, crossings, lay.w(), lay.h());
+            check("overview of the loaded story: none of its lines between chapters runs through another chapter's box " + bad, bad.isEmpty());
+            check("overview of the loaded story: chapters that follow one another are joined by a line",
+                    chapters.size() < 2 || between > 0 || lay.paths().isEmpty());
+        }
 
         // --- the ZARP pack: on with ZombieMod, and every file in it loads ---
         boolean zm = net.neoforged.fml.ModList.get().isLoaded("zombiemod");
