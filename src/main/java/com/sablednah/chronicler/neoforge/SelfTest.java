@@ -84,23 +84,38 @@ public final class SelfTest {
         check("map: no two quests share a cell", map.stream().map(m -> m.col() + "," + m.row()).distinct().count() == map.size());
         check("map: a cycle is laid out, not recursed into for ever", QuestMap.layout(List.of(
                 new QuestMap.Node("p", List.of("q"), 0), new QuestMap.Node("q", List.of("p"), 1))).size() == 2);
-        // The overview: what is open, a "?" where it leads on into what is not, nothing behind that.
+        // The overview: every chapter boxed, joined up; what is open, a "?" where it leads on into what is not.
         {
-            var ov = QuestMap.overview(List.of(
-                    new QuestMap.Entry("a", List.of(), true),          // done
-                    new QuestMap.Entry("b", List.of("a"), false),      // locked, waiting on a: a "?" after a
-                    new QuestMap.Entry("c", List.of("b"), false),      // locked behind a locked one: not drawn
-                    new QuestMap.Entry("d", List.of("a"), false),      // also waiting on a alone: the same "?"
-                    new QuestMap.Entry("e", List.of("a"), true),       // open
-                    new QuestMap.Entry("f", List.of("x:elsewhere"), false))); // waits on another chapter: a lone "?"
-            var ids = ov.stream().map(QuestMap.Node::id).toList();
-            check("overview: open quests are drawn, a locked chain shows one \"?\" and no more (" + ids + ")",
-                    ids.containsAll(List.of("a", "e", "?a", "?")) && !ids.contains("b") && !ids.contains("c") && !ids.contains("d") && ids.size() == 4);
-            check("overview: the \"?\" hangs off what it waits on", QuestMap.waitsOn("?a").equals(List.of("a")) && QuestMap.waitsOn("?").isEmpty()
-                    && ov.stream().filter(n -> n.id().equals("?a")).findFirst().map(n -> n.requires().equals(List.of("a"))).orElse(false));
-            check("overview: a chapter with nothing open is one \"?\"", QuestMap.overview(List.of(
-                    new QuestMap.Entry("p", List.of(), false), new QuestMap.Entry("q", List.of("p"), false))).stream().map(QuestMap.Node::id).toList().equals(List.of("?")));
-            check("overview: it lays out like any map", QuestMap.layout(ov).size() == 4);
+            var web = QuestMap.web(List.of(
+                    new QuestMap.Chapter("camp", List.of(
+                            new QuestMap.Entry("a", List.of(), true),           // done
+                            new QuestMap.Entry("b", List.of("a"), false),       // locked, waiting on a: a "?" after a
+                            new QuestMap.Entry("c", List.of("b"), false),       // locked behind a locked one: not drawn
+                            new QuestMap.Entry("d", List.of("a"), false),       // also waiting on a alone: the same "?"
+                            new QuestMap.Entry("e", List.of("a"), true))),      // open
+                    new QuestMap.Chapter("signal", List.of(
+                            new QuestMap.Entry("s1", List.of("e"), true),       // opened by the camp's e: a line between boxes
+                            new QuestMap.Entry("s2", List.of("s1"), false))),   // locked: a "?" inside the signal's box
+                    new QuestMap.Chapter("hatch", List.of(
+                            new QuestMap.Entry("h1", List.of("s2"), false))),   // behind a locked quest: nothing but its box's "?"
+                    new QuestMap.Chapter("side", List.of(
+                            new QuestMap.Entry("x", List.of("flag:only"), false)))));  // waits on nothing drawn: a lone "?"
+            java.util.Map<String, QuestMap.Area> area = new java.util.HashMap<>();
+            for (var a : web.areas()) area.put(a.chapter(), a);
+            java.util.function.Function<String, List<String>> ids = ch -> area.get(ch).placed().stream().map(QuestMap.Placed::id).toList();
+            check("overview: a box per chapter (" + area.keySet() + ")", web.areas().size() == 4);
+            check("overview: a locked chain shows one \"?\" and no more (" + ids.apply("camp") + ")",
+                    ids.apply("camp").containsAll(List.of("a", "e", "?camp|a")) && ids.apply("camp").size() == 3);
+            check("overview: acts run left to right by what follows what",
+                    area.get("camp").col() == 0 && area.get("signal").col() == 1 && area.get("hatch").col() == 2 && area.get("side").col() == 0);
+            check("overview: a line joins the act that opens the next", web.links().contains(new QuestMap.Link("e", "s1", false)));
+            check("overview: the \"?\" hangs off what it waits on, dotted", web.links().contains(new QuestMap.Link("a", "?camp|a", true))
+                    && web.links().contains(new QuestMap.Link("s1", "?signal|s1", true)));
+            check("overview: a box with nothing open is one \"?\" (" + ids.apply("hatch") + ", " + ids.apply("side") + ")",
+                    ids.apply("hatch").equals(List.of("?hatch|")) && ids.apply("side").equals(List.of("?side|")));
+            check("overview: nothing locked is named", web.areas().stream().flatMap(a -> a.placed().stream()).map(QuestMap.Placed::id)
+                    .noneMatch(id -> List.of("b", "c", "d", "s2", "h1", "x").contains(id)));
+            check("overview: a box lays out only its own quests", area.get("signal").placed().stream().noneMatch(QuestMap.Placed::external));
         }
 
         check("lang catalogue is non-trivial", Lang.catalogueSize() > 60);
