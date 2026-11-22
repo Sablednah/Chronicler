@@ -14,6 +14,7 @@ import org.lwjgl.glfw.GLFW;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.sablednah.chronicler.core.QuestMap;
+import com.sablednah.chronicler.core.WebLayout;
 import com.sablednah.chronicler.network.JournalPayload;
 import com.sablednah.chronicler.network.JournalPayload.Button;
 import com.sablednah.chronicler.network.JournalPayload.ChapterView;
@@ -68,9 +69,9 @@ public final class JournalScreen extends Screen {
     private static final int HEADER_H = 28;
     private static final int ROW_H = 12;
     private static final int INDENT = 9;
-    private static final int CELL_W = 88;
-    private static final int CELL_H = 42;
-    private static final int NODE = 22;
+    private static final int CELL_W = WebLayout.JOURNAL.cellW();
+    private static final int CELL_H = WebLayout.JOURNAL.cellH();
+    private static final int NODE = WebLayout.JOURNAL.node();
     private static final int REFRESH_TICKS = 40;
 
     /** A clickable region. {@code canvas}: on the map, decided on release so a drag is not a click. */
@@ -92,11 +93,16 @@ public final class JournalScreen extends Screen {
     private static final String HOME = "~home";
     /** Every chapter on one canvas, each in its box; in the chapter slot like {@link #HOME}. */
     private static final String OVERVIEW = "~overview";
-    private static final int BOX_HEAD = 15;
-    private static final int BOX_GAP = 8;
-    private static final int COL_GAP = 28;
-    private QuestMap.Web web;
-    private JournalPayload webFor;
+    private static final int BOX_HEAD = WebLayout.JOURNAL.boxHead();
+    /** How far either side of a crossing the line behind fades. */
+    private static final int FADE = 4;
+    private static final double ZOOM_MIN = 0.35, ZOOM_MAX = 1.6;
+    private Geo geo;
+    private JournalPayload geoFor;
+    private double zoom = 1;
+
+    /** The overview worked out once per journal: the web, where it all goes, and each quest's status for line colour. */
+    private record Geo(QuestMap.Web web, WebLayout.Layout layout, Map<String, Byte> status) {}
     private String chapterId = "";
     private String questId = ""; // empty: the chapter's map
     private double listScroll, maxListScroll;
@@ -519,103 +525,59 @@ public final class JournalScreen extends Screen {
         frame(g, cx0, cy0, cx1, cy1, BRASS_DIM, 1);
         if (cy1 - cy0 < 20) return;
 
-        // Where every box goes, in canvas units (pan applied below): columns as wide as their widest box.
-        QuestMap.Web web = web(p);
-        Map<String, ChapterView> chapters = new HashMap<>();
-        for (ChapterView c : p.chapters()) chapters.put(c.id(), c);
-        Map<Integer, Integer> colW = new HashMap<>();
-        Map<String, int[]> size = new HashMap<>();
-        int lastCol = 0;
-        for (QuestMap.Area a : web.areas()) {
-            int cols = 1, rows = 1;
-            for (QuestMap.Placed pl : a.placed()) {
-                cols = Math.max(cols, pl.col() + 1);
-                rows = Math.max(rows, pl.row() + 1);
-            }
-            int w = Math.max(cols * CELL_W + 8, CELL_W + 8), h = BOX_HEAD + rows * CELL_H + 2;
-            size.put(a.chapter(), new int[] {w, h});
-            colW.merge(a.col(), w, Math::max);
-            lastCol = Math.max(lastCol, a.col());
-        }
-        int[] colX = new int[lastCol + 2];
-        for (int c = 0; c <= lastCol; c++) colX[c + 1] = colX[c] + colW.getOrDefault(c, 0) + (colW.containsKey(c) ? COL_GAP : 0);
-        Map<String, int[]> box = new HashMap<>(); // chapter -> x, y, w, h
-        Map<Integer, Integer> colBottom = new HashMap<>();
-        List<QuestMap.Area> byCol = new ArrayList<>(web.areas());
-        byCol.sort(java.util.Comparator.comparingInt(QuestMap.Area::col)); // stable: story order within a column
-        int totalW = 0, totalH = 0;
-        for (QuestMap.Area a : byCol) {
-            int[] wh = size.get(a.chapter());
-            int by = colBottom.getOrDefault(a.col(), 0);
-            for (String before : a.after()) { // level with the act it follows, so a chain reads straight across
-                int[] b = box.get(before);
-                if (b != null) { by = Math.max(by, b[1]); break; }
-            }
-            box.put(a.chapter(), new int[] {colX[a.col()], by, wh[0], wh[1]});
-            colBottom.put(a.col(), by + wh[1] + BOX_GAP);
-            totalW = Math.max(totalW, colX[a.col()] + wh[0]);
-            totalH = Math.max(totalH, by + wh[1]);
-        }
-        maxPanX = Math.max(0, totalW + 12 - (cx1 - cx0));
-        maxPanY = Math.max(0, totalH + 12 - (cy1 - cy0));
+        Geo geo = geo(p);
+        double z = zoom;
+        WebLayout.Layout lay = geo.layout();
+        maxPanX = Math.max(0, lay.w() - (cx1 - cx0 - 12) / z);
+        maxPanY = Math.max(0, lay.h() - (cy1 - cy0 - 12) / z);
         panX = clamp(panX, 0, maxPanX);
         panY = clamp(panY, 0, maxPanY);
-        int ox = cx0 + 6 - (int) panX, oy = cy0 + 6 - (int) panY;
-
-        Map<String, Cell> at = new HashMap<>();
-        Map<String, int[]> boxOf = new HashMap<>();
-        Map<String, Byte> statusOf = new HashMap<>();
-        for (ChapterView c : p.chapters()) for (QuestView q : c.quests()) statusOf.put(q.id(), q.status());
-        for (QuestMap.Area a : web.areas()) {
-            int[] b = box.get(a.chapter());
-            int nx = ox + b[0] + 4 + (CELL_W - NODE) / 2 - 4, ny = oy + b[1] + BOX_HEAD + 4;
-            for (QuestMap.Placed pl : a.placed()) {
-                at.put(pl.id(), new Cell(nx + pl.col() * CELL_W, ny + pl.row() * CELL_H));
-                boxOf.put(pl.id(), b);
-            }
-        }
-
-        g.enableScissor(cx0 + 1, cy0 + 1, cx1 - 1, cy1 - 1);
+        // Drawn in the overview's own units, scaled and panned; the mouse is taken back into them.
+        double mx = (mouseX - cx0 - 6) / z + panX, my = (mouseY - cy0 - 6) / z + panY;
+        double vx0 = panX - 6 / z, vy0 = panY - 6 / z, vx1 = panX + (cx1 - cx0) / z, vy1 = panY + (cy1 - cy0) / z;
         boolean mouseInCanvas = mouseX >= cx0 && mouseX < cx1 && mouseY >= cy0 && mouseY < cy1;
         List<Component> tooltip = null;
+        Map<String, ChapterView> chapters = new HashMap<>();
+        for (ChapterView c : p.chapters()) chapters.put(c.id(), c);
+
+        g.enableScissor(cx0 + 1, cy0 + 1, cx1 - 1, cy1 - 1);
+        g.pose().pushMatrix();
+        g.pose().translate(cx0 + 6, cy0 + 6);
+        g.pose().scale((float) z, (float) z);
+        g.pose().translate((float) -panX, (float) -panY);
         // Boxes first, then every line over them, then the quests on top.
-        for (QuestMap.Area a : web.areas()) {
+        for (QuestMap.Area a : geo.web().areas()) {
             ChapterView c = chapters.get(a.chapter());
-            int[] b = box.get(a.chapter());
-            int bx = ox + b[0], by = oy + b[1];
-            if (bx > cx1 || bx + b[2] < cx0 || by > cy1 || by + b[3] < cy0) continue;
-            g.fill(bx, by, bx + b[2], by + b[3], 0x18000000);
-            frame(g, bx, by, bx + b[2], by + b[3], BRASS_DIM, 1);
+            WebLayout.Box b = lay.boxes().get(a.chapter());
+            int bx = b.x(), by = b.y(), bw = b.w(), bh = b.h();
+            if (bx > vx1 || bx + bw < vx0 || by > vy1 || by + bh < vy0) continue;
+            g.fill(bx, by, bx + bw, by + bh, 0x18000000);
+            frame(g, bx, by, bx + bw, by + bh, BRASS_DIM, 1);
             Component title = bold(c.name());
-            int tw = Math.min(font.width(title), b[2] - 12);
-            boolean titleHover = mouseInCanvas && mouseX >= bx + 4 && mouseX < bx + 8 + tw && mouseY >= by + 2 && mouseY < by + BOX_HEAD - 2;
-            g.drawString(font, ellipsis(titleHover ? title.copy().withStyle(ChatFormatting.UNDERLINE) : title, b[2] - 12), bx + 6, by + 4, GOLD);
+            int tw = Math.min(font.width(title), bw - 12);
+            boolean titleHover = mouseInCanvas && mx >= bx + 4 && mx < bx + 8 + tw && my >= by + 2 && my < by + BOX_HEAD - 2;
+            g.drawString(font, ellipsis(titleHover ? title.copy().withStyle(ChatFormatting.UNDERLINE) : title, bw - 12), bx + 6, by + 4, GOLD);
             String chapter = c.id();
-            if (bx + 8 + tw > cx0 && bx + 4 < cx1 && by + BOX_HEAD - 2 > cy0 && by + 2 < cy1) {
-                hotspots.add(new Hot(Math.max(bx + 4, cx0), Math.max(by + 2, cy0), Math.min(bx + 8 + tw, cx1), Math.min(by + BOX_HEAD - 2, cy1),
-                        () -> goTo(chapter, "", true), true));
+            canvasHot(bx + 4, by + 2, bx + 8 + tw, by + BOX_HEAD - 2, () -> goTo(chapter, "", true));
+        }
+        for (WebLayout.Path path : lay.paths()) {
+            int colour = geo.status().getOrDefault(path.link().from(), JournalPayload.LOCKED) == JournalPayload.COMPLETE ? EDGE_DONE : EDGE_OPEN;
+            int faded = (0x50 << 24) | (colour & 0xFFFFFF);
+            for (WebLayout.Seg seg : path.segs()) {
+                if (seg.x0() > vx1 || seg.x1() < vx0 || seg.y0() > vy1 || seg.y1() < vy0) continue;
+                drawSeg(g, seg, colour, faded, path.link().hidden() ? 3 : 1, path.fades());
             }
         }
-        for (QuestMap.Link l : web.links()) {
-            Cell from = at.get(l.from()), to = at.get(l.to());
-            if (from == null || to == null) continue;
-            int colour = statusOf.getOrDefault(l.from(), JournalPayload.LOCKED) == JournalPayload.COMPLETE ? EDGE_DONE : EDGE_OPEN;
-            int[] fb = boxOf.get(l.from()), tb = boxOf.get(l.to());
-            // Between two boxes the line leaves its own box first and turns in the gap beyond it.
-            int turn = fb == tb ? Integer.MIN_VALUE : ox + fb[0] + fb[2] + COL_GAP / 2;
-            if (l.hidden()) dottedEdge(g, from, to, colour, turn);
-            else solidEdge(g, from, to, colour, turn);
-        }
-        for (QuestMap.Area a : web.areas()) {
+        for (QuestMap.Area a : geo.web().areas()) {
             ChapterView c = chapters.get(a.chapter());
             for (QuestMap.Placed pl : a.placed()) {
-                Cell cell = at.get(pl.id());
-                if (cell.x() + CELL_W < cx0 || cell.x() - CELL_W > cx1 || cell.y() + CELL_H < cy0 || cell.y() > cy1) continue;
+                WebLayout.Point cell = lay.cells().get(pl.id());
+                if (cell.x() + CELL_W < vx0 || cell.x() - CELL_W > vx1 || cell.y() + CELL_H < vy0 || cell.y() > vy1) continue;
                 int nx0 = cell.x() - (CELL_W - NODE) / 2 + 2, nx1 = nx0 + CELL_W - 4;
-                boolean hover = mouseInCanvas && mouseX >= nx0 && mouseX < nx1 && mouseY >= cell.y() - 2 && mouseY < cell.y() + NODE + 12;
+                boolean hover = mouseInCanvas && mx >= nx0 && mx < nx1 && my >= cell.y() - 2 && my < cell.y() + NODE + 12;
                 if (QuestMap.hidden(pl.id())) {
                     mysteryNode(g, cell.x(), cell.y());
-                    if (hover && mouseX >= cell.x() && mouseX < cell.x() + NODE && mouseY >= cell.y() && mouseY < cell.y() + NODE) {
+                    if (hover && mx >= cell.x() && mx < cell.x() + NODE && my >= cell.y() && my < cell.y() + NODE) {
                         tooltip = List.of(label("panel.overview.locked"));
                     }
                     continue;
@@ -627,27 +589,72 @@ public final class JournalScreen extends Screen {
                 g.drawString(font, name, cell.x() + NODE / 2 - font.width(name) / 2, cell.y() + NODE + 3, nameColour(q.status()));
                 if (hover) tooltip = List.of(q.name(), statusName(q.status()));
                 String chapter = c.id(), quest = q.id();
-                hotspots.add(new Hot(Math.max(nx0, cx0), Math.max(cell.y() - 2, cy0), Math.min(nx1, cx1), Math.min(cell.y() + NODE + 12, cy1),
-                        () -> goTo(chapter, quest, true), true));
+                canvasHot(nx0, cell.y() - 2, nx1, cell.y() + NODE + 12, () -> goTo(chapter, quest, true));
             }
         }
+        g.pose().popMatrix();
         g.disableScissor();
         if (tooltip != null) g.setTooltipForNextFrame(font, tooltip, Optional.empty(), mouseX, mouseY);
     }
 
-    /** The overview's web, worked out once per journal the server sends. */
-    private QuestMap.Web web(JournalPayload p) {
-        if (web == null || webFor != p) {
-            List<QuestMap.Chapter> chapters = new ArrayList<>();
-            for (ChapterView c : p.chapters()) {
-                List<QuestMap.Entry> quests = new ArrayList<>();
-                for (QuestView q : c.quests()) quests.add(new QuestMap.Entry(q.id(), q.requires(), q.status() != JournalPayload.LOCKED));
-                chapters.add(new QuestMap.Chapter(c.id(), quests));
-            }
-            web = QuestMap.web(chapters);
-            webFor = p;
+    /** A click target given in overview units, kept on screen in screen units and clipped to the canvas. */
+    private void canvasHot(int x0, int y0, int x1, int y1, Runnable action) {
+        double z = zoom;
+        int sx0 = (int) Math.floor(canvasX0 + 6 + (x0 - panX) * z), sx1 = (int) Math.ceil(canvasX0 + 6 + (x1 - panX) * z);
+        int sy0 = (int) Math.floor(canvasY0 + 6 + (y0 - panY) * z), sy1 = (int) Math.ceil(canvasY0 + 6 + (y1 - panY) * z);
+        sx0 = Math.max(sx0, canvasX0); sy0 = Math.max(sy0, canvasY0);
+        sx1 = Math.min(sx1, canvasX1); sy1 = Math.min(sy1, canvasY1);
+        if (sx1 > sx0 && sy1 > sy0) hotspots.add(new Hot(sx0, sy0, sx1, sy1, action, true));
+    }
+
+    /** One piece of a line, faded for {@link #FADE} either side of each place it passes behind another. */
+    private static void drawSeg(GuiGraphics g, WebLayout.Seg s, int colour, int faded, int step, List<WebLayout.Point> fades) {
+        boolean hz = s.horizontal();
+        int a0 = hz ? s.x0() : s.y0(), a1 = hz ? s.x1() : s.y1(), fixed = hz ? s.y0() : s.x0();
+        List<Integer> at = new ArrayList<>();
+        for (WebLayout.Point f : fades) {
+            if (hz ? f.y() == fixed && f.x() >= a0 && f.x() <= a1 : f.x() == fixed && f.y() >= a0 && f.y() <= a1) at.add(hz ? f.x() : f.y());
         }
-        return web;
+        at.sort(Integer::compare);
+        int pos = a0;
+        for (int c : at) {
+            run(g, hz, fixed, pos, Math.min(a1, c - FADE - 1), colour, step);
+            run(g, hz, fixed, Math.max(pos, c - FADE), Math.min(a1, c + FADE), faded, step);
+            pos = Math.max(pos, c + FADE + 1);
+        }
+        run(g, hz, fixed, pos, a1, colour, step);
+    }
+
+    private static void run(GuiGraphics g, boolean hz, int fixed, int lo, int hi, int colour, int step) {
+        if (lo > hi) return;
+        if (step == 1) {
+            if (hz) g.fill(lo, fixed, hi + 1, fixed + 1, colour);
+            else g.fill(fixed, lo, fixed + 1, hi + 1, colour);
+            return;
+        }
+        for (int q = lo + Math.floorMod(-lo, step); q <= hi; q += step) {
+            if (hz) g.fill(q, fixed, q + 1, fixed + 1, colour);
+            else g.fill(fixed, q, fixed + 1, q + 1, colour);
+        }
+    }
+
+    /** The overview's layout ({@link WebLayout}), worked out once per journal the server sends. */
+    private Geo geo(JournalPayload p) {
+        if (geo != null && geoFor == p) return geo;
+        List<QuestMap.Chapter> chapters = new ArrayList<>();
+        Map<String, Byte> status = new HashMap<>();
+        for (ChapterView c : p.chapters()) {
+            List<QuestMap.Entry> quests = new ArrayList<>();
+            for (QuestView q : c.quests()) {
+                quests.add(new QuestMap.Entry(q.id(), q.requires(), q.status() != JournalPayload.LOCKED));
+                status.put(q.id(), q.status());
+            }
+            chapters.add(new QuestMap.Chapter(c.id(), quests));
+        }
+        QuestMap.Web web = QuestMap.web(chapters);
+        geo = new Geo(web, WebLayout.of(web, WebLayout.JOURNAL), status);
+        geoFor = p;
+        return geo;
     }
 
     /** Something not open yet: an empty frame of dots with a question mark. */
@@ -661,32 +668,6 @@ public final class JournalScreen extends Screen {
         }
         Component q = label("panel.overview.unknown");
         g.drawString(font, q, x + NODE / 2 - font.width(q) / 2 + 1, y + NODE / 2 - 4, 0xFF8A837A);
-    }
-
-    /** The overview's line: {@link #edge}'s shape, but turning at {@code turn} when it crosses between boxes. */
-    private static void solidEdge(GuiGraphics g, Cell from, Cell to, int colour, int turn) {
-        line(g, from, to, colour, turn, 1);
-    }
-
-    /** {@link #solidEdge}, dotted: the way on into what is not open yet. */
-    private static void dottedEdge(GuiGraphics g, Cell from, Cell to, int colour, int turn) {
-        line(g, from, to, colour, turn, 3);
-    }
-
-    private static void line(GuiGraphics g, Cell from, Cell to, int colour, int turn, int step) {
-        int x0 = from.x() + NODE, y0 = from.y() + NODE / 2;
-        int x1 = to.x() - 1, y1 = to.y() + NODE / 2;
-        if (x1 <= x0) return; // only a cycle points backwards
-        int mid = turn == Integer.MIN_VALUE ? Math.max(x0 + 2, x1 - (CELL_W - NODE) / 2) : Math.min(Math.max(turn, x0 + 2), x1 - 2);
-        if (step == 1) {
-            g.fill(x0, y0, mid + 1, y0 + 1, colour);
-            g.fill(mid, Math.min(y0, y1), mid + 1, Math.max(y0, y1) + 1, colour);
-            g.fill(mid, y1, x1 + 1, y1 + 1, colour);
-            return;
-        }
-        for (int x = x0; x <= mid; x += step) g.fill(x, y0, x + 1, y0 + 1, colour);
-        for (int y = Math.min(y0, y1); y <= Math.max(y0, y1); y += step) g.fill(mid, y, mid + 1, y + 1, colour);
-        for (int x = mid; x <= x1; x += step) g.fill(x, y1, x + 1, y1 + 1, colour);
     }
 
     /** On the go, on offer, the story so far: every line was worded by the server; a quest line is a link to its page. */
@@ -965,8 +946,9 @@ public final class JournalScreen extends Screen {
         if (pressedInCanvas && event.button() == 0) {
             if (Math.abs(event.x() - pressX) + Math.abs(event.y() - pressY) > 3) dragged = true;
             if (dragged) {
-                panX = clamp(panX - dx, 0, maxPanX);
-                panY = clamp(panY - dy, 0, maxPanY);
+                double z = OVERVIEW.equals(chapterId) ? zoom : 1; // the overview pans in its own (scaled) units
+                panX = clamp(panX - dx / z, 0, maxPanX);
+                panY = clamp(panY - dy / z, 0, maxPanY);
             }
             return true;
         }
@@ -995,6 +977,14 @@ public final class JournalScreen extends Screen {
         if (super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)) return true;
         if (mouseX < paneX() - 4) {
             listScroll = clamp(listScroll - scrollY * ROW_H, 0, maxListScroll);
+        } else if (OVERVIEW.equals(chapterId)) {
+            // The wheel zooms, about the point under the cursor; drag to move.
+            if (scrollY == 0) return true;
+            double old = zoom;
+            zoom = clamp(zoom * (scrollY > 0 ? 1.15 : 1 / 1.15), ZOOM_MIN, ZOOM_MAX);
+            double ax = (mouseX - canvasX0 - 6) / old + panX, ay = (mouseY - canvasY0 - 6) / old + panY;
+            panX = Math.max(0, ax - (mouseX - canvasX0 - 6) / zoom);
+            panY = Math.max(0, ay - (mouseY - canvasY0 - 6) / zoom);
         } else if (questId.isEmpty() && !HOME.equals(chapterId)) {
             panY = clamp(panY - scrollY * 16, 0, maxPanY);
             panX = clamp(panX - scrollX * 16, 0, maxPanX);
