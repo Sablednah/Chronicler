@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.0 — 2026-11-23
 
 - **Overview** in the journal panel, under Home: the whole story as one web. Each chapter is a box with its own map inside; the boxes run left to right by what follows what, and a line joins the quest that opens the next chapter to the quest it opens. Lines keep to the gaps between boxes (never across another chapter's box or a quest's name), each quest's lines on a track of their own, and where two unrelated lines still cross, the longer fades as it passes behind. What is not open yet stays hidden -- where the story carries on into it a dotted line leads to a "?", and a chapter with nothing open is its title and a single "?". Scroll to zoom, drag to look around, click a quest or a chapter's title to open it. (Sable.)
 - **A party keeps its endings across a replay**, as each member's journal always has: replaying a chapter starts its quests over for the party but no longer forgets the endings it found, so someone catching up later is credited with all of them (ZARP: Cure went from the party when Sable replayed to Mercy).

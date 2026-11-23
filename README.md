@@ -29,7 +29,10 @@ in [docs/DESIGN.md](docs/DESIGN.md); the questline walkthrough is
   it, or `/quest journal`), with clickable Track / Abandon / Accept links.
   With Chronicler on the client too, the same journal opens as a **panel**
   (the **backtick** key, the item, or `/quest journal`): chapters and their quests on the
-  left, a map of what leads to what, a page per quest with its buttons.
+  left, a map of what leads to what, a page per quest with its buttons. Under Home, the
+  **Overview** shows the whole story as one web: every chapter boxed, lines from the quest that
+  opens a chapter into it, and a dotted line to a "?" wherever the story carries on into what is
+  not open yet (scroll to zoom, drag to look around).
 - With Chronicler on the client, a **quest tracker HUD** down the left of the screen lists your
   active quests (the tracked one first) and where each objective stands, then **Nearby**: what
   is on offer within `tracker.hudOfferRadius` blocks (default 24), nearest first. The panel opens

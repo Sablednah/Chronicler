@@ -536,7 +536,14 @@ Chapters on the left with quests indented under them; the right pane is the
 chapter's quest map or a quest's page. The map lays out by prerequisite depth
 (`core/QuestMap`, loader-light so the self-test checks the layout the client
 draws); prerequisites from other chapters get the left column as stand-ins,
-because in ZARP nearly every chapter hangs off another's quest. Per-quest
+because in ZARP nearly every chapter hangs off another's quest. The **Overview**
+(2026-11-21/22, Sable) is every chapter at once: `QuestMap.web` boxes each
+chapter (column = one past the furthest chapter it needs) with its open quests,
+a stand-in "?" per set of open quests that locked ones wait on, and the links
+within and between boxes; `core/WebLayout` places the boxes and routes lines
+through the gaps only (a track per source quest, clear lanes past boxes in the
+way, the longer of two unrelated crossing lines fading behind) -- the self-test
+checks no line ever enters a third chapter's box, on the loaded story. Per-quest
 `visibility` (`always` / `unlocked` / `found`) came with it and applies to the
 book and `/quests` too. The payload is built by `neoforge/JournalPanel` with
 all text resolved there; the client runs the same `/quest` commands chat

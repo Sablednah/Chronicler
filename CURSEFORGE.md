@@ -12,8 +12,9 @@ Quests a checklist and wanted a story.
 with clickable buttons, progress is tracked on the action bar, the journal is a written book
 handed to every new player, choices are buttons, and completions are a title card. A player who
 does install Chronicler gets the journal as a **panel** on the backtick key: chapters with their
-quests under them, a quest map of what leads to what, and a page per quest with its buttons. That
-is sugar; nothing is required.
+quests under them, a quest map of what leads to what, an **Overview** of the whole story as one web
+(every chapter boxed and joined, what is still locked behind a "?"), and a page per quest with its
+buttons. That is sugar; nothing is required.
 
 ---
 
